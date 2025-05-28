@@ -56,16 +56,13 @@ const Tenders: React.FC = () => {
         setIsEmailAlertOpen(false);
     };
 
-    const getUniqueCpvCodes = () => {
-        const cpvSet = new Set<string>();
-        filteredTenders.forEach(tender => {
-            tender.cpvCodes.forEach((cpv: string) => {
-                if (isItRelatedCpv(cpv)) {
-                    cpvSet.add(cpv);
-                }
-            });
-        });
-        return Array.from(cpvSet);
+    const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
+
+    const toggleCpvExpand = (publicationNumber: string) => {
+        setExpandedCpvCards(prev => ({
+            ...prev,
+            [publicationNumber]: !prev[publicationNumber]
+        }));
     };
 
     const displayedTenders = isFiltered ? filteredTenders : tenders;
@@ -77,22 +74,6 @@ const Tenders: React.FC = () => {
         
         // Remove duplicates
         return Array.from(new Set(cpvCodes));
-    };
-
-    const getRelatedCpvCodes = (tender: any, cpvCode: string) => {
-        const baseCode = cpvCode.split('-')[0];
-        return tender.cpvCodes.filter((code: string) => 
-            code !== cpvCode && code.startsWith(baseCode.slice(0, -2))
-        );
-    };
-
-    const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
-
-    const toggleCpvExpand = (publicationNumber: string) => {
-        setExpandedCpvCards(prev => ({
-            ...prev,
-            [publicationNumber]: !prev[publicationNumber]
-        }));
     };
 
     return (
