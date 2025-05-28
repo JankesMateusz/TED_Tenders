@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="#3498db"/>
+  
+  <!-- Letters TED using paths -->
+  <g fill="white" transform="translate(80, 160)">
+    <!-- T -->
+    <rect x="0" y="0" width="80" height="20"/>
+    <rect x="30" y="0" width="20" height="200"/>
+    
+    <!-- E -->
+    <rect x="120" y="0" width="80" height="20"/>
+    <rect x="120" y="90" width="70" height="20"/>
+    <rect x="120" y="180" width="80" height="20"/>
+    <rect x="120" y="0" width="20" height="200"/>
+    
+    <!-- D -->
+    <rect x="240" y="0" width="20" height="200"/>
+    <path d="M240,0 h60 q40,0 40,100 t-40,100 h-60 z" fill="white"/>
+  </g>
+</svg> 

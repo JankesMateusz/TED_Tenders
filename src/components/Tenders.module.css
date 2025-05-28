@@ -1,0 +1,248 @@
+.container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.message {
+    text-align: center;
+    padding: 20px;
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--button-primary);
+    font-weight: 500;
+}
+
+.tendersList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 20px;
+}
+
+.tenderCard {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.tenderCard:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.tenderCardFavorite {
+    border-color: var(--button-primary);
+    background: linear-gradient(to bottom, 
+        var(--bg-secondary), 
+        color-mix(in srgb, var(--button-primary) 3%, var(--bg-secondary))
+    );
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.publicationNumber {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.favoriteButton {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.favoriteButton:hover {
+    transform: scale(1.1);
+}
+
+.favoriteActive {
+    color: #f1c40f;
+}
+
+.title {
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    line-height: 1.4;
+}
+
+.info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.infoItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.infoLabel {
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.infoValue {
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.cpvSection {
+    margin: 16px 0;
+}
+
+.cpvContainer {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.cpvToggle {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    border: none;
+    text-align: left;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.cpvToggle:hover {
+    background: var(--bg-secondary);
+}
+
+.cpvCodes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-secondary);
+}
+
+.cpvCodeContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--cpv-bg);
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.cpvCodeContainer:hover {
+    background: var(--cpv-bg-hover);
+}
+
+.cpvCode {
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.cpvName {
+    font-size: 13px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.relatedCpvCodes {
+    margin-left: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.relatedCpvCode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--cpv-bg);
+    padding: 4px 12px;
+    border-radius: 6px;
+    opacity: 0.8;
+    font-size: 0.9em;
+}
+
+.relatedCpvCode:hover {
+    opacity: 1;
+    background: var(--cpv-bg-hover);
+}
+
+.link {
+    display: inline-block;
+    background: var(--button-primary);
+    color: white;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    margin-top: 16px;
+}
+
+.link:hover {
+    background: var(--button-primary-hover);
+}
+
+.cardActions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.selectButton {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px;
+    transition: transform 0.2s ease;
+    opacity: 0.7;
+}
+
+.selectButton:hover {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.selectActive {
+    opacity: 1;
+    color: var(--button-primary);
+} 
