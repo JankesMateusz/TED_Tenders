@@ -1,8 +1,7 @@
 import axios from "axios";
 import { Notice } from "../models/Notice";
 
-const API_URL = "https://api.ted.europa.eu/v3/notices/search";
-const API_KEY = "TWOJ_KLUCZ_API"; // Wstaw swój klucz API
+const API_URL = "https://us-central1-tendersted.cloudfunctions.net/tedProxy";
 
 export const fetchTenders = async (date: string): Promise<Notice[]> => {
     try {
@@ -24,7 +23,6 @@ export const fetchTenders = async (date: string): Promise<Notice[]> => {
             limit: 250
         }, {
             headers: { 
-                Authorization: `Bearer ${API_KEY}`,
                 "Content-Type": "application/json"
             }
         });
