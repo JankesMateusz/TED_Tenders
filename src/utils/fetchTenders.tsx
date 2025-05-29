@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Notice } from "../models/Notice";
 
-const API_URL = "https://us-central1-tendersted.cloudfunctions.net/tedProxy";
+const API_URL = "https://us-central1-tendersted.cloudfunctions.net/api/tedProxy";
 
 export const fetchTenders = async (date: string): Promise<Notice[]> => {
     try {
