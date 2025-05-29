@@ -12,6 +12,17 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
+// Własne nagłówki CORS
+app.use((req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
+// Obsługa preflight
+app.options('*', cors({ origin: true }));
+
 app.post('/tedProxy', async (req, res) => {
   try {
     const apiKey = await accessSecretVersion('API_KEY');
