@@ -16,7 +16,11 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-
+        
+        - name: Create API config
+        run: |
+        echo "export const API_CONFIG = { API_KEY: '${{ secrets.TED_API_KEY }}', BASE_URL: 'https://api.ted.europa.eu/api/v2', } as const;" > src/config/api.ts
+        
       - name: Install Dependencies
         run: npm ci
 
