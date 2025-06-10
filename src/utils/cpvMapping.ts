@@ -18,6 +18,8 @@ export const cpvMapping: { [key: string]: string } = {
     "72610000": "Usługi pomocy technicznej w IT",
     "48820000": "Serwery",
     "48000000": "Pakiety oprogramowania i systemy informatyczne",
+    "48310000": "Pakiety oprogramowania do tworzenia dokumentów",
+    "72268000 ": "Usługi dostawy oprogramowania",
     // Original codes with suffixes
     "38520000-0": "Skanery",
     "30200000-0": "Urządzenia komputerowe",

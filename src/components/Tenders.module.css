@@ -20,6 +20,17 @@
     font-weight: 500;
 }
 
+.content {
+    margin-top: 20px;
+}
+
+.tenderDetails {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+}
+
 .tendersList {
     list-style: none;
     padding: 0;
@@ -35,6 +46,7 @@
     box-shadow: var(--card-shadow);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     border: 2px solid transparent;
+    cursor: pointer;
 }
 
 .tenderCard:hover {
@@ -62,6 +74,11 @@
     font-size: 14px;
 }
 
+.cardActions {
+    display: flex;
+    gap: 8px;
+}
+
 .favoriteButton {
     background: transparent;
     border: none;
@@ -78,6 +95,24 @@
 
 .favoriteActive {
     color: #f1c40f;
+}
+
+.selectButton {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.selectButton:hover {
+    transform: scale(1.1);
+}
+
+.selectActive {
+    color: var(--button-primary);
 }
 
 .title {
@@ -205,44 +240,15 @@
 
 .link {
     display: inline-block;
+    margin-top: 16px;
+    padding: 8px 16px;
     background: var(--button-primary);
     color: white;
     text-decoration: none;
-    padding: 8px 16px;
     border-radius: 4px;
-    font-size: 14px;
-    font-weight: 500;
     transition: background-color 0.2s ease;
-    margin-top: 16px;
 }
 
 .link:hover {
     background: var(--button-primary-hover);
-}
-
-.cardActions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.selectButton {
-    background: transparent;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    transition: transform 0.2s ease;
-    opacity: 0.7;
-}
-
-.selectButton:hover {
-    transform: scale(1.1);
-    opacity: 1;
-}
-
-.selectActive {
-    opacity: 1;
-    color: var(--button-primary);
 } 
