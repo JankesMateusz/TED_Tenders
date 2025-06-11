@@ -137,6 +137,39 @@ const Tenders: React.FC = () => {
                                     <span className={styles.infoValue}>{tender.buyerName}</span>
                                 </div>
                             </div>
+                            <div className={styles.cpvSection}>
+                                {getDisplayedCpvCodes(tender).length > 0 && (
+                                    <div className={styles.cpvContainer}>
+                                        <button 
+                                            className={styles.cpvToggle}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setExpandedCpvCards(prev => ({
+                                                    ...prev,
+                                                    [tender.publicationNumber]: !prev[tender.publicationNumber]
+                                                }));
+                                            }}
+                                        >
+                                            Kody CPV ({getDisplayedCpvCodes(tender).length})
+                                            {expandedCpvCards[tender.publicationNumber] ? ' ▼' : ' ▶'}
+                                        </button>
+                                        {expandedCpvCards[tender.publicationNumber] && (
+                                            <div className={styles.cpvCodes}>
+                                                {getDisplayedCpvCodes(tender).map((cpv: string, cpvIndex: number) => (
+                                                    <div key={cpvIndex} className={styles.cpvCodeContainer}>
+                                                        <span className={styles.cpvCode}>
+                                                            {cpv}
+                                                        </span>
+                                                        <span className={styles.cpvName}>
+                                                            {getCpvName(cpv)}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             <a 
                                 href={tender.link} 
                                 target="_blank" 
