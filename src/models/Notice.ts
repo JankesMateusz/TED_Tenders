@@ -9,7 +9,7 @@ export class Notice {
     buyerName: string;
     buyerCity: string;
     changeNoticeVersionIdentifier: string | null;
-
+    
     constructor(data: any) {
         this.publicationNumber = data["publication-number"];
         this.publicationDate = this.formatDate(data["publication-date"]);
