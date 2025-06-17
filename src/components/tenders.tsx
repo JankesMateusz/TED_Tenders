@@ -20,7 +20,11 @@ const Tenders: React.FC = () => {
         removeFromFavorites, 
         isFavorite,
         toggleTenderSelection,
-        isTenderSelected
+        isTenderSelected,
+        toggleToBeEntered,
+        toggleNotToBeEntered,
+        isToBeEntered,
+        isNotToBeEntered
     } = useUserPreferences();
     const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
 
@@ -85,7 +89,11 @@ const Tenders: React.FC = () => {
                     {displayedTenders.map((tender, index) => (
                         <li 
                             key={index} 
-                            className={`${styles.tenderCard} ${isFavorite(tender.publicationNumber) ? styles.tenderCardFavorite : ''}`}
+                            className={`${styles.tenderCard} 
+                                ${isFavorite(tender.publicationNumber) ? styles.tenderCardFavorite : ''}
+                                ${isToBeEntered(tender.publicationNumber) ? styles.tenderCardToBeEntered : ''}
+                                ${isNotToBeEntered(tender.publicationNumber) ? styles.tenderCardNotToBeEntered : ''}
+                            `}
                         >
                             <div className={styles.cardHeader}>
                                 <div className={styles.publicationNumber}>
@@ -100,10 +108,33 @@ const Tenders: React.FC = () => {
                                                 toggleTenderSelection(tender.publicationNumber);
                                             }}
                                             aria-label={isTenderSelected(tender.publicationNumber) ? "Deselect tender" : "Select tender"}
+                                            title={isTenderSelected(tender.publicationNumber) ? "Deselect tender" : "Select tender"}
                                         >
                                             {isTenderSelected(tender.publicationNumber) ? '✉️' : '📩'}
                                         </button>
                                     )}
+                                    <button
+                                        className={`${styles.statusButton} ${isToBeEntered(tender.publicationNumber) ? styles.toBeEnteredActive : ''}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleToBeEntered(tender.publicationNumber);
+                                        }}
+                                        aria-label={isToBeEntered(tender.publicationNumber) ? "Remove from to be entered" : "Mark as to be entered"}
+                                        title={isToBeEntered(tender.publicationNumber) ? "Remove from to be entered" : "Mark as to be entered"}
+                                    >
+                                        {isToBeEntered(tender.publicationNumber) ? '✓' : '✓'}
+                                    </button>
+                                    <button
+                                        className={`${styles.statusButton} ${isNotToBeEntered(tender.publicationNumber) ? styles.notToBeEnteredActive : ''}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleNotToBeEntered(tender.publicationNumber);
+                                        }}
+                                        aria-label={isNotToBeEntered(tender.publicationNumber) ? "Remove from not to be entered" : "Mark as not to be entered"}
+                                        title={isNotToBeEntered(tender.publicationNumber) ? "Remove from not to be entered" : "Mark as not to be entered"}
+                                    >
+                                        {isNotToBeEntered(tender.publicationNumber) ? '✕' : '✕'}
+                                    </button>
                                     <button
                                         className={`${styles.favoriteButton} ${isFavorite(tender.publicationNumber) ? styles.favoriteActive : ''}`}
                                         onClick={(e) => {
@@ -113,6 +144,7 @@ const Tenders: React.FC = () => {
                                                 : addToFavorites(tender);
                                         }}
                                         aria-label={isFavorite(tender.publicationNumber) ? "Remove from favorites" : "Add to favorites"}
+                                        title={isFavorite(tender.publicationNumber) ? "Remove from favorites" : "Add to favorites"}
                                     >
                                         {isFavorite(tender.publicationNumber) ? '★' : '☆'}
                                     </button>

@@ -62,6 +62,22 @@
     );
 }
 
+.tenderCardToBeEntered {
+    border-color: #2ecc71;
+    background: linear-gradient(to bottom, 
+        var(--bg-secondary), 
+        color-mix(in srgb, #2ecc71 3%, var(--bg-secondary))
+    );
+}
+
+.tenderCardNotToBeEntered {
+    border-color: #e74c3c;
+    background: linear-gradient(to bottom, 
+        var(--bg-secondary), 
+        color-mix(in srgb, #e74c3c 3%, var(--bg-secondary))
+    );
+}
+
 .cardHeader {
     display: flex;
     justify-content: space-between;
@@ -95,6 +111,28 @@
 
 .favoriteActive {
     color: #f1c40f;
+}
+
+.statusButton {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.statusButton:hover {
+    transform: scale(1.1);
+}
+
+.toBeEnteredActive {
+    color: #2ecc71;
+}
+
+.notToBeEnteredActive {
+    color: #e74c3c;
 }
 
 .selectButton {

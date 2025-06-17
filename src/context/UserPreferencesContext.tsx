@@ -21,6 +21,8 @@ interface UserPreferencesContextType {
     favorites: Tender[];
     emailAlerts: EmailAlert[];
     selectedTenders: Set<string>;
+    toBeEnteredTenders: Set<string>;
+    notToBeEnteredTenders: Set<string>;
     addToFavorites: (tender: Tender) => void;
     removeFromFavorites: (publicationNumber: string) => void;
     isFavorite: (publicationNumber: string) => boolean;
@@ -30,6 +32,10 @@ interface UserPreferencesContextType {
     getSelectedTenders: (tenders: Tender[]) => Tender[];
     addEmailAlert: (alert: { email: string, tenders: Tender[] }) => void;
     removeEmailAlert: (id: string) => void;
+    toggleToBeEntered: (publicationNumber: string) => void;
+    toggleNotToBeEntered: (publicationNumber: string) => void;
+    isToBeEntered: (publicationNumber: string) => boolean;
+    isNotToBeEntered: (publicationNumber: string) => boolean;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
@@ -41,6 +47,8 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
     });
 
     const [selectedTenders, setSelectedTenders] = useState<Set<string>>(new Set());
+    const [toBeEnteredTenders, setToBeEnteredTenders] = useState<Set<string>>(new Set());
+    const [notToBeEnteredTenders, setNotToBeEnteredTenders] = useState<Set<string>>(new Set());
 
     const [emailAlerts, setEmailAlerts] = useState<EmailAlert[]>(() => {
         const saved = localStorage.getItem('emailAlerts');
@@ -54,6 +62,14 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
     useEffect(() => {
         localStorage.setItem('emailAlerts', JSON.stringify(emailAlerts));
     }, [emailAlerts]);
+
+    useEffect(() => {
+        localStorage.setItem('toBeEnteredTenders', JSON.stringify(Array.from(toBeEnteredTenders)));
+    }, [toBeEnteredTenders]);
+
+    useEffect(() => {
+        localStorage.setItem('notToBeEnteredTenders', JSON.stringify(Array.from(notToBeEnteredTenders)));
+    }, [notToBeEnteredTenders]);
 
     const addToFavorites = (tender: Tender) => {
         setFavorites(prev => {
@@ -109,23 +125,73 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         setEmailAlerts(prev => prev.filter(alert => alert.id !== id));
     };
 
+    const toggleToBeEntered = (publicationNumber: string) => {
+        setToBeEnteredTenders(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(publicationNumber)) {
+                newSet.delete(publicationNumber);
+            } else {
+                newSet.add(publicationNumber);
+                // Remove from not to be entered if it was there
+                setNotToBeEnteredTenders(prev => {
+                    const newNotSet = new Set(prev);
+                    newNotSet.delete(publicationNumber);
+                    return newNotSet;
+                });
+            }
+            return newSet;
+        });
+    };
+
+    const toggleNotToBeEntered = (publicationNumber: string) => {
+        setNotToBeEnteredTenders(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(publicationNumber)) {
+                newSet.delete(publicationNumber);
+            } else {
+                newSet.add(publicationNumber);
+                // Remove from to be entered if it was there
+                setToBeEnteredTenders(prev => {
+                    const newToSet = new Set(prev);
+                    newToSet.delete(publicationNumber);
+                    return newToSet;
+                });
+            }
+            return newSet;
+        });
+    };
+
+    const isToBeEntered = (publicationNumber: string) => {
+        return toBeEnteredTenders.has(publicationNumber);
+    };
+
+    const isNotToBeEntered = (publicationNumber: string) => {
+        return notToBeEnteredTenders.has(publicationNumber);
+    };
+
+    const value = {
+        favorites,
+        emailAlerts,
+        selectedTenders,
+        toBeEnteredTenders,
+        notToBeEnteredTenders,
+        addToFavorites,
+        removeFromFavorites,
+        isFavorite,
+        toggleTenderSelection,
+        isTenderSelected,
+        clearSelectedTenders,
+        getSelectedTenders,
+        addEmailAlert,
+        removeEmailAlert,
+        toggleToBeEntered,
+        toggleNotToBeEntered,
+        isToBeEntered,
+        isNotToBeEntered
+    };
+
     return (
-        <UserPreferencesContext.Provider 
-            value={{
-                favorites,
-                emailAlerts,
-                selectedTenders,
-                addToFavorites,
-                removeFromFavorites,
-                isFavorite,
-                toggleTenderSelection,
-                isTenderSelected,
-                clearSelectedTenders,
-                getSelectedTenders,
-                addEmailAlert,
-                removeEmailAlert
-            }}
-        >
+        <UserPreferencesContext.Provider value={value}>
             {children}
         </UserPreferencesContext.Provider>
     );
