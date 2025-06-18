@@ -2,6 +2,7 @@ import React from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { UserPreferencesProvider } from './context/UserPreferencesContext';
 import Tenders from './components/tenders';
+import ScrollToTopButton from './components/ScrollToTopButton';
 import './styles/theme.css';
 
 const App: React.FC = () => {
@@ -9,6 +10,7 @@ const App: React.FC = () => {
     <ThemeProvider>
       <UserPreferencesProvider>
         <Tenders />
+        <ScrollToTopButton />
       </UserPreferencesProvider>
     </ThemeProvider>
   );

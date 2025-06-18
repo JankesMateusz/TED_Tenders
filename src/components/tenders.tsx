@@ -4,7 +4,6 @@ import { filterTendersByCpvCodes, isItRelatedCpv, removeChangeNotices } from "..
 import { getCpvName } from "../utils/cpvMapping";
 import { useUserPreferences } from "../context/UserPreferencesContext";
 import Header from "./header";
-import EmailAlertDialog from "./EmailAlertDialog";
 import styles from "./Tenders.module.css";
 
 const Tenders: React.FC = () => {
@@ -14,7 +13,6 @@ const Tenders: React.FC = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isFiltered, setIsFiltered] = useState<boolean>(false);
     const [totalTenders, setTotalTenders] = useState<number>(0);
-    const [isEmailAlertOpen, setIsEmailAlertOpen] = useState(false);
     const { 
         addToFavorites, 
         removeFromFavorites, 
@@ -45,8 +43,6 @@ const Tenders: React.FC = () => {
 
     const handleAllTendersClick = () => setIsFiltered(false);
     const handleFilterClick = () => setIsFiltered(true);
-    const handleOpenEmailAlert = () => setIsEmailAlertOpen(true);
-    const handleCloseEmailAlert = () => setIsEmailAlertOpen(false);
 
     const getDisplayedCpvCodes = (tender: any): string[] => {
         const cpvCodes = isFiltered 
@@ -66,12 +62,6 @@ const Tenders: React.FC = () => {
                 onAllTendersClick={handleAllTendersClick}
                 onFilterClick={handleFilterClick}
                 isFiltered={isFiltered}
-                onSetEmailAlert={handleOpenEmailAlert}
-            />
-            <EmailAlertDialog
-                isOpen={isEmailAlertOpen}
-                onClose={handleCloseEmailAlert}
-                tenders={displayedTenders}
             />
             <div className={styles.container}>
                 {isLoading && (

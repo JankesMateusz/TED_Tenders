@@ -11,7 +11,6 @@ interface HeaderProps {
     onAllTendersClick: () => void;
     onFilterClick: () => void;
     isFiltered: boolean;
-    onSetEmailAlert: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -20,8 +19,7 @@ const Header: React.FC<HeaderProps> = ({
     totalTenders,
     onAllTendersClick,
     onFilterClick,
-    isFiltered,
-    onSetEmailAlert
+    isFiltered
 }) => {
     const { theme, toggleTheme } = useTheme();
 
@@ -59,15 +57,6 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         Filter
                     </button>
-                    {isFiltered && (
-                        <button
-                            className={`${styles.button} ${styles.emailAlertButton}`}
-                            onClick={onSetEmailAlert}
-                            title="Set up email alerts for IT tenders"
-                        >
-                            📧 Mailing
-                        </button>
-                    )}
                     <button
                         className={`${styles.button} ${styles.themeToggle}`}
                         onClick={toggleTheme}
