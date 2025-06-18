@@ -62,4 +62,68 @@
 
 .activeTab .closeButton {
     color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .tabsContainer {
+        padding: 0 12px;
+    }
+    
+    .tabsList {
+        gap: 3px;
+        min-height: 36px;
+    }
+    
+    .tab {
+        padding: 6px 12px;
+        max-width: 200px;
+        min-width: 120px;
+    }
+    
+    .tabTitle {
+        font-size: 13px;
+    }
+    
+    .closeButton {
+        font-size: 16px;
+        padding: 0 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tabsContainer {
+        padding: 0 8px;
+    }
+    
+    .tabsList {
+        gap: 2px;
+        min-height: 32px;
+    }
+    
+    .tab {
+        padding: 4px 8px;
+        max-width: 150px;
+        min-width: 100px;
+    }
+    
+    .tabTitle {
+        font-size: 12px;
+    }
+    
+    .closeButton {
+        font-size: 14px;
+        padding: 0 2px;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .tab:hover {
+        background: var(--bg-primary);
+    }
+    
+    .closeButton:hover {
+        opacity: 0.7;
+    }
 } 

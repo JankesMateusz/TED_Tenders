@@ -289,4 +289,274 @@
 
 .link:hover {
     background: var(--button-primary-hover);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .container {
+        padding: 20px;
+    }
+    
+    .tendersList {
+        gap: 16px;
+    }
+    
+    .tenderCard {
+        padding: 16px;
+    }
+    
+    .info {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+    }
+    
+    .cpvCodes {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 16px;
+    }
+    
+    .message {
+        padding: 16px;
+        font-size: 14px;
+    }
+    
+    .loading {
+        padding: 16px;
+        font-size: 14px;
+    }
+    
+    .tendersList {
+        gap: 12px;
+    }
+    
+    .tenderCard {
+        padding: 12px;
+    }
+    
+    .cardHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .publicationNumber {
+        font-size: 12px;
+    }
+    
+    .cardActions {
+        align-self: flex-end;
+        gap: 6px;
+    }
+    
+    .favoriteButton {
+        font-size: 20px;
+        padding: 6px;
+    }
+    
+    .statusButton,
+    .selectButton {
+        font-size: 18px;
+        padding: 6px;
+    }
+    
+    .title {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+    
+    .info {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .infoItem {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+    }
+    
+    .infoLabel {
+        font-size: 11px;
+    }
+    
+    .infoValue {
+        font-size: 13px;
+        text-align: right;
+    }
+    
+    .cpvSection {
+        margin: 12px 0;
+    }
+    
+    .cpvToggle {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+    
+    .cpvCodes {
+        grid-template-columns: 1fr;
+        gap: 6px;
+        padding: 10px;
+    }
+    
+    .cpvCodeContainer {
+        padding: 4px 8px;
+    }
+    
+    .cpvCode {
+        font-size: 12px;
+    }
+    
+    .cpvName {
+        font-size: 12px;
+    }
+    
+    .relatedCpvCodes {
+        margin-left: 16px;
+    }
+    
+    .relatedCpvCode {
+        padding: 3px 8px;
+        font-size: 0.85em;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 12px;
+    }
+    
+    .message {
+        padding: 12px;
+        font-size: 13px;
+    }
+    
+    .loading {
+        padding: 12px;
+        font-size: 13px;
+    }
+    
+    .tendersList {
+        gap: 10px;
+    }
+    
+    .tenderCard {
+        padding: 10px;
+    }
+    
+    .cardHeader {
+        gap: 6px;
+        margin-bottom: 10px;
+    }
+    
+    .publicationNumber {
+        font-size: 11px;
+    }
+    
+    .cardActions {
+        gap: 4px;
+    }
+    
+    .favoriteButton {
+        font-size: 18px;
+        padding: 4px;
+    }
+    
+    .statusButton,
+    .selectButton {
+        font-size: 16px;
+        padding: 4px;
+    }
+    
+    .title {
+        font-size: 14px;
+        margin-bottom: 10px;
+        line-height: 1.3;
+    }
+    
+    .info {
+        gap: 6px;
+        margin-bottom: 10px;
+    }
+    
+    .infoItem {
+        padding: 3px 0;
+    }
+    
+    .infoLabel {
+        font-size: 10px;
+    }
+    
+    .infoValue {
+        font-size: 12px;
+    }
+    
+    .cpvSection {
+        margin: 10px 0;
+    }
+    
+    .cpvToggle {
+        padding: 5px 8px;
+        font-size: 12px;
+    }
+    
+    .cpvCodes {
+        gap: 4px;
+        padding: 8px;
+    }
+    
+    .cpvCodeContainer {
+        padding: 3px 6px;
+    }
+    
+    .cpvCode {
+        font-size: 11px;
+    }
+    
+    .cpvName {
+        font-size: 11px;
+    }
+    
+    .relatedCpvCodes {
+        margin-left: 12px;
+    }
+    
+    .relatedCpvCode {
+        padding: 2px 6px;
+        font-size: 0.8em;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .tenderCard:hover {
+        transform: none;
+    }
+    
+    .favoriteButton:hover,
+    .statusButton:hover,
+    .selectButton:hover {
+        transform: none;
+    }
+    
+    .cpvToggle:hover {
+        background: var(--bg-primary);
+    }
+    
+    .cpvCodeContainer:hover {
+        background: var(--cpv-bg);
+    }
+    
+    .relatedCpvCode:hover {
+        background: var(--cpv-bg);
+        opacity: 0.8;
+    }
 } 

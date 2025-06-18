@@ -1,46 +1,117 @@
-# Getting Started with Create React App
+# Zamówienia TED - Wyszukiwarka zamówień publicznych
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Aplikacja React do przeglądania i filtrowania zamówień publicznych z bazy TED (Tenders Electronic Daily). Aplikacja jest w pełni responsywna i zoptymalizowana dla urządzeń mobilnych.
 
-## Available Scripts
+## Funkcje
 
-In the project directory, you can run:
+- 📱 **W pełni responsywna** - działa świetnie na wszystkich urządzeniach
+- 🌙 **Tryb ciemny/jasny** - automatyczne przełączanie motywów
+- 🔍 **Filtrowanie** - tylko zamówienia IT lub wszystkie branże
+- ⭐ **Ulubione** - zapisywanie interesujących przetargów
+- 📧 **Powiadomienia email** - wysyłanie wybranych przetargów na email
+- 📅 **Wybór daty** - przeglądanie przetargów z konkretnego dnia
+- 🏷️ **Kody CPV** - szczegółowe informacje o kodach klasyfikacji
+- 📊 **Statusy** - oznaczanie przetargów do udziału lub rezygnacji
 
-### `npm start`
+## Responsywność
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Aplikacja została zaprojektowana z myślą o urządzeniach mobilnych:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- **Mobile-first design** - projektowanie zaczynając od urządzeń mobilnych
+- **Touch-friendly** - przyciski i interakcje zoptymalizowane dla dotyku
+- **Adaptive layout** - układ dostosowuje się do różnych rozmiarów ekranów
+- **PWA ready** - może być zainstalowana jako aplikacja na urządzeniach mobilnych
 
-### `npm test`
+### Breakpointy
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Desktop**: > 1024px
+- **Tablet**: 768px - 1024px  
+- **Mobile**: 480px - 768px
+- **Small Mobile**: < 480px
 
-### `npm run build`
+## Technologie
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **React 19** - nowoczesny framework JavaScript
+- **TypeScript** - typowanie statyczne
+- **CSS Modules** - modułowe style
+- **React DatePicker** - komponent wyboru daty
+- **Axios** - HTTP client
+- **PostCSS + Autoprefixer** - automatyczne prefiksy CSS
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Instalacja i uruchomienie
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Wymagania
 
-### `npm run eject`
+- Node.js 16+ 
+- npm lub yarn
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Instalacja
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+# Klonowanie repozytorium
+git clone <repository-url>
+cd ted-eu
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+# Instalacja zależności
+npm install
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+# Uruchomienie w trybie deweloperskim
+npm start
+```
 
-## Learn More
+Aplikacja będzie dostępna pod adresem [http://localhost:3000](http://localhost:3000)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Build produkcyjny
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm run build
+```
+
+## Struktura projektu
+
+```
+src/
+├── components/          # Komponenty React
+│   ├── Header.tsx      # Nagłówek z kontrolkami
+│   ├── Tenders.tsx     # Główny komponent listy przetargów
+│   └── EmailAlertDialog.tsx # Dialog powiadomień email
+├── context/            # Konteksty React
+│   ├── ThemeContext.tsx # Zarządzanie motywami
+│   └── UserPreferencesContext.tsx # Preferencje użytkownika
+├── services/           # Serwisy API
+├── utils/              # Funkcje pomocnicze
+└── styles/             # Style globalne
+```
+
+## Dostosowywanie
+
+### Motywy
+
+Aplikacja używa CSS Custom Properties do motywów. Możesz dostosować kolory w `src/styles/theme.css`.
+
+### Responsywność
+
+Style responsywne są zdefiniowane w każdym pliku CSS Module z użyciem media queries:
+
+```css
+@media (max-width: 768px) {
+  /* Style dla urządzeń mobilnych */
+}
+
+@media (max-width: 480px) {
+  /* Style dla małych urządzeń mobilnych */
+}
+```
+
+## Deployment
+
+Aplikacja jest gotowa do deploymentu na Firebase Hosting:
+
+```bash
+npm run build
+firebase deploy
+```
+
+## Licencja
+
+MIT License
