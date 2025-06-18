@@ -17,8 +17,6 @@ const Tenders: React.FC = () => {
         addToFavorites, 
         removeFromFavorites, 
         isFavorite,
-        toggleTenderSelection,
-        isTenderSelected,
         toggleToBeEntered,
         toggleNotToBeEntered,
         isToBeEntered,
