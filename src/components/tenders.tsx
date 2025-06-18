@@ -90,19 +90,6 @@ const Tenders: React.FC = () => {
                                     Numer publikacji: {tender.publicationNumber}
                                 </div>
                                 <div className={styles.cardActions}>
-                                    {isFiltered && (
-                                        <button
-                                            className={`${styles.selectButton} ${isTenderSelected(tender.publicationNumber) ? styles.selectActive : ''}`}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleTenderSelection(tender.publicationNumber);
-                                            }}
-                                            aria-label={isTenderSelected(tender.publicationNumber) ? "Deselect tender" : "Select tender"}
-                                            title={isTenderSelected(tender.publicationNumber) ? "Deselect tender" : "Select tender"}
-                                        >
-                                            {isTenderSelected(tender.publicationNumber) ? '✉️' : '📩'}
-                                        </button>
-                                    )}
                                     <button
                                         className={`${styles.statusButton} ${isToBeEntered(tender.publicationNumber) ? styles.toBeEnteredActive : ''}`}
                                         onClick={(e) => {

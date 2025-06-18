@@ -47,8 +47,14 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
     });
 
     const [selectedTenders, setSelectedTenders] = useState<Set<string>>(new Set());
-    const [toBeEnteredTenders, setToBeEnteredTenders] = useState<Set<string>>(new Set());
-    const [notToBeEnteredTenders, setNotToBeEnteredTenders] = useState<Set<string>>(new Set());
+    const [toBeEnteredTenders, setToBeEnteredTenders] = useState<Set<string>>(() => {
+        const saved = localStorage.getItem('toBeEnteredTenders');
+        return saved ? new Set(JSON.parse(saved)) : new Set();
+    });
+    const [notToBeEnteredTenders, setNotToBeEnteredTenders] = useState<Set<string>>(() => {
+        const saved = localStorage.getItem('notToBeEnteredTenders');
+        return saved ? new Set(JSON.parse(saved)) : new Set();
+    });
 
     const [emailAlerts, setEmailAlerts] = useState<EmailAlert[]>(() => {
         const saved = localStorage.getItem('emailAlerts');
