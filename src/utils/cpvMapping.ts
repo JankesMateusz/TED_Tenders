@@ -134,7 +134,11 @@ export const cpvMapping: { [key: string]: string } = {
     "30121200-5": "Urządzenia powielające",
     "30121300-6": "Maszyny do drukowania offsetowego",
     "30121400-7": "Urządzenia drukujące i powielające",
-    "50313200-3": "Usługi w zakresie konserwacji kopiarki"
+    "50313200-3": "Usługi w zakresie konserwacji kopiarki",
+    "42962000-7": "Urządzenia drukujące i graficzne",
+    "30232180-0": "Drukarki do drukowania na papierze",
+    "30232200-6": "Drukarki do drukowania na papierze",
+    "30232220-2": "Drukarki do drukowania na papierze",
 };
 
 export const getCpvName = (code: string): string => {
