@@ -58,8 +58,15 @@ const cpvCodes = [
 export const isItRelatedCpv = (code: string): boolean => {
     const baseCode = code.split('-')[0];
     return cpvCodes.some(cpvCode => {
-        const filterBase = cpvCode.split('-')[0];
-        return baseCode.startsWith(filterBase);
+        // Check if the filter code has a suffix
+        if (cpvCode.includes('-')) {
+            // If filter code has suffix, split it and compare base codes
+            const filterBase = cpvCode.split('-')[0];
+            return baseCode.startsWith(filterBase);
+        } else {
+            // If filter code has no suffix, compare directly
+            return baseCode.startsWith(cpvCode);
+        }
     });
 };
 
