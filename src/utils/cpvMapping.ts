@@ -139,6 +139,10 @@ export const cpvMapping: { [key: string]: string } = {
     "30232180-0": "Drukarki do drukowania na papierze",
     "30232200-6": "Drukarki do drukowania na papierze",
     "30232220-2": "Drukarki do drukowania na papierze",
+    "32550000-3": "Sprzęt telefoniczny",
+    "32500000-8": "Urządzenia telekomunikacyjne",
+    "32250000-0": "Telefony komórkowe",
+    "64212000-5": "Usługi telefonii komórkowej"
 };
 
 export const getCpvName = (code: string): string => {

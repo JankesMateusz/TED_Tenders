@@ -6,6 +6,60 @@
     color: var(--text-primary);
 }
 
+.filtersSection {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    flex-wrap: wrap;
+}
+
+.sourceFilters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.sourceFiltersLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: 4px;
+}
+
+.sourceFilterLabel {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.sourceCheckbox {
+    display: none;
+}
+
+.sourceFilterBadge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.sourceFilterBadge:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+
 .message {
     text-align: center;
     padding: 20px;
@@ -153,12 +207,43 @@
     color: var(--button-primary);
 }
 
+.badgesContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
 .title {
     color: var(--text-primary);
     font-size: 18px;
     font-weight: 600;
     margin: 0 0 16px 0;
     line-height: 1.4;
+}
+
+.sourceBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.orderTypeBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .info {

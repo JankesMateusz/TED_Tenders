@@ -1,0 +1,6 @@
+export enum TenderSource {
+    TED = 'TED',
+    E_ZAMOWIENIA = 'E_ZAMOWIENIA',
+    BAZA_KONKURENCYJNOSCI = 'BAZA_KONKURENCYJNOSCI'
+}
+
