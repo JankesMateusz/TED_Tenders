@@ -4,7 +4,7 @@ import { fetchEzamowienia } from "../utils/fetchEzamowienia";
 import { filterTendersByCpvCodes, isItRelatedCpv, removeChangeNotices } from "../utils/cpvFilter";
 import { getCpvName } from "../utils/cpvMapping";
 import { useUserPreferences } from "../context/UserPreferencesContext";
-import { getSourceConfig, getOrderTypeConfig, OrderType, orderTypeConfig } from "../utils/tenderSources";
+import { getSourceConfig, getOrderTypeConfig, OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
 import Header from "./header";
 import styles from "./Tenders.module.css";
