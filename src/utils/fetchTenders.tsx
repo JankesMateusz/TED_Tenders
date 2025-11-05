@@ -1,5 +1,6 @@
 import axios from "axios";
 import { Notice } from "../models/Notice";
+import { TenderSource } from "../types/TenderSource";
 
 const API_URL = "https://us-central1-tendersted.cloudfunctions.net/api/tedProxy";
 
@@ -31,7 +32,7 @@ export const fetchTenders = async (date: string): Promise<Notice[]> => {
                 }
             });
 
-            const notices = response.data.notices.map((notice: any) => new Notice(notice));
+            const notices = response.data.notices.map((notice: any) => new Notice(notice, TenderSource.TED));
             allNotices = [...allNotices, ...notices];
 
             // Jeśli otrzymaliśmy mniej niż 250 wyników, oznacza to że to ostatnia strona

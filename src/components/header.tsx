@@ -3,36 +3,55 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
+import { TenderSource } from "../types/TenderSource";
+import { tenderSourceConfig } from "../utils/tenderSources";
 
 interface HeaderProps {
     selectedDate: Date | null;
     setSelectedDate: (date: Date | null) => void;
-    totalTenders: number;
+    tendersCountBySource: Record<TenderSource, number>;
     onAllTendersClick: () => void;
     onFilterClick: () => void;
     isFiltered: boolean;
+    selectedSources: TenderSource[];
 }
 
 const Header: React.FC<HeaderProps> = ({ 
     selectedDate, 
     setSelectedDate, 
-    totalTenders,
+    tendersCountBySource,
     onAllTendersClick,
     onFilterClick,
-    isFiltered
+    isFiltered,
+    selectedSources
 }) => {
     const { theme, toggleTheme } = useTheme();
 
     return (
         <header className={styles.header}>
-            <h1 className={styles.title}>Zamówienia TED</h1>
+            <h1 className={styles.title}>Przetargi</h1>
             <div className={styles.tenderInfo}>
-                <span className={styles.tenderCount}>
-                    Liczba przetargów: {totalTenders}
-                </span>
-                <span className={styles.filterStatus}>
-                    ({isFiltered ? 'tylko IT' : 'wszystkie branże'})
-                </span>
+                <div className={styles.tenderCounts}>
+                    {[TenderSource.TED, TenderSource.E_ZAMOWIENIA, TenderSource.BAZA_KONKURENCYJNOSCI].map((source) => {
+                        const isSelected = selectedSources.includes(source);
+                        
+                        // Ukrywamy licznik jeśli źródło jest odfiltrowane
+                        if (!isSelected) return null;
+                        
+                        const config = tenderSourceConfig[source];
+                        const count = tendersCountBySource[source];
+                        
+                        return (
+                            <span key={source} className={styles.tenderCountItem}>
+                                <span className={styles.tenderCountLabel}>{config.label}:</span>
+                                <span className={styles.tenderCountValue}>{count}</span>
+                            </span>
+                        );
+                    })}
+                    <span className={styles.filterStatus}>
+                        ({isFiltered ? 'tylko IT' : 'wszystkie branże'})
+                    </span>
+                </div>
             </div>
             <div className={styles.controls}>
                 <div className={styles.datePicker}>

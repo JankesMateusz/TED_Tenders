@@ -1,3 +1,5 @@
+import { TenderSource } from "../types/TenderSource";
+
 export class Notice {
     publicationNumber: string;
     publicationDate: string;
@@ -9,8 +11,10 @@ export class Notice {
     buyerName: string;
     buyerCity: string;
     changeNoticeVersionIdentifier: string | null;
+    source: TenderSource;
+    orderType?: "Delivery" | "Services" | "Works"; // Tylko dla eZamówienia
     
-    constructor(data: any) {
+    constructor(data: any, source: TenderSource = TenderSource.TED) {
         this.publicationNumber = data["publication-number"];
         this.publicationDate = this.formatDate(data["publication-date"]);
         this.deadlineDate = this.formatDate(data["deadline-receipt-tender-date-lot"]) || "Brak terminu";
@@ -21,6 +25,7 @@ export class Notice {
         this.buyerName = data["organisation-name-buyer"]?.pol?.[0] || "Brak danych";
         this.buyerCity = data["buyer-city"]?.mul?.[0] || "Brak miasta";
         this.changeNoticeVersionIdentifier = data["change-notice-version-identifier"] || null;
+        this.source = source;
     }
 
     private extractCountry(titleObj: any): string {

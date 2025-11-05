@@ -2,16 +2,20 @@
     display: flex;
     align-items: center;
     gap: 20px;
-    padding: 16px 24px;
+    padding: 20px 24px;
+    min-height: 80px;
     background: linear-gradient(to right, #2c3e50, #3498db);
     color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    justify-content: space-between;
+    overflow: visible;
 }
 
 .title {
     margin: 0;
     font-size: 24px;
     font-weight: 600;
+    flex-shrink: 0;
 }
 
 .tenderInfo {
@@ -19,8 +23,40 @@
     align-items: center;
     gap: 8px;
     background: rgba(255, 255, 255, 0.2);
-    padding: 8px 16px;
+    padding: 8px 20px;
     border-radius: 20px;
+    flex-shrink: 1;
+    min-width: 350px;
+    overflow: visible;
+}
+
+.tenderCounts {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.tenderCountItem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tenderCountLabel {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.tenderCountValue {
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.3);
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 24px;
+    text-align: center;
 }
 
 .tenderCount {
@@ -39,6 +75,15 @@
     display: flex;
     align-items: center;
     gap: 20px;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.filtersGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .datePicker {
@@ -68,9 +113,52 @@
     background: white;
 }
 
+.sourceFilters {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.sourceFiltersLabel {
+    font-size: 13px;
+    font-weight: 500;
+    color: white;
+    margin-right: 2px;
+}
+
+.sourceFilterLabel {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.sourceCheckbox {
+    display: none;
+}
+
+.sourceFilterBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.sourceFilterBadge:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+
 .buttons {
     display: flex;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .button {
@@ -302,6 +390,20 @@
         min-width: 120px;
     }
     
+    .sourceFilters {
+        justify-content: center;
+        gap: 6px;
+    }
+    
+    .sourceFiltersLabel {
+        font-size: 12px;
+    }
+    
+    .sourceFilterBadge {
+        padding: 3px 8px;
+        font-size: 10px;
+    }
+    
     .buttons {
         justify-content: center;
         flex-wrap: wrap;
@@ -361,6 +463,20 @@
         padding: 6px 8px;
         font-size: 12px;
         min-width: 100px;
+    }
+    
+    .sourceFilters {
+        gap: 4px;
+    }
+    
+    .sourceFiltersLabel {
+        font-size: 11px;
+        margin-right: 2px;
+    }
+    
+    .sourceFilterBadge {
+        padding: 2px 6px;
+        font-size: 9px;
     }
     
     .buttons {
