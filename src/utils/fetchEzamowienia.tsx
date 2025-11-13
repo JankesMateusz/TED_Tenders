@@ -108,7 +108,7 @@ const mapEzamowieniaToNotice = (data: EzamowieniaResponse, orderType: "Delivery"
     const notice = new Notice(noticeData, TenderSource.E_ZAMOWIENIA);
     
     // Nadpisujemy link i inne pola specyficzne dla eZamówienia
-    notice.link = `https://ezamowienia.gov.pl/mo-board/Notice/Details/${data.noticeNumber}`;
+    notice.link = `https://ezamowienia.gov.pl/mo-client-board/bzp/notice-details/id/${data.objectId}`;
     notice.country = "Polska";
     notice.orderType = orderType;
     
