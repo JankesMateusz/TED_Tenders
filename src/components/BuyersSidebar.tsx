@@ -1,10 +1,7 @@
 import React, { useMemo } from "react";
 import styles from "./BuyersSidebar.module.css";
 
-interface Buyer {
-    name: string;
-    count: number;
-}
+//removed Buyer interface
 
 interface BuyersSidebarProps {
     displayedTenders: any[];
