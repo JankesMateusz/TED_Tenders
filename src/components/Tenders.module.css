@@ -1,8 +1,22 @@
-.container {
-    padding: 24px;
-    max-width: 1200px;
+.mainContent {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    max-width: 1600px;
     margin: 0 auto;
-    background-color: var(--bg-primary);
+    padding: 24px;
+}
+
+.contentArea {
+    flex: 1;
+    min-width: 0;
+}
+
+.container {
+    padding: 0;
+    max-width: none;
+    margin: 0;
+    background-color: transparent;
     color: var(--text-primary);
 }
 
@@ -22,7 +36,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
 }
 
 .sourceFiltersLabel {
@@ -58,6 +73,36 @@
 .sourceFilterBadge:hover {
     opacity: 0.9;
     transform: scale(1.05);
+}
+
+.statusCounts {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.statusCountItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.statusCountLabel {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.statusCountValue {
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 24px;
+    text-align: center;
 }
 
 .message {
@@ -378,8 +423,13 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-    .container {
+    .mainContent {
+        flex-direction: column;
         padding: 20px;
+    }
+    
+    .container {
+        padding: 0;
     }
     
     .tendersList {
@@ -401,8 +451,13 @@
 }
 
 @media (max-width: 768px) {
-    .container {
+    .mainContent {
         padding: 16px;
+    }
+    
+    
+    .container {
+        padding: 0;
     }
     
     .message {
@@ -515,8 +570,13 @@
 }
 
 @media (max-width: 480px) {
-    .container {
+    .mainContent {
         padding: 12px;
+    }
+    
+    
+    .container {
+        padding: 0;
     }
     
     .message {

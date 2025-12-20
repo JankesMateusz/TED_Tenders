@@ -7,6 +7,7 @@ import { useUserPreferences } from "../context/UserPreferencesContext";
 import { getSourceConfig, getOrderTypeConfig, OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
 import Header from "./header";
+import BuyersSidebar from "./BuyersSidebar";
 import styles from "./Tenders.module.css";
 
 const Tenders: React.FC = () => {
@@ -29,6 +30,7 @@ const Tenders: React.FC = () => {
         "Services",
         "Works"
     ]);
+    const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
     const { 
         addToFavorites, 
         removeFromFavorites, 
@@ -36,7 +38,9 @@ const Tenders: React.FC = () => {
         toggleToBeEntered,
         toggleNotToBeEntered,
         isToBeEntered,
-        isNotToBeEntered
+        isNotToBeEntered,
+        toBeEnteredTenders,
+        notToBeEnteredTenders
     } = useUserPreferences();
     const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
 
@@ -136,6 +140,11 @@ const Tenders: React.FC = () => {
             return true;
         });
         
+        // Filtrowanie po zamawiającym
+        if (selectedBuyer) {
+            result = result.filter(tender => tender.buyerName === selectedBuyer);
+        }
+        
         // Filtrowanie po CPV jeśli włączone
         if (isFiltered) {
             result = filterTendersByCpvCodes(result);
@@ -149,7 +158,7 @@ const Tenders: React.FC = () => {
         });
         
         return result;
-    }, [tenders, selectedSources, selectedOrderTypes, isFiltered]);
+    }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, isFiltered]);
 
     useEffect(() => {
         // Liczenie przetargów per źródło
@@ -168,6 +177,32 @@ const Tenders: React.FC = () => {
         setTendersCountBySource(counts);
     }, [displayedTenders]);
 
+    // Liczenie przetargów oznaczonych jako "do wpisania" i "nie do wpisania"
+    const toBeEnteredCount = useMemo(() => {
+        return displayedTenders.filter(tender => toBeEnteredTenders.has(tender.publicationNumber)).length;
+    }, [displayedTenders, toBeEnteredTenders]);
+
+    const notToBeEnteredCount = useMemo(() => {
+        return displayedTenders.filter(tender => notToBeEnteredTenders.has(tender.publicationNumber)).length;
+    }, [displayedTenders, notToBeEnteredTenders]);
+
+    // Lista unikalnych zamawiających z widocznych przetargów
+    const buyersList = useMemo(() => {
+        const buyersMap = new Map<string, number>();
+        
+        displayedTenders.forEach(tender => {
+            const buyerName = tender.buyerName;
+            if (buyerName && buyerName !== "Brak danych") {
+                buyersMap.set(buyerName, (buyersMap.get(buyerName) || 0) + 1);
+            }
+        });
+        
+        // Sortowanie alfabetycznie
+        return Array.from(buyersMap.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+    }, [displayedTenders]);
+
     return (
         <div className={styles.app}>
             <Header
@@ -179,7 +214,14 @@ const Tenders: React.FC = () => {
                 isFiltered={isFiltered}
                 selectedSources={selectedSources}
             />
-            <div className={styles.container}>
+            <div className={styles.mainContent}>
+                <BuyersSidebar
+                    displayedTenders={displayedTenders}
+                    selectedBuyer={selectedBuyer}
+                    onBuyerSelect={setSelectedBuyer}
+                />
+                <div className={styles.contentArea}>
+                    <div className={styles.container}>
                 <div className={styles.filtersSection}>
                     <div className={styles.sourceFilters}>
                         <span className={styles.sourceFiltersLabel}>Źródła:</span>
@@ -237,6 +279,20 @@ const Tenders: React.FC = () => {
                             })}
                         </div>
                     )}
+                    <div className={styles.statusCounts}>
+                        <span className={styles.statusCountItem}>
+                            <span className={styles.statusCountLabel}>Do wpisania:</span>
+                            <span className={styles.statusCountValue} style={{ color: '#2ecc71' }}>
+                                {toBeEnteredCount}
+                            </span>
+                        </span>
+                        <span className={styles.statusCountItem}>
+                            <span className={styles.statusCountLabel}>Nie do wpisania:</span>
+                            <span className={styles.statusCountValue} style={{ color: '#e74c3c' }}>
+                                {notToBeEnteredCount}
+                            </span>
+                        </span>
+                    </div>
                 </div>
                 {isLoading && (
                     <p className={styles.loading}>Ładowanie danych...</p>
@@ -382,6 +438,8 @@ const Tenders: React.FC = () => {
                         </li>
                     ))}
                 </ul>
+                    </div>
+                </div>
             </div>
         </div>
     );

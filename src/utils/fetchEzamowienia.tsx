@@ -13,6 +13,7 @@ interface EzamowieniaResponse {
     organizationName: string;
     organizationCity: string;
     moIdentifier: string;
+    objectId: string;
     orderType: "Delivery" | "Services" | "Works";
     [key: string]: any;
 }
