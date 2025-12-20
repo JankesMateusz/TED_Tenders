@@ -140,9 +140,18 @@ const Tenders: React.FC = () => {
             return true;
         });
         
-        // Filtrowanie po zamawiającym
+        // Filtrowanie po zamawiającym z użyciem znormalizowanej nazwy
         if (selectedBuyer) {
-            result = result.filter(tender => tender.buyerName === selectedBuyer);
+            // Funkcja normalizująca nazwę zamawiającego (ta sama co w BuyersSidebar)
+            const normalizeBuyerName = (name: string): string => {
+                return name.trim().toLowerCase().replace(/\s+/g, ' ');
+            };
+            
+            const normalizedSelected = normalizeBuyerName(selectedBuyer);
+            result = result.filter(tender => {
+                const normalizedTenderName = normalizeBuyerName(tender.buyerName);
+                return normalizedTenderName === normalizedSelected;
+            });
         }
         
         // Filtrowanie po CPV jeśli włączone
