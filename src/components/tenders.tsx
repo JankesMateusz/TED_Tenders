@@ -186,23 +186,6 @@ const Tenders: React.FC = () => {
         return displayedTenders.filter(tender => notToBeEnteredTenders.has(tender.publicationNumber)).length;
     }, [displayedTenders, notToBeEnteredTenders]);
 
-    // Lista unikalnych zamawiających z widocznych przetargów
-    const buyersList = useMemo(() => {
-        const buyersMap = new Map<string, number>();
-        
-        displayedTenders.forEach(tender => {
-            const buyerName = tender.buyerName;
-            if (buyerName && buyerName !== "Brak danych") {
-                buyersMap.set(buyerName, (buyersMap.get(buyerName) || 0) + 1);
-            }
-        });
-        
-        // Sortowanie alfabetycznie
-        return Array.from(buyersMap.entries())
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
-    }, [displayedTenders]);
-
     return (
         <div className={styles.app}>
             <Header
