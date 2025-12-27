@@ -89,20 +89,6 @@ const extractCpvCodes = (cpvString: string): string[] => {
 };
 
 /**
- * Konwertuje datę YYYY-MM-DD na zakres ISO (od początku do końca dnia)
- */
-const getDateRangeISO = (date: string): { from: string; to: string } => {
-    const dateObj = new Date(date);
-    dateObj.setHours(0, 0, 0, 0);
-    const from = dateObj.toISOString();
-    
-    dateObj.setHours(23, 59, 59, 999);
-    const to = dateObj.toISOString();
-    
-    return { from, to };
-};
-
-/**
  * Mapuje dane z eZamówienia do struktury Notice
  */
 const mapEzamowieniaToNotice = (data: EzamowieniaResponse, orderType: "Delivery" | "Services" | "Works"): Notice => {
