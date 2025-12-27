@@ -111,7 +111,6 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
 
     const currentSelected = activeView === "buyers" ? selectedBuyer : selectedCity;
     const currentList = activeView === "buyers" ? buyersList : citiesList;
-    const currentTitle = activeView === "buyers" ? "Zamawiający" : "Miasta";
 
     return (
         <aside className={styles.sidebar}>
