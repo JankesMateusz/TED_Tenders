@@ -12,7 +12,11 @@ import styles from "./Tenders.module.css";
 
 const Tenders: React.FC = () => {
     const [tenders, setTenders] = useState<any[]>([]);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+    const today = new Date();
+    const [startDate, setStartDate] = useState<Date | null>(today);
+    const [endDate, setEndDate] = useState<Date | null>(today);
+    const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
+    const [searchQuery, setSearchQuery] = useState<string>("");
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isFiltered, setIsFiltered] = useState<boolean>(false);
     const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
@@ -45,15 +49,20 @@ const Tenders: React.FC = () => {
     const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
 
     useEffect(() => {
-        if (!selectedDate) return;
+        if (!startDate) return;
+        // Gdy pojedynczy dzień, używamy tej samej daty dla start i end
+        const effectiveEndDate = useDateRange ? endDate : startDate;
+        if (!effectiveEndDate) return;
+        
         const loadTenders = async () => {
             setIsLoading(true);
-            const formattedDate = selectedDate.toISOString().slice(0, 10);
+            const formattedStartDate = startDate.toISOString().slice(0, 10);
+            const formattedEndDate = effectiveEndDate.toISOString().slice(0, 10);
             
             // Pobieranie równolegle z TED i eZamówienia
             const results = await Promise.allSettled([
-                fetchTenders(formattedDate),
-                fetchEzamowienia(formattedDate)
+                fetchTenders(formattedStartDate, formattedEndDate),
+                fetchEzamowienia(formattedStartDate, formattedEndDate)
             ]);
             
             let allTenders: any[] = [];
@@ -77,7 +86,22 @@ const Tenders: React.FC = () => {
             setIsLoading(false);
         };
         loadTenders();
-    }, [selectedDate]);
+    }, [startDate, endDate, useDateRange]);
+    
+    // Gdy przełączamy na pojedynczy dzień, ustaw endDate na startDate
+    useEffect(() => {
+        if (!useDateRange && startDate) {
+            setEndDate(startDate);
+        }
+    }, [useDateRange, startDate]);
+    
+    // Gdy zmieniamy startDate w trybie pojedynczego dnia, aktualizuj endDate
+    const handleStartDateChange = (date: Date | null) => {
+        setStartDate(date);
+        if (!useDateRange && date) {
+            setEndDate(date);
+        }
+    };
 
     const handleAllTendersClick = () => setIsFiltered(false);
     const handleFilterClick = () => setIsFiltered(true);
@@ -159,6 +183,24 @@ const Tenders: React.FC = () => {
             result = filterTendersByCpvCodes(result);
         }
         
+        // Filtrowanie po wyszukiwaniu
+        if (searchQuery.trim()) {
+            const query = searchQuery.trim().toLowerCase();
+            result = result.filter(tender => {
+                // Wyszukiwanie po tytule
+                if (tender.title?.toLowerCase().includes(query)) return true;
+                // Wyszukiwanie po zamawiającym
+                if (tender.buyerName?.toLowerCase().includes(query)) return true;
+                // Wyszukiwanie po mieście
+                if (tender.buyerCity?.toLowerCase().includes(query)) return true;
+                // Wyszukiwanie po numerze publikacji
+                if (tender.publicationNumber?.toLowerCase().includes(query)) return true;
+                // Wyszukiwanie po kodach CPV
+                if (tender.cpvCodes?.some((cpv: string) => cpv.toLowerCase().includes(query))) return true;
+                return false;
+            });
+        }
+        
         // Sortowanie po dacie publikacji (najnowsze na górze)
         result.sort((a, b) => {
             const dateA = parseDate(a.publicationDate);
@@ -167,7 +209,7 @@ const Tenders: React.FC = () => {
         });
         
         return result;
-    }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, isFiltered]);
+    }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, isFiltered, searchQuery]);
 
     useEffect(() => {
         // Liczenie przetargów per źródło
@@ -198,8 +240,12 @@ const Tenders: React.FC = () => {
     return (
         <div className={styles.app}>
             <Header
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
+                startDate={startDate}
+                endDate={endDate}
+                setStartDate={handleStartDateChange}
+                setEndDate={setEndDate}
+                useDateRange={useDateRange}
+                setUseDateRange={setUseDateRange}
                 tendersCountBySource={tendersCountBySource}
                 onAllTendersClick={handleAllTendersClick}
                 onFilterClick={handleFilterClick}
@@ -214,6 +260,15 @@ const Tenders: React.FC = () => {
                 />
                 <div className={styles.contentArea}>
                     <div className={styles.container}>
+                <div className={styles.searchSection}>
+                    <input
+                        type="text"
+                        placeholder="Szukaj w przetargach (tytuł, zamawiający, miasto, numer, CPV)..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className={styles.searchInput}
+                    />
+                </div>
                 <div className={styles.filtersSection}>
                     <div className={styles.sourceFilters}>
                         <span className={styles.sourceFiltersLabel}>Źródła:</span>
@@ -371,7 +426,12 @@ const Tenders: React.FC = () => {
                             <div className={styles.info}>
                                 <div className={styles.infoItem}>
                                     <span className={styles.infoLabel}>Data publikacji</span>
-                                    <span className={styles.infoValue}>{tender.publicationDate}</span>
+                                    <span className={styles.infoValue}>
+                                        {tender.publicationDate}
+                                        {tender.publicationTime && tender.source === TenderSource.E_ZAMOWIENIA && (
+                                            <span className={styles.publicationTime}> {tender.publicationTime}</span>
+                                        )}
+                                    </span>
                                 </div>
                                 <div className={styles.infoItem}>
                                     <span className={styles.infoLabel}>Termin składania</span>

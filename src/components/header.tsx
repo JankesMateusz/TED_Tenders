@@ -1,5 +1,5 @@
 import React from "react";
-import DatePicker from "react-datepicker";
+import DatePicker, { DatePickerProps } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
@@ -7,8 +7,12 @@ import { TenderSource } from "../types/TenderSource";
 import { tenderSourceConfig } from "../utils/tenderSources";
 
 interface HeaderProps {
-    selectedDate: Date | null;
-    setSelectedDate: (date: Date | null) => void;
+    startDate: Date | null;
+    endDate: Date | null;
+    setStartDate: (date: Date | null) => void;
+    setEndDate: (date: Date | null) => void;
+    useDateRange: boolean;
+    setUseDateRange: (value: boolean) => void;
     tendersCountBySource: Record<TenderSource, number>;
     onAllTendersClick: () => void;
     onFilterClick: () => void;
@@ -17,8 +21,12 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ 
-    selectedDate, 
-    setSelectedDate, 
+    startDate, 
+    endDate,
+    setStartDate,
+    setEndDate,
+    useDateRange,
+    setUseDateRange,
     tendersCountBySource,
     onAllTendersClick,
     onFilterClick,
@@ -55,13 +63,52 @@ const Header: React.FC<HeaderProps> = ({
             </div>
             <div className={styles.controls}>
                 <div className={styles.datePicker}>
-                    <label className={styles.datePickerLabel}>Wybierz datę:</label>
-                    <DatePicker
-                        selected={selectedDate}
-                        onChange={(date) => setSelectedDate(date)}
-                        dateFormat="dd-MM-yyyy"
-                        placeholderText="Wybierz datę"
-                    />
+                    <label className={styles.datePickerLabel}>
+                        {useDateRange ? "Zakres dat:" : "Data:"}
+                    </label>
+                    {useDateRange ? (
+                        <div className={styles.dateRangeContainer}>
+                            <DatePicker
+                                selected={startDate}
+                                onChange={(date) => setStartDate(date)}
+                                selectsStart
+                                startDate={startDate}
+                                endDate={endDate}
+                                dateFormat="dd-MM-yyyy"
+                                placeholderText="Od"
+                                className={styles.dateInput}
+                            />
+                            <span className={styles.dateSeparator}>-</span>
+                            <DatePicker
+                                selected={endDate}
+                                onChange={(date) => setEndDate(date)}
+                                selectsEnd
+                                startDate={startDate}
+                                endDate={endDate}
+                                minDate={startDate || undefined}
+                                dateFormat="dd-MM-yyyy"
+                                placeholderText="Do"
+                                className={styles.dateInput}
+                            />
+                        </div>
+                    ) : (
+                        <DatePicker
+                            selected={startDate}
+                            onChange={(date) => setStartDate(date)}
+                            dateFormat="dd-MM-yyyy"
+                            placeholderText="Wybierz datę"
+                            className={styles.dateInput}
+                        />
+                    )}
+                    <label className={styles.dateRangeCheckbox}>
+                        <input
+                            type="checkbox"
+                            checked={useDateRange}
+                            onChange={(e) => setUseDateRange(e.target.checked)}
+                            className={styles.checkboxInput}
+                        />
+                        <span className={styles.checkboxLabel}>Zakres dat</span>
+                    </label>
                 </div>
                 <div className={styles.buttons}>
                     <button 

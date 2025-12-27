@@ -40,6 +40,26 @@ const formatDateFromISO = (isoDate: string | null): string => {
 };
 
 /**
+ * Wyciąga godzinę z daty ISO w formacie HH:MM
+ */
+const extractTimeFromISO = (isoDate: string | null): string | undefined => {
+    if (!isoDate) return undefined;
+    
+    try {
+        const date = new Date(isoDate);
+        if (isNaN(date.getTime())) return undefined;
+        
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        
+        return `${hours}:${minutes}`;
+    } catch (error) {
+        console.warn('Error extracting time from ISO:', isoDate, error);
+        return undefined;
+    }
+};
+
+/**
  * Wyciąga kody CPV z stringa w formacie "kod (nazwa)" lub "kod, kod"
  */
 const extractCpvCodes = (cpvString: string): string[] => {
@@ -115,20 +135,37 @@ const mapEzamowieniaToNotice = (data: EzamowieniaResponse, orderType: "Delivery"
     
     // Formatujemy daty ręcznie (bo konstruktor oczekuje innego formatu)
     notice.publicationDate = formatDateFromISO(data.publicationDate);
+    notice.publicationTime = extractTimeFromISO(data.publicationDate);
     notice.deadlineDate = formatDateFromISO(data.submittingOffersDate) || "Brak terminu";
     
     return notice;
 };
 
 /**
+ * Konwertuje zakres dat na zakres ISO
+ */
+const getDateRangeISOFromRange = (startDate: string, endDate: string): { from: string; to: string } => {
+    const startDateObj = new Date(startDate);
+    startDateObj.setHours(0, 0, 0, 0);
+    const from = startDateObj.toISOString();
+    
+    const endDateObj = new Date(endDate);
+    endDateObj.setHours(23, 59, 59, 999);
+    const to = endDateObj.toISOString();
+    
+    return { from, to };
+};
+
+/**
  * Pobiera przetargi z eZamówienia dla danego typu zamówienia (Delivery, Services, Works)
  */
 const fetchEzamowieniaByOrderType = async (
-    date: string,
+    startDate: string,
+    endDate: string,
     orderType: "Delivery" | "Services" | "Works"
 ): Promise<Notice[]> => {
     try {
-        const { from: publicationDateFrom, to: publicationDateTo } = getDateRangeISO(date);
+        const { from: publicationDateFrom, to: publicationDateTo } = getDateRangeISOFromRange(startDate, endDate);
         let allNotices: Notice[] = [];
         let currentPage = 1;
         const pageSize = 10;
@@ -176,15 +213,15 @@ const fetchEzamowieniaByOrderType = async (
 };
 
 /**
- * Pobiera przetargi z eZamówienia dla danego dnia (wszystkie typy: Delivery, Services, Works)
+ * Pobiera przetargi z eZamówienia dla zakresu dat (wszystkie typy: Delivery, Services, Works)
  */
-export const fetchEzamowienia = async (date: string): Promise<Notice[]> => {
+export const fetchEzamowienia = async (startDate: string, endDate: string): Promise<Notice[]> => {
     try {
         // Pobieranie równolegle wszystkich trzech typów zamówień
         const results = await Promise.allSettled([
-            fetchEzamowieniaByOrderType(date, "Delivery"),
-            fetchEzamowieniaByOrderType(date, "Services"),
-            fetchEzamowieniaByOrderType(date, "Works")
+            fetchEzamowieniaByOrderType(startDate, endDate, "Delivery"),
+            fetchEzamowieniaByOrderType(startDate, endDate, "Services"),
+            fetchEzamowieniaByOrderType(startDate, endDate, "Works")
         ]);
 
         let allNotices: Notice[] = [];

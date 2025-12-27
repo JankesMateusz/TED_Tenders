@@ -3,6 +3,7 @@ import { TenderSource } from "../types/TenderSource";
 export class Notice {
     publicationNumber: string;
     publicationDate: string;
+    publicationTime?: string; // Godzina publikacji (tylko dla eZamówienia)
     deadlineDate: string;
     cpvCodes: string[];
     country: string;

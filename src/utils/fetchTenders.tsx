@@ -4,16 +4,39 @@ import { TenderSource } from "../types/TenderSource";
 
 const API_URL = "https://us-central1-tendersted.cloudfunctions.net/api/tedProxy";
 
-export const fetchTenders = async (date: string): Promise<Notice[]> => {
+/**
+ * Konwertuje zakres dat na format TED API (YYYYMMDD)
+ */
+const formatDateForTED = (date: string): string => {
+    return date.replace(/-/g, "");
+};
+
+/**
+ * Generuje query dla TED API dla zakresu dat
+ */
+const buildTEDQuery = (startDate: string, endDate: string): string => {
+    const startFormatted = formatDateForTED(startDate);
+    const endFormatted = formatDateForTED(endDate);
+    
+    if (startDate === endDate) {
+        // Dla jednego dnia używamy prostszego query
+        return `buyer-country=POL AND publication-date=${startFormatted} AND classification-cpv=teeq AND notice-type=cn-standard`;
+    } else {
+        // Dla zakresu dat używamy zakresu
+        return `buyer-country=POL AND publication-date>=${startFormatted} AND publication-date<=${endFormatted} AND classification-cpv=teeq AND notice-type=cn-standard`;
+    }
+};
+
+export const fetchTenders = async (startDate: string, endDate: string): Promise<Notice[]> => {
     try {
-        const formattedDate = date.replace(/-/g, ""); // Zamiana yyyy-mm-dd na yyyyMMdd
+        const query = buildTEDQuery(startDate, endDate);
         let allNotices: Notice[] = [];
         let currentPage = 1;
         let hasMoreData = true;
 
         while (hasMoreData) {
             const response = await axios.post(API_URL, {
-                query: `buyer-country=POL AND publication-date=${formattedDate} AND classification-cpv=teeq AND notice-type=cn-standard`,
+                query: query,
                 fields: [
                     "notice-title",
                     "classification-cpv",
