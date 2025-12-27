@@ -11,16 +11,34 @@
     max-height: calc(100vh - 120px);
 }
 
-.sidebarTitle {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 16px 0;
+.headerRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 2px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+}
+
+.headerButton {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+}
+
+.headerButton:hover {
+    color: var(--text-primary);
+}
+
+.headerButtonActive {
+    color: var(--button-primary);
+    font-weight: 700;
 }
 
 .clearFilterButton {

@@ -35,6 +35,7 @@ const Tenders: React.FC = () => {
         "Works"
     ]);
     const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
+    const [selectedCity, setSelectedCity] = useState<string | null>(null);
     const { 
         addToFavorites, 
         removeFromFavorites, 
@@ -167,14 +168,27 @@ const Tenders: React.FC = () => {
         // Filtrowanie po zamawiającym z użyciem znormalizowanej nazwy
         if (selectedBuyer) {
             // Funkcja normalizująca nazwę zamawiającego (ta sama co w BuyersSidebar)
-            const normalizeBuyerName = (name: string): string => {
+            const normalizeName = (name: string): string => {
                 return name.trim().toLowerCase().replace(/\s+/g, ' ');
             };
             
-            const normalizedSelected = normalizeBuyerName(selectedBuyer);
+            const normalizedSelected = normalizeName(selectedBuyer);
             result = result.filter(tender => {
-                const normalizedTenderName = normalizeBuyerName(tender.buyerName);
+                const normalizedTenderName = normalizeName(tender.buyerName);
                 return normalizedTenderName === normalizedSelected;
+            });
+        }
+        
+        // Filtrowanie po mieście z użyciem znormalizowanej nazwy
+        if (selectedCity) {
+            const normalizeName = (name: string): string => {
+                return name.trim().toLowerCase().replace(/\s+/g, ' ');
+            };
+            
+            const normalizedSelected = normalizeName(selectedCity);
+            result = result.filter(tender => {
+                const normalizedTenderCity = normalizeName(tender.buyerCity);
+                return normalizedTenderCity === normalizedSelected;
             });
         }
         
@@ -209,7 +223,7 @@ const Tenders: React.FC = () => {
         });
         
         return result;
-    }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, isFiltered, searchQuery]);
+    }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery]);
 
     useEffect(() => {
         // Liczenie przetargów per źródło
@@ -256,7 +270,9 @@ const Tenders: React.FC = () => {
                 <BuyersSidebar
                     displayedTenders={displayedTenders}
                     selectedBuyer={selectedBuyer}
+                    selectedCity={selectedCity}
                     onBuyerSelect={setSelectedBuyer}
+                    onCitySelect={setSelectedCity}
                 />
                 <div className={styles.contentArea}>
                     <div className={styles.container}>

@@ -1,21 +1,29 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import styles from "./BuyersSidebar.module.css";
 
 //removed Buyer interface
 
+type ViewType = "buyers" | "cities";
+
 interface BuyersSidebarProps {
     displayedTenders: any[];
     selectedBuyer: string | null;
+    selectedCity: string | null;
     onBuyerSelect: (buyerName: string | null) => void;
+    onCitySelect: (cityName: string | null) => void;
 }
 
 const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
     displayedTenders,
     selectedBuyer,
-    onBuyerSelect
+    selectedCity,
+    onBuyerSelect,
+    onCitySelect
 }) => {
-    // Funkcja normalizująca nazwę zamawiającego
-    const normalizeBuyerName = (name: string): string => {
+    const [activeView, setActiveView] = useState<ViewType>("buyers");
+    
+    // Funkcja normalizująca nazwę
+    const normalizeName = (name: string): string => {
         return name.trim().toLowerCase().replace(/\s+/g, ' ');
     };
 
@@ -26,7 +34,7 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
         displayedTenders.forEach(tender => {
             const buyerName = tender.buyerName;
             if (buyerName && buyerName !== "Brak danych") {
-                const normalizedName = normalizeBuyerName(buyerName);
+                const normalizedName = normalizeName(buyerName);
                 const existing = buyersMap.get(normalizedName);
                 
                 if (existing) {
@@ -49,23 +57,78 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
             .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
     }, [displayedTenders]);
 
+    // Lista unikalnych miast z widocznych przetargów
+    const citiesList = useMemo(() => {
+        const citiesMap = new Map<string, { name: string; count: number }>();
+        
+        displayedTenders.forEach(tender => {
+            const cityName = tender.buyerCity;
+            if (cityName && cityName !== "Brak miasta") {
+                const normalizedName = normalizeName(cityName);
+                const existing = citiesMap.get(normalizedName);
+                
+                if (existing) {
+                    citiesMap.set(normalizedName, {
+                        name: cityName.length > existing.name.length ? cityName : existing.name,
+                        count: existing.count + 1
+                    });
+                } else {
+                    citiesMap.set(normalizedName, {
+                        name: cityName,
+                        count: 1
+                    });
+                }
+            }
+        });
+        
+        // Sortowanie alfabetycznie
+        return Array.from(citiesMap.values())
+            .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+    }, [displayedTenders]);
+
     const handleBuyerClick = (buyerName: string) => {
         // Normalizujemy również przy porównywaniu z selectedBuyer
-        const normalizedSelected = selectedBuyer ? normalizeBuyerName(selectedBuyer) : null;
-        const normalizedClicked = normalizeBuyerName(buyerName);
+        const normalizedSelected = selectedBuyer ? normalizeName(selectedBuyer) : null;
+        const normalizedClicked = normalizeName(buyerName);
         
         onBuyerSelect(normalizedSelected === normalizedClicked ? null : buyerName);
     };
 
-    const handleClearFilter = () => {
-        onBuyerSelect(null);
+    const handleCityClick = (cityName: string) => {
+        const normalizedSelected = selectedCity ? normalizeName(selectedCity) : null;
+        const normalizedClicked = normalizeName(cityName);
+        
+        onCitySelect(normalizedSelected === normalizedClicked ? null : cityName);
     };
+
+    const handleClearFilter = () => {
+        if (activeView === "buyers") {
+            onBuyerSelect(null);
+        } else {
+            onCitySelect(null);
+        }
+    };
+
+    const currentSelected = activeView === "buyers" ? selectedBuyer : selectedCity;
+    const currentList = activeView === "buyers" ? buyersList : citiesList;
+    const currentTitle = activeView === "buyers" ? "Zamawiający" : "Miasta";
 
     return (
         <aside className={styles.sidebar}>
-            <h3 className={styles.sidebarTitle}>
-                Zamawiający ({buyersList.length})
-                {selectedBuyer && (
+            <div className={styles.headerRow}>
+                <h3 
+                    className={`${styles.headerButton} ${activeView === "buyers" ? styles.headerButtonActive : ''}`}
+                    onClick={() => setActiveView("buyers")}
+                >
+                    Zamawiający ({buyersList.length})
+                </h3>
+                <h3 
+                    className={`${styles.headerButton} ${activeView === "cities" ? styles.headerButtonActive : ''}`}
+                    onClick={() => setActiveView("cities")}
+                >
+                    Miasta ({citiesList.length})
+                </h3>
+                {currentSelected && (
                     <button 
                         className={styles.clearFilterButton}
                         onClick={handleClearFilter}
@@ -74,28 +137,30 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
                         ✕
                     </button>
                 )}
-            </h3>
-            {buyersList.length > 0 ? (
+            </div>
+            {currentList.length > 0 ? (
                 <ul className={styles.buyersList}>
-                    {buyersList.map((buyer, index) => {
-                        const normalizedBuyerName = normalizeBuyerName(buyer.name);
-                        const normalizedSelected = selectedBuyer ? normalizeBuyerName(selectedBuyer) : null;
-                        const isSelected = normalizedSelected === normalizedBuyerName;
+                    {currentList.map((item, index) => {
+                        const normalizedName = normalizeName(item.name);
+                        const normalizedSelected = currentSelected ? normalizeName(currentSelected) : null;
+                        const isSelected = normalizedSelected === normalizedName;
                         
                         return (
                             <li 
                                 key={index} 
                                 className={`${styles.buyerItem} ${isSelected ? styles.buyerItemSelected : ''}`}
-                                onClick={() => handleBuyerClick(buyer.name)}
+                                onClick={() => activeView === "buyers" ? handleBuyerClick(item.name) : handleCityClick(item.name)}
                             >
-                                <span className={styles.buyerName}>{buyer.name}</span>
-                                <span className={styles.buyerCount}>{buyer.count}</span>
+                                <span className={styles.buyerName}>{item.name}</span>
+                                <span className={styles.buyerCount}>{item.count}</span>
                             </li>
                         );
                     })}
                 </ul>
             ) : (
-                <p className={styles.noBuyers}>Brak zamawiających</p>
+                <p className={styles.noBuyers}>
+                    {activeView === "buyers" ? "Brak zamawiających" : "Brak miast"}
+                </p>
             )}
         </aside>
     );
