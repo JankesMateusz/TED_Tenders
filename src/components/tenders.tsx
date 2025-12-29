@@ -47,7 +47,8 @@ const Tenders: React.FC = () => {
         notToBeEnteredTenders
     } = useUserPreferences();
     const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
-    const prevValuesRef = useRef({ startDate, endDate, useDateRange });
+    const prevValuesRef = useRef<{ startDate: Date | null; endDate: Date | null; useDateRange: boolean } | null>(null);
+    const isInitialMount = useRef(true);
 
     // Funkcja do pobierania przetargów
     const loadTenders = useCallback(async () => {
@@ -89,7 +90,20 @@ const Tenders: React.FC = () => {
 
     // Pobieranie przetargów tylko gdy zmienia się startDate lub endDate (nie useDateRange)
     useEffect(() => {
+        // Przy pierwszym renderze załaduj przetargi automatycznie
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            loadTenders();
+            prevValuesRef.current = { startDate, endDate, useDateRange };
+            return;
+        }
+        
         const prev = prevValuesRef.current;
+        if (!prev) {
+            prevValuesRef.current = { startDate, endDate, useDateRange };
+            return;
+        }
+        
         const startDateChanged = prev.startDate?.getTime() !== startDate?.getTime();
         const endDateChanged = prev.endDate?.getTime() !== endDate?.getTime();
         const onlyDateRangeChanged = !startDateChanged && !endDateChanged && prev.useDateRange !== useDateRange;
