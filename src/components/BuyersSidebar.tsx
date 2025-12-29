@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import styles from "./BuyersSidebar.module.css";
 import { normalizeName } from "../utils/stringUtils";
 import { Tender } from "../types/Tender";
@@ -22,6 +22,25 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
     onCitySelect
 }) => {
     const [activeView, setActiveView] = useState<ViewType>("buyers");
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Obsługa Ctrl+F
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ctrl+F lub Cmd+F (na Mac)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                if (searchInputRef.current) {
+                    searchInputRef.current.focus();
+                    searchInputRef.current.select();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Lista unikalnych zamawiających z widocznych przetargów
     const buyersList = useMemo(() => {
@@ -105,8 +124,20 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
         }
     };
 
+    // Filtrowana lista na podstawie wyszukiwania
+    const filteredList = useMemo(() => {
+        const list = activeView === "buyers" ? buyersList : citiesList;
+        if (!searchQuery.trim()) {
+            return list;
+        }
+        
+        const query = normalizeName(searchQuery);
+        return list.filter(item => 
+            normalizeName(item.name).includes(query)
+        );
+    }, [activeView, buyersList, citiesList, searchQuery]);
+
     const currentSelected = activeView === "buyers" ? selectedBuyer : selectedCity;
-    const currentList = activeView === "buyers" ? buyersList : citiesList;
 
     return (
         <aside className={styles.sidebar}>
@@ -133,9 +164,19 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
                     </button>
                 )}
             </div>
-            {currentList.length > 0 ? (
+            <div className={styles.searchContainer}>
+                <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder={activeView === "buyers" ? "Szukaj zamawiającego..." : "Szukaj miasta..."}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={styles.searchInput}
+                />
+            </div>
+            {filteredList.length > 0 ? (
                 <ul className={styles.buyersList}>
-                    {currentList.map((item) => {
+                    {filteredList.map((item) => {
                         const normalizedName = normalizeName(item.name);
                         const normalizedSelected = currentSelected ? normalizeName(currentSelected) : null;
                         const isSelected = normalizedSelected === normalizedName;
@@ -154,7 +195,10 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
                 </ul>
             ) : (
                 <p className={styles.noBuyers}>
-                    {activeView === "buyers" ? MESSAGES.NO_BUYERS : MESSAGES.NO_CITIES}
+                    {searchQuery.trim() 
+                        ? `Brak wyników dla "${searchQuery}"`
+                        : (activeView === "buyers" ? MESSAGES.NO_BUYERS : MESSAGES.NO_CITIES)
+                    }
                 </p>
             )}
         </aside>
