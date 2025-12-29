@@ -73,18 +73,19 @@ export const isItRelatedCpv = (code: string): boolean => {
 };
 
 // Function to filter out change notices
-export const removeChangeNotices = (tenders: any[]) => {
+export const removeChangeNotices = <T extends { changeNoticeVersionIdentifier?: string | null }>(tenders: T[]): T[] => {
     return tenders.filter(tender => !tender.changeNoticeVersionIdentifier);
 };
 
 // Function to filter tenders by CPV codes
-export const filterTendersByCpvCodes = (tenders: any[]) => {
+export const filterTendersByCpvCodes = <T extends { cpvCodes: string[] }>(tenders: T[]): T[] => {
     return tenders.filter(tender => {
         return tender.cpvCodes.some((tenderCpv: string) => isItRelatedCpv(tenderCpv));
     });
 };
 
-export const isITRelatedTender = (tender: any) => {
+// Note: This function appears to be unused but kept for potential future use
+export const isITRelatedTender = (tender: { cpvCodes: string[] }): boolean => {
     return tender.cpvCodes.some((tenderCpv: string) => {
         const tenderCpvBase = tenderCpv.split('-')[0];
         return cpvCodes.some(filterCpv => filterCpv.startsWith(tenderCpvBase));

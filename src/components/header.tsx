@@ -5,6 +5,7 @@ import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
 import { TenderSource } from "../types/TenderSource";
 import { tenderSourceConfig } from "../utils/tenderSources";
+import { DATE_FORMAT, PLACEHOLDER_TEXTS } from "../constants";
 
 interface HeaderProps {
     startDate: Date | null;
@@ -74,8 +75,8 @@ const Header: React.FC<HeaderProps> = ({
                                 selectsStart
                                 startDate={startDate}
                                 endDate={endDate}
-                                dateFormat="dd-MM-yyyy"
-                                placeholderText="Od"
+                                dateFormat={DATE_FORMAT}
+                                placeholderText={PLACEHOLDER_TEXTS.DATE_FROM}
                                 className={styles.dateInput}
                             />
                             <span className={styles.dateSeparator}>-</span>
@@ -86,8 +87,8 @@ const Header: React.FC<HeaderProps> = ({
                                 startDate={startDate}
                                 endDate={endDate}
                                 minDate={startDate || undefined}
-                                dateFormat="dd-MM-yyyy"
-                                placeholderText="Do"
+                                dateFormat={DATE_FORMAT}
+                                placeholderText={PLACEHOLDER_TEXTS.DATE_TO}
                                 className={styles.dateInput}
                             />
                         </div>
@@ -95,8 +96,8 @@ const Header: React.FC<HeaderProps> = ({
                         <DatePicker
                             selected={startDate}
                             onChange={(date) => setStartDate(date)}
-                            dateFormat="dd-MM-yyyy"
-                            placeholderText="Wybierz datę"
+                            dateFormat={DATE_FORMAT}
+                            placeholderText={PLACEHOLDER_TEXTS.DATE_PICKER}
                             className={styles.dateInput}
                         />
                     )}

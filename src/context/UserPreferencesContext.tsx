@@ -1,15 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface Tender {
-    publicationNumber: string;
-    title: string;
-    buyerName: string;
-    buyerCity: string;
-    publicationDate: string;
-    deadlineDate: string;
-    cpvCodes: string[];
-    link: string;
-}
+import { Tender } from '../types/Tender';
 
 interface EmailAlert {
     id: string;

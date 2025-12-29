@@ -154,7 +154,7 @@ const fetchEzamowieniaByOrderType = async (
         const { from: publicationDateFrom, to: publicationDateTo } = getDateRangeISOFromRange(startDate, endDate);
         let allNotices: Notice[] = [];
         let currentPage = 1;
-        const pageSize = 10;
+        const PAGE_SIZE = 10;
         let hasMoreData = true;
 
         while (hasMoreData) {
@@ -167,7 +167,7 @@ const fetchEzamowieniaByOrderType = async (
                 SortingColumnName: "PublicationDate",
                 SortingDirection: "DESC",
                 PageNumber: currentPage.toString(),
-                PageSize: pageSize.toString()
+                PageSize: PAGE_SIZE.toString()
             });
 
             const response = await axios.get(`${API_URL}?${params.toString()}`, {
@@ -182,8 +182,8 @@ const fetchEzamowieniaByOrderType = async (
             
             allNotices = [...allNotices, ...notices];
 
-            // Jeśli otrzymaliśmy mniej niż pageSize wyników, oznacza to że to ostatnia strona
-            if (notices.length < pageSize) {
+            // Jeśli otrzymaliśmy mniej niż PAGE_SIZE wyników, oznacza to że to ostatnia strona
+            if (notices.length < PAGE_SIZE) {
                 hasMoreData = false;
             } else {
                 currentPage++;

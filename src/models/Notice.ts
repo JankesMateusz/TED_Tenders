@@ -1,12 +1,13 @@
 import { TenderSource } from "../types/TenderSource";
+import { Tender } from "../types/Tender";
 
-export class Notice {
+export class Notice implements Tender {
     publicationNumber: string;
     publicationDate: string;
     publicationTime?: string; // Godzina publikacji (tylko dla eZamówienia)
     deadlineDate: string;
     cpvCodes: string[];
-    country: string;
+    country?: string;
     title: string;
     link: string;
     buyerName: string;

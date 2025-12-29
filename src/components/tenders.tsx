@@ -3,15 +3,18 @@ import { fetchTenders } from "../utils/fetchTenders";
 import { fetchEzamowienia } from "../utils/fetchEzamowienia";
 import { filterTendersByCpvCodes, isItRelatedCpv, removeChangeNotices } from "../utils/cpvFilter";
 import { getCpvName } from "../utils/cpvMapping";
+import { normalizeName } from "../utils/stringUtils";
 import { useUserPreferences } from "../context/UserPreferencesContext";
 import { getSourceConfig, getOrderTypeConfig, OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
+import { Tender } from "../types/Tender";
+import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS, MESSAGES } from "../constants";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import styles from "./Tenders.module.css";
 
 const Tenders: React.FC = () => {
-    const [tenders, setTenders] = useState<any[]>([]);
+    const [tenders, setTenders] = useState<Tender[]>([]);
     const today = new Date();
     const [startDate, setStartDate] = useState<Date | null>(today);
     const [endDate, setEndDate] = useState<Date | null>(today);
@@ -29,11 +32,7 @@ const Tenders: React.FC = () => {
         TenderSource.E_ZAMOWIENIA,
         TenderSource.BAZA_KONKURENCYJNOSCI
     ]);
-    const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>([
-        "Delivery",
-        "Services",
-        "Works"
-    ]);
+    const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>([...DEFAULT_ORDER_TYPES]);
     const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
     const [selectedCity, setSelectedCity] = useState<string | null>(null);
     const { 
@@ -143,7 +142,7 @@ const Tenders: React.FC = () => {
         return new Date(0);
     };
 
-    const getDisplayedCpvCodes = (tender: any): string[] => {
+    const getDisplayedCpvCodes = (tender: Tender): string[] => {
         const cpvCodes = isFiltered 
             ? tender.cpvCodes.filter((cpv: string) => isItRelatedCpv(cpv))
             : tender.cpvCodes;
@@ -167,11 +166,6 @@ const Tenders: React.FC = () => {
         
         // Filtrowanie po zamawiającym z użyciem znormalizowanej nazwy
         if (selectedBuyer) {
-            // Funkcja normalizująca nazwę zamawiającego (ta sama co w BuyersSidebar)
-            const normalizeName = (name: string): string => {
-                return name.trim().toLowerCase().replace(/\s+/g, ' ');
-            };
-            
             const normalizedSelected = normalizeName(selectedBuyer);
             result = result.filter(tender => {
                 const normalizedTenderName = normalizeName(tender.buyerName);
@@ -181,10 +175,6 @@ const Tenders: React.FC = () => {
         
         // Filtrowanie po mieście z użyciem znormalizowanej nazwy
         if (selectedCity) {
-            const normalizeName = (name: string): string => {
-                return name.trim().toLowerCase().replace(/\s+/g, ' ');
-            };
-            
             const normalizedSelected = normalizeName(selectedCity);
             result = result.filter(tender => {
                 const normalizedTenderCity = normalizeName(tender.buyerCity);
@@ -279,7 +269,7 @@ const Tenders: React.FC = () => {
                 <div className={styles.searchSection}>
                     <input
                         type="text"
-                        placeholder="Szukaj w przetargach (tytuł, zamawiający, miasto, numer, CPV)..."
+                        placeholder={PLACEHOLDER_TEXTS.SEARCH}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className={styles.searchInput}
@@ -316,7 +306,7 @@ const Tenders: React.FC = () => {
                     {selectedSources.includes(TenderSource.E_ZAMOWIENIA) && (
                         <div className={styles.sourceFilters}>
                             <span className={styles.sourceFiltersLabel}>Typy:</span>
-                            {(["Delivery", "Services", "Works"] as OrderType[]).map((orderType) => {
+                            {DEFAULT_ORDER_TYPES.map((orderType) => {
                                 const config = getOrderTypeConfig(orderType);
                                 const isSelected = selectedOrderTypes.includes(orderType);
                                 return (
@@ -358,20 +348,17 @@ const Tenders: React.FC = () => {
                     </div>
                 </div>
                 {isLoading && (
-                    <p className={styles.loading}>Ładowanie danych...</p>
+                    <p className={styles.loading}>{MESSAGES.LOADING}</p>
                 )}
                 {displayedTenders.length === 0 && !isLoading && (
                     <p className={styles.message}>
-                        {isFiltered 
-                            ? "Brak zamówień IT dla wybranej daty."
-                            : "Brak zamówień dla wybranej daty."
-                        }
+                        {isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}
                     </p>
                 )}
                 <ul className={styles.tendersList}>
-                    {displayedTenders.map((tender, index) => (
+                    {displayedTenders.map((tender) => (
                         <li 
-                            key={index} 
+                            key={tender.publicationNumber} 
                             className={`${styles.tenderCard} 
                                 ${isFavorite(tender.publicationNumber) ? styles.tenderCardFavorite : ''}
                                 ${isToBeEntered(tender.publicationNumber) ? styles.tenderCardToBeEntered : ''}
@@ -389,10 +376,10 @@ const Tenders: React.FC = () => {
                                             e.stopPropagation();
                                             toggleToBeEntered(tender.publicationNumber);
                                         }}
-                                        aria-label={isToBeEntered(tender.publicationNumber) ? "Remove from to be entered" : "Mark as to be entered"}
-                                        title={isToBeEntered(tender.publicationNumber) ? "Remove from to be entered" : "Mark as to be entered"}
+                                        aria-label={isToBeEntered(tender.publicationNumber) ? "Usuń z do wpisania" : "Oznacz jako do wpisania"}
+                                        title={isToBeEntered(tender.publicationNumber) ? "Usuń z do wpisania" : "Oznacz jako do wpisania"}
                                     >
-                                        {isToBeEntered(tender.publicationNumber) ? '✓' : '✓'}
+                                        ✓
                                     </button>
                                     <button
                                         className={`${styles.statusButton} ${isNotToBeEntered(tender.publicationNumber) ? styles.notToBeEnteredActive : ''}`}
@@ -400,10 +387,10 @@ const Tenders: React.FC = () => {
                                             e.stopPropagation();
                                             toggleNotToBeEntered(tender.publicationNumber);
                                         }}
-                                        aria-label={isNotToBeEntered(tender.publicationNumber) ? "Remove from not to be entered" : "Mark as not to be entered"}
-                                        title={isNotToBeEntered(tender.publicationNumber) ? "Remove from not to be entered" : "Mark as not to be entered"}
+                                        aria-label={isNotToBeEntered(tender.publicationNumber) ? "Usuń z nie do wpisania" : "Oznacz jako nie do wpisania"}
+                                        title={isNotToBeEntered(tender.publicationNumber) ? "Usuń z nie do wpisania" : "Oznacz jako nie do wpisania"}
                                     >
-                                        {isNotToBeEntered(tender.publicationNumber) ? '✕' : '✕'}
+                                        ✕
                                     </button>
                                     <button
                                         className={`${styles.favoriteButton} ${isFavorite(tender.publicationNumber) ? styles.favoriteActive : ''}`}
@@ -413,8 +400,8 @@ const Tenders: React.FC = () => {
                                                 ? removeFromFavorites(tender.publicationNumber)
                                                 : addToFavorites(tender);
                                         }}
-                                        aria-label={isFavorite(tender.publicationNumber) ? "Remove from favorites" : "Add to favorites"}
-                                        title={isFavorite(tender.publicationNumber) ? "Remove from favorites" : "Add to favorites"}
+                                        aria-label={isFavorite(tender.publicationNumber) ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
+                                        title={isFavorite(tender.publicationNumber) ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
                                     >
                                         {isFavorite(tender.publicationNumber) ? '★' : '☆'}
                                     </button>
@@ -480,8 +467,8 @@ const Tenders: React.FC = () => {
                                         </button>
                                         {expandedCpvCards[tender.publicationNumber] && (
                                             <div className={styles.cpvCodes}>
-                                                {getDisplayedCpvCodes(tender).map((cpv: string, cpvIndex: number) => (
-                                                    <div key={cpvIndex} className={styles.cpvCodeContainer}>
+                                                {getDisplayedCpvCodes(tender).map((cpv: string) => (
+                                                    <div key={cpv} className={styles.cpvCodeContainer}>
                                                         <span className={styles.cpvCode}>
                                                             {cpv}
                                                         </span>

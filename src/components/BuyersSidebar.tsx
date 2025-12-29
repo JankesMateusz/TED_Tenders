@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from "react";
 import styles from "./BuyersSidebar.module.css";
-
-//removed Buyer interface
+import { normalizeName } from "../utils/stringUtils";
+import { Tender } from "../types/Tender";
+import { MESSAGES } from "../constants";
 
 type ViewType = "buyers" | "cities";
 
 interface BuyersSidebarProps {
-    displayedTenders: any[];
+    displayedTenders: Tender[];
     selectedBuyer: string | null;
     selectedCity: string | null;
     onBuyerSelect: (buyerName: string | null) => void;
@@ -21,11 +22,6 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
     onCitySelect
 }) => {
     const [activeView, setActiveView] = useState<ViewType>("buyers");
-    
-    // Funkcja normalizująca nazwę
-    const normalizeName = (name: string): string => {
-        return name.trim().toLowerCase().replace(/\s+/g, ' ');
-    };
 
     // Lista unikalnych zamawiających z widocznych przetargów
     const buyersList = useMemo(() => {
@@ -139,14 +135,14 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
             </div>
             {currentList.length > 0 ? (
                 <ul className={styles.buyersList}>
-                    {currentList.map((item, index) => {
+                    {currentList.map((item) => {
                         const normalizedName = normalizeName(item.name);
                         const normalizedSelected = currentSelected ? normalizeName(currentSelected) : null;
                         const isSelected = normalizedSelected === normalizedName;
                         
                         return (
                             <li 
-                                key={index} 
+                                key={item.name} 
                                 className={`${styles.buyerItem} ${isSelected ? styles.buyerItemSelected : ''}`}
                                 onClick={() => activeView === "buyers" ? handleBuyerClick(item.name) : handleCityClick(item.name)}
                             >
@@ -158,7 +154,7 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
                 </ul>
             ) : (
                 <p className={styles.noBuyers}>
-                    {activeView === "buyers" ? "Brak zamawiających" : "Brak miast"}
+                    {activeView === "buyers" ? MESSAGES.NO_BUYERS : MESSAGES.NO_CITIES}
                 </p>
             )}
         </aside>
@@ -166,4 +162,3 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
 };
 
 export default BuyersSidebar;
-

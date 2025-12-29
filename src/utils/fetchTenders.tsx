@@ -3,6 +3,7 @@ import { Notice } from "../models/Notice";
 import { TenderSource } from "../types/TenderSource";
 
 const API_URL = "https://us-central1-tendersted.cloudfunctions.net/api/tedProxy";
+const PAGE_SIZE = 250;
 
 /**
  * Konwertuje zakres dat na format TED API (YYYYMMDD)
@@ -48,7 +49,7 @@ export const fetchTenders = async (startDate: string, endDate: string): Promise<
                     "deadline-receipt-tender-date-lot",
                 ],
                 page: currentPage,
-                limit: 250
+                limit: PAGE_SIZE
             }, {
                 headers: { 
                     "Content-Type": "application/json"
@@ -58,8 +59,8 @@ export const fetchTenders = async (startDate: string, endDate: string): Promise<
             const notices = response.data.notices.map((notice: any) => new Notice(notice, TenderSource.TED));
             allNotices = [...allNotices, ...notices];
 
-            // Jeśli otrzymaliśmy mniej niż 250 wyników, oznacza to że to ostatnia strona
-            if (notices.length < 250) {
+            // Jeśli otrzymaliśmy mniej niż PAGE_SIZE wyników, oznacza to że to ostatnia strona
+            if (notices.length < PAGE_SIZE) {
                 hasMoreData = false;
             } else {
                 currentPage++;

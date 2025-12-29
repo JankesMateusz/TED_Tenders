@@ -1,6 +1,4 @@
-import { API_CONFIG } from '../config/api';
+// This file is reserved for future TED API functionality
+// Currently, TED API calls are handled in utils/fetchTenders.tsx
 
-const API_KEY = API_CONFIG.API_KEY;
-const BASE_URL = API_CONFIG.BASE_URL;
-
-// ... existing code ... 
+export {}; 

@@ -483,6 +483,9 @@
 }
 
 @media (max-width: 768px) {
+    .searchSection {
+        display: none;
+    }
     .mainContent {
         padding: 16px;
     }
@@ -602,6 +605,10 @@
 }
 
 @media (max-width: 480px) {
+    .searchSection {
+        display: none;
+    }
+    
     .mainContent {
         padding: 12px;
     }
