@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { fetchTenders } from "../utils/fetchTenders";
 import { fetchEzamowienia } from "../utils/fetchEzamowienia";
 import { filterTendersByCpvCodes, isItRelatedCpv, removeChangeNotices } from "../utils/cpvFilter";
@@ -47,48 +47,68 @@ const Tenders: React.FC = () => {
         notToBeEnteredTenders
     } = useUserPreferences();
     const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
+    const prevValuesRef = useRef({ startDate, endDate, useDateRange });
 
-    useEffect(() => {
+    // Funkcja do pobierania przetargów
+    const loadTenders = useCallback(async () => {
         if (!startDate) return;
         // Gdy pojedynczy dzień, używamy tej samej daty dla start i end
         const effectiveEndDate = useDateRange ? endDate : startDate;
         if (!effectiveEndDate) return;
         
-        const loadTenders = async () => {
-            setIsLoading(true);
-            const formattedStartDate = startDate.toISOString().slice(0, 10);
-            const formattedEndDate = effectiveEndDate.toISOString().slice(0, 10);
-            
-            // Pobieranie równolegle z TED i eZamówienia
-            const results = await Promise.allSettled([
-                fetchTenders(formattedStartDate, formattedEndDate),
-                fetchEzamowienia(formattedStartDate, formattedEndDate)
-            ]);
-            
-            let allTenders: any[] = [];
-            
-            // Przetwarzanie wyników z TED
-            if (results[0].status === 'fulfilled') {
-                allTenders = [...allTenders, ...results[0].value];
-            } else {
-                console.error("Błąd pobierania przetargów z TED:", results[0].reason);
-            }
-            
-            // Przetwarzanie wyników z eZamówienia
-            if (results[1].status === 'fulfilled') {
-                allTenders = [...allTenders, ...results[1].value];
-            } else {
-                console.error("Błąd pobierania przetargów z eZamówienia:", results[1].reason);
-            }
-            
-            const originalTenders = removeChangeNotices(allTenders);
-            setTenders(originalTenders);
-            setIsLoading(false);
-        };
-        loadTenders();
+        setIsLoading(true);
+        const formattedStartDate = startDate.toISOString().slice(0, 10);
+        const formattedEndDate = effectiveEndDate.toISOString().slice(0, 10);
+        
+        // Pobieranie równolegle z TED i eZamówienia
+        const results = await Promise.allSettled([
+            fetchTenders(formattedStartDate, formattedEndDate),
+            fetchEzamowienia(formattedStartDate, formattedEndDate)
+        ]);
+        
+        let allTenders: Tender[] = [];
+        
+        // Przetwarzanie wyników z TED
+        if (results[0].status === 'fulfilled') {
+            allTenders = [...allTenders, ...results[0].value];
+        } else {
+            console.error("Błąd pobierania przetargów z TED:", results[0].reason);
+        }
+        
+        // Przetwarzanie wyników z eZamówienia
+        if (results[1].status === 'fulfilled') {
+            allTenders = [...allTenders, ...results[1].value];
+        } else {
+            console.error("Błąd pobierania przetargów z eZamówienia:", results[1].reason);
+        }
+        
+        const originalTenders = removeChangeNotices(allTenders);
+        setTenders(originalTenders);
+        setIsLoading(false);
     }, [startDate, endDate, useDateRange]);
+
+    // Pobieranie przetargów tylko gdy zmienia się startDate lub endDate (nie useDateRange)
+    useEffect(() => {
+        const prev = prevValuesRef.current;
+        const startDateChanged = prev.startDate?.getTime() !== startDate?.getTime();
+        const endDateChanged = prev.endDate?.getTime() !== endDate?.getTime();
+        const onlyDateRangeChanged = !startDateChanged && !endDateChanged && prev.useDateRange !== useDateRange;
+        
+        // Aktualizuj ref
+        prevValuesRef.current = { startDate, endDate, useDateRange };
+        
+        // Jeśli zmieniło się tylko useDateRange (bez zmiany dat), nie pobieraj przetargów
+        if (onlyDateRangeChanged) {
+            return;
+        }
+        
+        // W przeciwnym razie pobierz przetargi (zmiana dat)
+        if (startDateChanged || endDateChanged) {
+            loadTenders();
+        }
+    }, [startDate, endDate, useDateRange, loadTenders]);
     
-    // Gdy przełączamy na pojedynczy dzień, ustaw endDate na startDate
+    // Gdy przełączamy na pojedynczy dzień, ustaw endDate na startDate (bez pobierania)
     useEffect(() => {
         if (!useDateRange && startDate) {
             setEndDate(startDate);
@@ -103,8 +123,23 @@ const Tenders: React.FC = () => {
         }
     };
 
-    const handleAllTendersClick = () => setIsFiltered(false);
-    const handleFilterClick = () => setIsFiltered(true);
+    const handleAllTendersClick = () => {
+        // Jeśli już jesteśmy w trybie "All tenders", odśwież dane
+        if (!isFiltered) {
+            loadTenders();
+        } else {
+            setIsFiltered(false);
+        }
+    };
+
+    const handleFilterClick = () => {
+        // Filter tylko zmienia widok, nie odświeża danych
+        setIsFiltered(true);
+    };
+
+    const handleRefresh = () => {
+        loadTenders();
+    };
 
     const handleSourceToggle = (source: TenderSource) => {
         setSelectedSources(prev => 
@@ -253,8 +288,10 @@ const Tenders: React.FC = () => {
                 tendersCountBySource={tendersCountBySource}
                 onAllTendersClick={handleAllTendersClick}
                 onFilterClick={handleFilterClick}
+                onRefresh={handleRefresh}
                 isFiltered={isFiltered}
                 selectedSources={selectedSources}
+                isLoading={isLoading}
             />
             <div className={styles.mainContent}>
                 <BuyersSidebar

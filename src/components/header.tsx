@@ -17,8 +17,10 @@ interface HeaderProps {
     tendersCountBySource: Record<TenderSource, number>;
     onAllTendersClick: () => void;
     onFilterClick: () => void;
+    onRefresh: () => void;
     isFiltered: boolean;
     selectedSources: TenderSource[];
+    isLoading: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -31,8 +33,10 @@ const Header: React.FC<HeaderProps> = ({
     tendersCountBySource,
     onAllTendersClick,
     onFilterClick,
+    onRefresh,
     isFiltered,
-    selectedSources
+    selectedSources,
+    isLoading
 }) => {
     const { theme, toggleTheme } = useTheme();
 
@@ -115,14 +119,25 @@ const Header: React.FC<HeaderProps> = ({
                     <button 
                         className={`${styles.button} ${!isFiltered ? styles.buttonActive : styles.buttonPrimary}`}
                         onClick={onAllTendersClick}
+                        disabled={isLoading}
                     >
                         All tenders
                     </button>
                     <button 
                         className={`${styles.button} ${isFiltered ? styles.buttonActive : styles.buttonSecondary}`}
                         onClick={onFilterClick}
+                        disabled={isLoading}
                     >
                         Filter
+                    </button>
+                    <button
+                        className={`${styles.button} ${styles.refreshButton}`}
+                        onClick={onRefresh}
+                        disabled={isLoading}
+                        aria-label="Odśwież przetargi"
+                        title="Odśwież przetargi"
+                    >
+                        {isLoading ? '⟳' : '↻'}
                     </button>
                     <button
                         className={`${styles.button} ${styles.themeToggle}`}

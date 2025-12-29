@@ -8,7 +8,9 @@
     color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     justify-content: space-between;
-    overflow: visible;
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .title {
@@ -26,16 +28,17 @@
     padding: 8px 20px;
     border-radius: 20px;
     flex-shrink: 1;
-    min-width: 350px;
-    overflow: visible;
+    min-width: 0;
+    overflow: hidden;
+    width: 100%;
 }
 
 .tenderCounts {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
+    flex-wrap: wrap;
+    white-space: normal;
 }
 
 .tenderCountItem {
@@ -89,7 +92,11 @@
 .datePicker {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 .datePickerLabel {
@@ -101,9 +108,11 @@
 .dateRangeCheckbox {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     cursor: pointer;
     user-select: none;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .checkboxInput {
@@ -115,26 +124,32 @@
 
 .checkboxLabel {
     color: white;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
+    white-space: nowrap;
 }
 
 .dateRangeContainer {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: nowrap;
 }
 
 .dateInput {
     background: rgba(255, 255, 255, 0.9);
     border: none;
     border-radius: 4px;
-    padding: 8px 12px;
+    padding: 8px 10px;
     font-size: 14px;
     color: #2c3e50;
     cursor: pointer;
     transition: background-color 0.2s ease;
-    width: 110px;
+    width: 100px;
+    min-width: 90px;
+    max-width: 110px;
+    box-sizing: border-box;
+    flex-shrink: 1;
 }
 
 .dateInput:hover {
@@ -143,8 +158,10 @@
 
 .dateSeparator {
     color: white;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .sourceFilters {
@@ -232,6 +249,41 @@
 
 .buttonActive:hover {
     background: #c0392b;
+}
+
+.button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.refreshButton {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    font-size: 18px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.refreshButton:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
+}
+
+.refreshButton:disabled {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Custom DatePicker Styles */
@@ -383,6 +435,7 @@
         align-items: stretch;
         gap: 12px;
         padding: 12px;
+        min-height: auto;
     }
     
     .title {
@@ -393,6 +446,15 @@
     .tenderInfo {
         justify-content: center;
         padding: 6px 12px;
+        min-width: 0;
+        width: 100%;
+        overflow-x: auto;
+    }
+    
+    .tenderCounts {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
     }
     
     .tenderCount {
@@ -412,16 +474,38 @@
     .datePicker {
         justify-content: center;
         gap: 8px;
+        flex-wrap: nowrap;
+        width: auto;
     }
     
     .datePickerLabel {
         font-size: 12px;
+        white-space: nowrap;
+    }
+    
+    .dateRangeContainer {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: nowrap;
     }
     
     .datePicker input {
-        padding: 8px 12px;
-        font-size: 14px;
-        min-width: 120px;
+        padding: 8px 10px;
+        font-size: 13px;
+        width: 95px;
+        min-width: 85px;
+        max-width: 100px;
+        flex-shrink: 1;
+    }
+    
+    .dateSeparator {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    
+    .dateRangeCheckbox {
+        white-space: nowrap;
     }
     
     .sourceFilters {
@@ -458,7 +542,7 @@
 
 @media (max-width: 480px) {
     .header {
-        padding: 10px;
+        padding: 10px 8px;
         gap: 10px;
     }
     
@@ -471,6 +555,19 @@
         flex-direction: column;
         gap: 4px;
         text-align: center;
+        min-width: 0;
+        width: 100%;
+    }
+    
+    .tenderCounts {
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+    }
+    
+    .tenderCountItem {
+        width: 100%;
+        justify-content: center;
     }
     
     .tenderCount {
@@ -487,16 +584,43 @@
     
     .datePicker {
         gap: 6px;
+        flex-wrap: nowrap;
+        width: auto;
     }
     
     .datePickerLabel {
         font-size: 11px;
+        white-space: nowrap;
+    }
+    
+    .dateRangeContainer {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-wrap: nowrap;
     }
     
     .datePicker input {
         padding: 6px 8px;
         font-size: 12px;
-        min-width: 100px;
+        width: 80px;
+        min-width: 75px;
+        max-width: 85px;
+        flex-shrink: 1;
+    }
+    
+    .checkboxLabel {
+        font-size: 11px;
+    }
+    
+    .dateSeparator {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    
+    .dateRangeCheckbox {
+        white-space: nowrap;
+        font-size: 11px;
     }
     
     .sourceFilters {
