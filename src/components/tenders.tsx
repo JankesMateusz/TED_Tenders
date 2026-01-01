@@ -49,6 +49,24 @@ const Tenders: React.FC = () => {
     const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
     const prevValuesRef = useRef<{ startDate: Date | null; endDate: Date | null; useDateRange: boolean } | null>(null);
     const isInitialMount = useRef(true);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Obsługa Ctrl+F dla głównego searchbara
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ctrl+F lub Cmd+F (na Mac)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                if (searchInputRef.current) {
+                    searchInputRef.current.focus();
+                    searchInputRef.current.select();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Funkcja do pobierania przetargów
     const loadTenders = useCallback(async () => {
@@ -319,6 +337,7 @@ const Tenders: React.FC = () => {
                     <div className={styles.container}>
                 <div className={styles.searchSection}>
                     <input
+                        ref={searchInputRef}
                         type="text"
                         placeholder={PLACEHOLDER_TEXTS.SEARCH}
                         value={searchQuery}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import styles from "./BuyersSidebar.module.css";
 import { normalizeName } from "../utils/stringUtils";
 import { Tender } from "../types/Tender";
@@ -24,23 +24,6 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
     const [activeView, setActiveView] = useState<ViewType>("buyers");
     const [searchQuery, setSearchQuery] = useState<string>("");
     const searchInputRef = useRef<HTMLInputElement>(null);
-
-    // Obsługa Ctrl+F
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl+F lub Cmd+F (na Mac)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                e.preventDefault();
-                if (searchInputRef.current) {
-                    searchInputRef.current.focus();
-                    searchInputRef.current.select();
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
 
     // Lista unikalnych zamawiających z widocznych przetargów
     const buyersList = useMemo(() => {
