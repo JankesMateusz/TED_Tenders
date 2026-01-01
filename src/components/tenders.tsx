@@ -47,6 +47,17 @@ const Tenders: React.FC = () => {
         notToBeEnteredTenders
     } = useUserPreferences();
     const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
+    const [statusFilters, setStatusFilters] = useState<{
+        favorites: boolean;
+        toBeEntered: boolean;
+        notToBeEntered: boolean;
+        unmarked: boolean;
+    }>({
+        favorites: false,
+        toBeEntered: false,
+        notToBeEntered: false,
+        unmarked: false
+    });
     const prevValuesRef = useRef<{ startDate: Date | null; endDate: Date | null; useDateRange: boolean } | null>(null);
     const isInitialMount = useRef(true);
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -272,6 +283,23 @@ const Tenders: React.FC = () => {
             });
         }
         
+        // Filtrowanie po statusach (OR - wystarczy jeden wybrany status)
+        const hasAnyStatusFilter = statusFilters.favorites || statusFilters.toBeEntered || statusFilters.notToBeEntered || statusFilters.unmarked;
+        if (hasAnyStatusFilter) {
+            result = result.filter(tender => {
+                const isFav = isFavorite(tender.publicationNumber);
+                const isToBe = isToBeEntered(tender.publicationNumber);
+                const isNotToBe = isNotToBeEntered(tender.publicationNumber);
+                const isUnmarked = !isFav && !isToBe && !isNotToBe;
+                
+                // OR logic - wystarczy że przetarg spełnia jeden z wybranych statusów
+                return (statusFilters.favorites && isFav) ||
+                       (statusFilters.toBeEntered && isToBe) ||
+                       (statusFilters.notToBeEntered && isNotToBe) ||
+                       (statusFilters.unmarked && isUnmarked);
+            });
+        }
+        
         // Sortowanie po dacie publikacji (najnowsze na górze)
         result.sort((a, b) => {
             const dateA = parseDate(a.publicationDate);
@@ -280,7 +308,7 @@ const Tenders: React.FC = () => {
         });
         
         return result;
-    }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery]);
+    }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters, isFavorite, isToBeEntered, isNotToBeEntered]);
 
     useEffect(() => {
         // Liczenie przetargów per źródło
@@ -336,14 +364,26 @@ const Tenders: React.FC = () => {
                 <div className={styles.contentArea}>
                     <div className={styles.container}>
                 <div className={styles.searchSection}>
-                    <input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder={PLACEHOLDER_TEXTS.SEARCH}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className={styles.searchInput}
-                    />
+                    <div className={styles.searchInputWrapper}>
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            placeholder={PLACEHOLDER_TEXTS.SEARCH}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={styles.searchInput}
+                        />
+                        {searchQuery && (
+                            <button
+                                className={styles.clearSearchButton}
+                                onClick={() => setSearchQuery("")}
+                                aria-label="Wyczyść wyszukiwanie"
+                                title="Wyczyść wyszukiwanie"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className={styles.filtersSection}>
                     <div className={styles.sourceFilters}>
@@ -415,6 +455,83 @@ const Tenders: React.FC = () => {
                                 {notToBeEnteredCount}
                             </span>
                         </span>
+                    </div>
+                </div>
+                <div className={styles.statusFiltersSection}>
+                    <div className={styles.sourceFilters}>
+                        <span className={styles.sourceFiltersLabel}>Filtruj po statusie:</span>
+                        <label className={styles.sourceFilterLabel}>
+                            <input
+                                type="checkbox"
+                                checked={statusFilters.favorites}
+                                onChange={() => setStatusFilters(prev => ({...prev, favorites: !prev.favorites}))}
+                                className={styles.sourceCheckbox}
+                            />
+                            <span 
+                                className={styles.sourceFilterBadge}
+                                style={{
+                                    backgroundColor: statusFilters.favorites ? '#f39c12' : 'rgba(0, 0, 0, 0.1)',
+                                    color: statusFilters.favorites ? '#ffffff' : 'var(--text-secondary)',
+                                    border: `1px solid ${statusFilters.favorites ? '#f39c12' : 'rgba(0, 0, 0, 0.2)'}`
+                                }}
+                            >
+                                Ulubione
+                            </span>
+                        </label>
+                        <label className={styles.sourceFilterLabel}>
+                            <input
+                                type="checkbox"
+                                checked={statusFilters.toBeEntered}
+                                onChange={() => setStatusFilters(prev => ({...prev, toBeEntered: !prev.toBeEntered}))}
+                                className={styles.sourceCheckbox}
+                            />
+                            <span 
+                                className={styles.sourceFilterBadge}
+                                style={{
+                                    backgroundColor: statusFilters.toBeEntered ? '#2ecc71' : 'rgba(0, 0, 0, 0.1)',
+                                    color: statusFilters.toBeEntered ? '#ffffff' : 'var(--text-secondary)',
+                                    border: `1px solid ${statusFilters.toBeEntered ? '#2ecc71' : 'rgba(0, 0, 0, 0.2)'}`
+                                }}
+                            >
+                                Do wpisania
+                            </span>
+                        </label>
+                        <label className={styles.sourceFilterLabel}>
+                            <input
+                                type="checkbox"
+                                checked={statusFilters.notToBeEntered}
+                                onChange={() => setStatusFilters(prev => ({...prev, notToBeEntered: !prev.notToBeEntered}))}
+                                className={styles.sourceCheckbox}
+                            />
+                            <span 
+                                className={styles.sourceFilterBadge}
+                                style={{
+                                    backgroundColor: statusFilters.notToBeEntered ? '#e74c3c' : 'rgba(0, 0, 0, 0.1)',
+                                    color: statusFilters.notToBeEntered ? '#ffffff' : 'var(--text-secondary)',
+                                    border: `1px solid ${statusFilters.notToBeEntered ? '#e74c3c' : 'rgba(0, 0, 0, 0.2)'}`
+                                }}
+                            >
+                                Nie do wpisania
+                            </span>
+                        </label>
+                        <label className={styles.sourceFilterLabel}>
+                            <input
+                                type="checkbox"
+                                checked={statusFilters.unmarked}
+                                onChange={() => setStatusFilters(prev => ({...prev, unmarked: !prev.unmarked}))}
+                                className={styles.sourceCheckbox}
+                            />
+                            <span 
+                                className={styles.sourceFilterBadge}
+                                style={{
+                                    backgroundColor: statusFilters.unmarked ? '#95a5a6' : 'rgba(0, 0, 0, 0.1)',
+                                    color: statusFilters.unmarked ? '#ffffff' : 'var(--text-secondary)',
+                                    border: `1px solid ${statusFilters.unmarked ? '#95a5a6' : 'rgba(0, 0, 0, 0.2)'}`
+                                }}
+                            >
+                                Nieoznaczone
+                            </span>
+                        </label>
                     </div>
                 </div>
                 {isLoading && (
