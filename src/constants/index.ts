@@ -8,12 +8,6 @@ export const DEFAULT_ORDER_TYPES: Array<"Delivery" | "Services" | "Works"> = [
     "Works"
 ];
 
-export const DEFAULT_SOURCES = [
-    "TED",
-    "E_ZAMOWIENIA",
-    "BAZA_KONKURENCYJNOSCI"
-] as const;
-
 export const PAGE_SIZE = {
     TED: 250,
     E_ZAMOWIENIA: 10

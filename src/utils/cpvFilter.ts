@@ -82,12 +82,4 @@ export const filterTendersByCpvCodes = <T extends { cpvCodes: string[] }>(tender
     return tenders.filter(tender => {
         return tender.cpvCodes.some((tenderCpv: string) => isItRelatedCpv(tenderCpv));
     });
-};
-
-// Note: This function appears to be unused but kept for potential future use
-export const isITRelatedTender = (tender: { cpvCodes: string[] }): boolean => {
-    return tender.cpvCodes.some((tenderCpv: string) => {
-        const tenderCpvBase = tenderCpv.split('-')[0];
-        return cpvCodes.some(filterCpv => filterCpv.startsWith(tenderCpvBase));
-    });
 }; 
