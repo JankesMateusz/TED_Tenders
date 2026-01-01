@@ -20,6 +20,7 @@ jobs:
 
       - name: Create API config
         run: |
+          mkdir -p src/config
           echo "export const API_CONFIG = { API_KEY: '${{ secrets.TED_API_KEY }}', BASE_URL: 'https://api.ted.europa.eu/api/v2', } as const;" > src/config/api.ts
 
       - name: Install Dependencies
