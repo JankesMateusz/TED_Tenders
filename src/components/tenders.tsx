@@ -21,6 +21,7 @@ const Tenders: React.FC = () => {
     const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [loadingProgress, setLoadingProgress] = useState<number>(0);
     const [isFiltered, setIsFiltered] = useState<boolean>(false);
     const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
         [TenderSource.TED]: 0,
@@ -87,34 +88,56 @@ const Tenders: React.FC = () => {
         if (!effectiveEndDate) return;
         
         setIsLoading(true);
+        setLoadingProgress(0);
+        
+        // Symulacja postępu
+        const progressInterval = setInterval(() => {
+            setLoadingProgress(prev => {
+                if (prev >= 90) {
+                    return prev;
+                }
+                return Math.min(prev + 10, 90);
+            });
+        }, 200);
+        
         const formattedStartDate = startDate.toISOString().slice(0, 10);
         const formattedEndDate = effectiveEndDate.toISOString().slice(0, 10);
         
-        // Pobieranie równolegle z TED i eZamówienia
-        const results = await Promise.allSettled([
-            fetchTenders(formattedStartDate, formattedEndDate),
-            fetchEzamowienia(formattedStartDate, formattedEndDate)
-        ]);
-        
-        let allTenders: Tender[] = [];
-        
-        // Przetwarzanie wyników z TED
-        if (results[0].status === 'fulfilled') {
-            allTenders = [...allTenders, ...results[0].value];
-        } else {
-            console.error("Błąd pobierania przetargów z TED:", results[0].reason);
+        try {
+            // Pobieranie równolegle z TED i eZamówienia
+            const results = await Promise.allSettled([
+                fetchTenders(formattedStartDate, formattedEndDate),
+                fetchEzamowienia(formattedStartDate, formattedEndDate)
+            ]);
+            
+            clearInterval(progressInterval);
+            setLoadingProgress(100);
+            
+            let allTenders: Tender[] = [];
+            
+            // Przetwarzanie wyników z TED
+            if (results[0].status === 'fulfilled') {
+                allTenders = [...allTenders, ...results[0].value];
+            } else {
+                console.error("Błąd pobierania przetargów z TED:", results[0].reason);
+            }
+            
+            // Przetwarzanie wyników z eZamówienia
+            if (results[1].status === 'fulfilled') {
+                allTenders = [...allTenders, ...results[1].value];
+            } else {
+                console.error("Błąd pobierania przetargów z eZamówienia:", results[1].reason);
+            }
+            
+            const originalTenders = removeChangeNotices(allTenders);
+            setTenders(originalTenders);
+        } catch (error) {
+            clearInterval(progressInterval);
+            console.error("Błąd podczas pobierania przetargów:", error);
+        } finally {
+            setIsLoading(false);
+            setTimeout(() => setLoadingProgress(0), 300);
         }
-        
-        // Przetwarzanie wyników z eZamówienia
-        if (results[1].status === 'fulfilled') {
-            allTenders = [...allTenders, ...results[1].value];
-        } else {
-            console.error("Błąd pobierania przetargów z eZamówienia:", results[1].reason);
-        }
-        
-        const originalTenders = removeChangeNotices(allTenders);
-        setTenders(originalTenders);
-        setIsLoading(false);
     }, [startDate, endDate, useDateRange]);
 
     // Pobieranie przetargów tylko gdy zmienia się startDate lub endDate (nie useDateRange)
@@ -371,6 +394,12 @@ const Tenders: React.FC = () => {
                             placeholder={PLACEHOLDER_TEXTS.SEARCH}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Delete' && searchQuery) {
+                                    e.preventDefault();
+                                    setSearchQuery("");
+                                }
+                            }}
                             className={styles.searchInput}
                         />
                         {searchQuery && (
@@ -535,14 +564,39 @@ const Tenders: React.FC = () => {
                     </div>
                 </div>
                 {isLoading && (
-                    <p className={styles.loading}>{MESSAGES.LOADING}</p>
+                    <>
+                        <div className={styles.progressBarContainer}>
+                            <div 
+                                className={styles.progressBar}
+                                style={{ width: `${loadingProgress}%` }}
+                            />
+                        </div>
+                        <div className={styles.skeletonContainer}>
+                            {[...Array(3)].map((_, index) => (
+                                <div key={index} className={styles.skeletonCard}>
+                                    <div className={styles.skeletonHeader}>
+                                        <div className={styles.skeletonLine} style={{ width: '40%' }} />
+                                        <div className={styles.skeletonLine} style={{ width: '20%' }} />
+                                    </div>
+                                    <div className={styles.skeletonBadge} />
+                                    <div className={styles.skeletonTitle} />
+                                    <div className={styles.skeletonInfo}>
+                                        <div className={styles.skeletonLine} style={{ width: '30%' }} />
+                                        <div className={styles.skeletonLine} style={{ width: '30%' }} />
+                                        <div className={styles.skeletonLine} style={{ width: '30%' }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
                 )}
                 {displayedTenders.length === 0 && !isLoading && (
                     <p className={styles.message}>
                         {isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}
                     </p>
                 )}
-                <ul className={styles.tendersList}>
+                {!isLoading && (
+                    <ul className={styles.tendersList}>
                     {displayedTenders.map((tender) => (
                         <li 
                             key={tender.publicationNumber} 
@@ -679,7 +733,8 @@ const Tenders: React.FC = () => {
                             </a>
                         </li>
                     ))}
-                </ul>
+                    </ul>
+                )}
                     </div>
                 </div>
             </div>
