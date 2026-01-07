@@ -275,6 +275,7 @@
 
 .refreshButton:disabled {
     animation: spin 1s linear infinite;
+    transform: none !important; /* Wyłącz transform z hover gdy disabled */
 }
 
 @keyframes spin {

@@ -9,6 +9,7 @@ import { getSourceConfig, getOrderTypeConfig, OrderType } from "../utils/tenderS
 import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
 import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS, MESSAGES } from "../constants";
+import { saveTendersToCache, getTendersFromCache } from "../utils/tendersCache";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import styles from "./Tenders.module.css";
@@ -80,13 +81,70 @@ const Tenders: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Funkcja do pobierania przetargów z API
+    const fetchTendersFromAPI = useCallback(async (formattedStartDate: string, formattedEndDate: string): Promise<Tender[]> => {
+        const results = await Promise.allSettled([
+            fetchTenders(formattedStartDate, formattedEndDate),
+            fetchEzamowienia(formattedStartDate, formattedEndDate)
+        ]);
+        
+        let allTenders: Tender[] = [];
+        
+        // Przetwarzanie wyników z TED
+        if (results[0].status === 'fulfilled') {
+            allTenders = [...allTenders, ...results[0].value];
+        } else {
+            console.error("Błąd pobierania przetargów z TED:", results[0].reason);
+        }
+        
+        // Przetwarzanie wyników z eZamówienia
+        if (results[1].status === 'fulfilled') {
+            allTenders = [...allTenders, ...results[1].value];
+        } else {
+            console.error("Błąd pobierania przetargów z eZamówienia:", results[1].reason);
+        }
+        
+        return removeChangeNotices(allTenders);
+    }, []);
+
+    // Funkcja do odświeżania przetargów w tle (stale-while-revalidate)
+    const refreshTendersInBackground = useCallback(async (formattedStartDate: string, formattedEndDate: string) => {
+        try {
+            const originalTenders = await fetchTendersFromAPI(formattedStartDate, formattedEndDate);
+            
+            // Zaktualizuj cache i state
+            saveTendersToCache(formattedStartDate, formattedEndDate, originalTenders);
+            setTenders(originalTenders);
+        } catch (error) {
+            console.error('Background refresh failed:', error);
+        }
+    }, [fetchTendersFromAPI]);
+
     // Funkcja do pobierania przetargów
-    const loadTenders = useCallback(async () => {
+    const loadTenders = useCallback(async (forceRefresh: boolean = false) => {
         if (!startDate) return;
         // Gdy pojedynczy dzień, używamy tej samej daty dla start i end
         const effectiveEndDate = useDateRange ? endDate : startDate;
         if (!effectiveEndDate) return;
         
+        const formattedStartDate = startDate.toISOString().slice(0, 10);
+        const formattedEndDate = effectiveEndDate.toISOString().slice(0, 10);
+        
+        // 1. Sprawdź cache (tylko jeśli nie wymuszamy odświeżenia)
+        if (!forceRefresh) {
+            const cachedTenders = getTendersFromCache(formattedStartDate, formattedEndDate);
+            if (cachedTenders) {
+                // Cache istnieje i jest świeży - użyj go natychmiast
+                setTenders(cachedTenders);
+                setIsLoading(false);
+                
+                // Odśwież w tle (stale-while-revalidate)
+                refreshTendersInBackground(formattedStartDate, formattedEndDate);
+                return;
+            }
+        }
+        
+        // 2. Brak cache, stary cache lub wymuszone odświeżenie - pobierz z API
         setIsLoading(true);
         setLoadingProgress(0);
         
@@ -100,37 +158,16 @@ const Tenders: React.FC = () => {
             });
         }, 200);
         
-        const formattedStartDate = startDate.toISOString().slice(0, 10);
-        const formattedEndDate = effectiveEndDate.toISOString().slice(0, 10);
-        
         try {
-            // Pobieranie równolegle z TED i eZamówienia
-            const results = await Promise.allSettled([
-                fetchTenders(formattedStartDate, formattedEndDate),
-                fetchEzamowienia(formattedStartDate, formattedEndDate)
-            ]);
+            const originalTenders = await fetchTendersFromAPI(formattedStartDate, formattedEndDate);
             
             clearInterval(progressInterval);
             setLoadingProgress(100);
             
-            let allTenders: Tender[] = [];
-            
-            // Przetwarzanie wyników z TED
-            if (results[0].status === 'fulfilled') {
-                allTenders = [...allTenders, ...results[0].value];
-            } else {
-                console.error("Błąd pobierania przetargów z TED:", results[0].reason);
-            }
-            
-            // Przetwarzanie wyników z eZamówienia
-            if (results[1].status === 'fulfilled') {
-                allTenders = [...allTenders, ...results[1].value];
-            } else {
-                console.error("Błąd pobierania przetargów z eZamówienia:", results[1].reason);
-            }
-            
-            const originalTenders = removeChangeNotices(allTenders);
             setTenders(originalTenders);
+            
+            // 3. Zapisz do cache
+            saveTendersToCache(formattedStartDate, formattedEndDate, originalTenders);
         } catch (error) {
             clearInterval(progressInterval);
             console.error("Błąd podczas pobierania przetargów:", error);
@@ -138,7 +175,7 @@ const Tenders: React.FC = () => {
             setIsLoading(false);
             setTimeout(() => setLoadingProgress(0), 300);
         }
-    }, [startDate, endDate, useDateRange]);
+    }, [startDate, endDate, useDateRange, fetchTendersFromAPI, refreshTendersInBackground]);
 
     // Pobieranie przetargów tylko gdy zmienia się startDate lub endDate (nie useDateRange)
     useEffect(() => {
@@ -204,7 +241,7 @@ const Tenders: React.FC = () => {
     };
 
     const handleRefresh = () => {
-        loadTenders();
+        loadTenders(true); // Wymuś odświeżenie, ignoruj cache
     };
 
     const handleSourceToggle = (source: TenderSource) => {
