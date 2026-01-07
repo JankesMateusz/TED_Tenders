@@ -10,6 +10,8 @@ import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
 import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS, MESSAGES } from "../constants";
 import { saveTendersToCache, getTendersFromCache } from "../utils/tendersCache";
+import { calculateStatistics } from "../utils/calculateStatistics";
+import { StatisticsTab } from "./StatisticsTab";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import styles from "./Tenders.module.css";
@@ -60,6 +62,7 @@ const Tenders: React.FC = () => {
         notToBeEntered: false,
         unmarked: false
     });
+    const [activeTab, setActiveTab] = useState<'tenders' | 'statistics'>('tenders');
     const prevValuesRef = useRef<{ startDate: Date | null; endDate: Date | null; useDateRange: boolean } | null>(null);
     const isInitialMount = useRef(true);
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -396,6 +399,16 @@ const Tenders: React.FC = () => {
         return displayedTenders.filter(tender => notToBeEnteredTenders.has(tender.publicationNumber)).length;
     }, [displayedTenders, notToBeEnteredTenders]);
 
+    // Oblicz statystyki
+    const statistics = useMemo(() => {
+        return calculateStatistics(
+            displayedTenders,
+            isFavorite,
+            isToBeEntered,
+            isNotToBeEntered
+        );
+    }, [displayedTenders, isFavorite, isToBeEntered, isNotToBeEntered]);
+
     return (
         <div className={styles.app}>
             <Header
@@ -414,16 +427,40 @@ const Tenders: React.FC = () => {
                 isLoading={isLoading}
             />
             <div className={styles.mainContent}>
-                <BuyersSidebar
-                    displayedTenders={displayedTenders}
-                    selectedBuyer={selectedBuyer}
-                    selectedCity={selectedCity}
-                    onBuyerSelect={setSelectedBuyer}
-                    onCitySelect={setSelectedCity}
-                />
+                {activeTab === 'tenders' && (
+                    <BuyersSidebar
+                        displayedTenders={displayedTenders}
+                        selectedBuyer={selectedBuyer}
+                        selectedCity={selectedCity}
+                        onBuyerSelect={setSelectedBuyer}
+                        onCitySelect={setSelectedCity}
+                    />
+                )}
                 <div className={styles.contentArea}>
-                    <div className={styles.container}>
-                <div className={styles.searchSection}>
+                    <div className={styles.tabsContainer}>
+                        <ul className={styles.tabs}>
+                            <li>
+                                <button
+                                    className={`${styles.tab} ${activeTab === 'tenders' ? styles.tabActive : ''}`}
+                                    onClick={() => setActiveTab('tenders')}
+                                >
+                                    Przetargi ({displayedTenders.length})
+                                </button>
+                            </li>
+                            <li>
+                                <button
+                                    className={`${styles.tab} ${activeTab === 'statistics' ? styles.tabActive : ''}`}
+                                    onClick={() => setActiveTab('statistics')}
+                                >
+                                    Statystyki
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div className={styles.tabContent}>
+                        {activeTab === 'tenders' ? (
+                            <div className={styles.container}>
+                                <div className={styles.searchSection}>
                     <div className={styles.searchInputWrapper}>
                         <input
                             ref={searchInputRef}
@@ -772,6 +809,10 @@ const Tenders: React.FC = () => {
                     ))}
                     </ul>
                 )}
+                            </div>
+                        ) : (
+                            <StatisticsTab statistics={statistics} />
+                        )}
                     </div>
                 </div>
             </div>

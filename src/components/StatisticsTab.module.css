@@ -1,0 +1,198 @@
+.statisticsContainer {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.statCard {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.statCard:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.statValue {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--button-primary);
+    margin-bottom: 8px;
+}
+
+.statLabel {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sectionsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.section {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+}
+
+.sectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.sourceStats,
+.orderTypeStats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sourceItem,
+.orderTypeItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.sourceBadge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sourceCount,
+.orderTypeCount {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.orderTypeLabel {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.listItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.listItem:last-child {
+    border-bottom: none;
+}
+
+.listRank {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 24px;
+}
+
+.listName {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.listCount {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--button-primary);
+    background: rgba(52, 152, 219, 0.1);
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+.statusStats,
+.deadlineStats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.statusItem,
+.deadlineItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.statusLabel,
+.deadlineLabel {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.statusValue,
+.deadlineValue {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .statisticsContainer {
+        padding: 16px;
+    }
+    
+    .statsGrid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    
+    .statCard {
+        padding: 16px;
+    }
+    
+    .statValue {
+        font-size: 24px;
+    }
+    
+    .sectionsGrid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .section {
+        padding: 16px;
+    }
+}
+

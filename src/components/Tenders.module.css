@@ -22,12 +22,96 @@
     min-width: 0;
 }
 
+.tabsContainer {
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    bottom: -2px;
+}
+
+.tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+.tabActive {
+    color: var(--button-primary);
+    border-bottom-color: var(--button-primary);
+    font-weight: 600;
+}
+
+.tabContent {
+    min-height: 400px;
+}
+
 .container {
     padding: 0;
     max-width: none;
     margin: 0;
     background-color: transparent;
     color: var(--text-primary);
+}
+
+.tabsContainer {
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    bottom: -2px;
+}
+
+.tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+.tabActive {
+    color: var(--button-primary);
+    border-bottom-color: var(--button-primary);
+    font-weight: 600;
+}
+
+.tabContent {
+    min-height: 400px;
 }
 
 .searchSection {
@@ -673,6 +757,23 @@
 }
 
 @media (max-width: 768px) {
+    .tabsContainer {
+        margin-bottom: 16px;
+    }
+    
+    .tabs {
+        gap: 4px;
+    }
+    
+    .tab {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+    
+    .tabContent {
+        min-height: 300px;
+    }
+    
     .searchSection {
         display: block;
         margin-bottom: 16px;
