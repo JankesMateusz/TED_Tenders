@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { fetchTenders } from "../utils/fetchTenders";
 import { fetchEzamowienia } from "../utils/fetchEzamowienia";
 import { filterTendersByCpvCodes, isItRelatedCpv, removeChangeNotices } from "../utils/cpvFilter";
-// getCpvName is imported in TenderCard now
 import { normalizeName } from "../utils/stringUtils";
 import { useUserPreferences } from "../context/UserPreferencesContext";
 import { getSourceConfig, getOrderTypeConfig, OrderType } from "../utils/tenderSources";
@@ -356,8 +355,6 @@ const Tenders: React.FC = () => {
         return result;
     }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters, isFavorite, isToBeEntered, isNotToBeEntered]);
 
-    // CSV export removed — feature intentionally disabled
-
     // Obsługa skrótów klawiszowych
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -459,7 +456,6 @@ const Tenders: React.FC = () => {
                                 </button>
                             </li>
                         </ul>
-                        {/* CSV export button removed */}
                     </div>
                     <div className={styles.tabContent}>
                         {activeTab === 'tenders' ? (
