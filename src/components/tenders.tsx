@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { fetchTenders } from "../utils/fetchTenders";
 import { fetchEzamowienia } from "../utils/fetchEzamowienia";
 import { filterTendersByCpvCodes, isItRelatedCpv, removeChangeNotices } from "../utils/cpvFilter";
-import { getCpvName } from "../utils/cpvMapping";
+// getCpvName is imported in TenderCard now
 import { normalizeName } from "../utils/stringUtils";
 import { useUserPreferences } from "../context/UserPreferencesContext";
 import { getSourceConfig, getOrderTypeConfig, OrderType } from "../utils/tenderSources";
@@ -41,8 +41,6 @@ const Tenders: React.FC = () => {
     const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
     const [selectedCity, setSelectedCity] = useState<string | null>(null);
     const { 
-        addToFavorites, 
-        removeFromFavorites, 
         isFavorite,
         toggleToBeEntered,
         toggleNotToBeEntered,

@@ -1,35 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Tender } from '../types/Tender';
 
-interface EmailAlert {
-    id: string;
-    tenders: Tender[];
-    email: string;
-}
-
 interface UserPreferencesContextType {
     favorites: Tender[];
-    emailAlerts: EmailAlert[];
     selectedTenders: Set<string>;
     toBeEnteredTenders: Set<string>;
     notToBeEnteredTenders: Set<string>;
-    notes: Record<string, string>;
     addToFavorites: (tender: Tender) => void;
     removeFromFavorites: (publicationNumber: string) => void;
     isFavorite: (publicationNumber: string) => boolean;
-    toggleTenderSelection: (publicationNumber: string) => void;
-    isTenderSelected: (publicationNumber: string) => boolean;
-    clearSelectedTenders: () => void;
-    getSelectedTenders: (tenders: Tender[]) => Tender[];
-    addEmailAlert: (alert: { email: string, tenders: Tender[] }) => void;
-    removeEmailAlert: (id: string) => void;
     toggleToBeEntered: (publicationNumber: string) => void;
     toggleNotToBeEntered: (publicationNumber: string) => void;
     isToBeEntered: (publicationNumber: string) => boolean;
     isNotToBeEntered: (publicationNumber: string) => boolean;
-    getNote: (publicationNumber: string) => string;
-    setNote: (publicationNumber: string, note: string) => void;
-    deleteNote: (publicationNumber: string) => void;
+    toggleTenderSelection: (publicationNumber: string) => void;
+    isTenderSelected: (publicationNumber: string) => boolean;
+    clearSelectedTenders: () => void;
+    getSelectedTenders: (tenders: Tender[]) => Tender[];
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
@@ -41,32 +28,21 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
     });
 
     const [selectedTenders, setSelectedTenders] = useState<Set<string>>(new Set());
+
     const [toBeEnteredTenders, setToBeEnteredTenders] = useState<Set<string>>(() => {
         const saved = localStorage.getItem('toBeEnteredTenders');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        return saved ? new Set<string>(JSON.parse(saved)) : new Set();
     });
+
     const [notToBeEnteredTenders, setNotToBeEnteredTenders] = useState<Set<string>>(() => {
         const saved = localStorage.getItem('notToBeEnteredTenders');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        return saved ? new Set<string>(JSON.parse(saved)) : new Set();
     });
 
-    const [emailAlerts, setEmailAlerts] = useState<EmailAlert[]>(() => {
-        const saved = localStorage.getItem('emailAlerts');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    const [notes, setNotes] = useState<Record<string, string>>(() => {
-        const saved = localStorage.getItem('tenderNotes');
-        return saved ? JSON.parse(saved) : {};
-    });
 
     useEffect(() => {
         localStorage.setItem('favorites', JSON.stringify(favorites));
     }, [favorites]);
-
-    useEffect(() => {
-        localStorage.setItem('emailAlerts', JSON.stringify(emailAlerts));
-    }, [emailAlerts]);
 
     useEffect(() => {
         localStorage.setItem('toBeEnteredTenders', JSON.stringify(Array.from(toBeEnteredTenders)));
@@ -76,9 +52,7 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         localStorage.setItem('notToBeEnteredTenders', JSON.stringify(Array.from(notToBeEnteredTenders)));
     }, [notToBeEnteredTenders]);
 
-    useEffect(() => {
-        localStorage.setItem('tenderNotes', JSON.stringify(notes));
-    }, [notes]);
+    // email alerts feature removed
 
     const addToFavorites = (tender: Tender) => {
         setFavorites(prev => {
@@ -89,12 +63,52 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         });
     };
 
+    const toggleToBeEntered = (publicationNumber: string) => {
+        setToBeEnteredTenders(prev => {
+            const next = new Set(prev);
+            if (next.has(publicationNumber)) next.delete(publicationNumber);
+            else next.add(publicationNumber);
+            return next;
+        });
+        // ensure a tender isn't both in toBeEntered and notToBeEntered
+        setNotToBeEnteredTenders(prev => {
+            if (!prev.has(publicationNumber)) return prev;
+            const next = new Set(prev);
+            next.delete(publicationNumber);
+            return next;
+        });
+    };
+
+    const toggleNotToBeEntered = (publicationNumber: string) => {
+        setNotToBeEnteredTenders(prev => {
+            const next = new Set(prev);
+            if (next.has(publicationNumber)) next.delete(publicationNumber);
+            else next.add(publicationNumber);
+            return next;
+        });
+        // ensure a tender isn't both in notToBeEntered and toBeEntered
+        setToBeEnteredTenders(prev => {
+            if (!prev.has(publicationNumber)) return prev;
+            const next = new Set(prev);
+            next.delete(publicationNumber);
+            return next;
+        });
+    };
+
     const removeFromFavorites = (publicationNumber: string) => {
         setFavorites(prev => prev.filter(t => t.publicationNumber !== publicationNumber));
     };
 
     const isFavorite = (publicationNumber: string) => {
         return favorites.some(t => t.publicationNumber === publicationNumber);
+    };
+
+    const isToBeEntered = (publicationNumber: string) => {
+        return toBeEnteredTenders.has(publicationNumber);
+    };
+
+    const isNotToBeEntered = (publicationNumber: string) => {
+        return notToBeEnteredTenders.has(publicationNumber);
     };
 
     const toggleTenderSelection = (publicationNumber: string) => {
@@ -121,113 +135,29 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         return tenders.filter(tender => selectedTenders.has(tender.publicationNumber));
     };
 
-    const addEmailAlert = (alert: { email: string, tenders: Tender[] }) => {
-        const newAlert = {
-            ...alert,
-            id: Math.random().toString(36).substr(2, 9)
-        };
-        setEmailAlerts(prev => [...prev, newAlert]);
-        clearSelectedTenders(); // Clear selections after sending
-    };
-
-    const removeEmailAlert = (id: string) => {
-        setEmailAlerts(prev => prev.filter(alert => alert.id !== id));
-    };
-
-    const toggleToBeEntered = (publicationNumber: string) => {
-        setToBeEnteredTenders(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(publicationNumber)) {
-                newSet.delete(publicationNumber);
-            } else {
-                newSet.add(publicationNumber);
-                // Remove from not to be entered if it was there
-                setNotToBeEnteredTenders(prev => {
-                    const newNotSet = new Set(prev);
-                    newNotSet.delete(publicationNumber);
-                    return newNotSet;
-                });
-            }
-            return newSet;
-        });
-    };
-
-    const toggleNotToBeEntered = (publicationNumber: string) => {
-        setNotToBeEnteredTenders(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(publicationNumber)) {
-                newSet.delete(publicationNumber);
-            } else {
-                newSet.add(publicationNumber);
-                // Remove from to be entered if it was there
-                setToBeEnteredTenders(prev => {
-                    const newToSet = new Set(prev);
-                    newToSet.delete(publicationNumber);
-                    return newToSet;
-                });
-            }
-            return newSet;
-        });
-    };
-
-    const isToBeEntered = (publicationNumber: string) => {
-        return toBeEnteredTenders.has(publicationNumber);
-    };
-
-    const isNotToBeEntered = (publicationNumber: string) => {
-        return notToBeEnteredTenders.has(publicationNumber);
-    };
-
-    const getNote = (publicationNumber: string): string => {
-        return notes[publicationNumber] || '';
-    };
-
-    const setNote = (publicationNumber: string, note: string) => {
-        setNotes(prev => {
-            if (note.trim() === '') {
-                const newNotes = { ...prev };
-                delete newNotes[publicationNumber];
-                return newNotes;
-            }
-            return { ...prev, [publicationNumber]: note };
-        });
-    };
-
-    const deleteNote = (publicationNumber: string) => {
-        setNotes(prev => {
-            const newNotes = { ...prev };
-            delete newNotes[publicationNumber];
-            return newNotes;
-        });
-    };
-
-    const value = {
-        favorites,
-        emailAlerts,
-        selectedTenders,
-        toBeEnteredTenders,
-        notToBeEnteredTenders,
-        notes,
-        addToFavorites,
-        removeFromFavorites,
-        isFavorite,
-        toggleTenderSelection,
-        isTenderSelected,
-        clearSelectedTenders,
-        getSelectedTenders,
-        addEmailAlert,
-        removeEmailAlert,
-        toggleToBeEntered,
-        toggleNotToBeEntered,
-        isToBeEntered,
-        isNotToBeEntered,
-        getNote,
-        setNote,
-        deleteNote
-    };
+    // addEmailAlert / removeEmailAlert removed
 
     return (
-        <UserPreferencesContext.Provider value={value}>
+        <UserPreferencesContext.Provider 
+            value={{
+                favorites,
+                selectedTenders,
+                toBeEnteredTenders,
+                notToBeEnteredTenders,
+                addToFavorites,
+                removeFromFavorites,
+                isFavorite,
+                toggleToBeEntered,
+                toggleNotToBeEntered,
+                isToBeEntered,
+                isNotToBeEntered,
+                toggleTenderSelection,
+                isTenderSelected,
+                clearSelectedTenders,
+                getSelectedTenders,
+                // email alerts removed
+            }}
+        >
             {children}
         </UserPreferencesContext.Provider>
     );
