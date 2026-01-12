@@ -14,6 +14,7 @@ import { calculateStatistics } from "../utils/calculateStatistics";
 import { StatisticsTab } from "./StatisticsTab";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
+import TenderCard from "./TenderCard";
 import styles from "./Tenders.module.css";
 
 const Tenders: React.FC = () => {
@@ -50,7 +51,7 @@ const Tenders: React.FC = () => {
         toBeEnteredTenders,
         notToBeEnteredTenders
     } = useUserPreferences();
-    const [expandedCpvCards, setExpandedCpvCards] = useState<{[key: string]: boolean}>({});
+    // expanded state for CPV cards is now managed inside TenderCard
     const [statusFilters, setStatusFilters] = useState<{
         favorites: boolean;
         toBeEntered: boolean;
@@ -67,22 +68,6 @@ const Tenders: React.FC = () => {
     const isInitialMount = useRef(true);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Obsługa Ctrl+F dla głównego searchbara
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl+F lub Cmd+F (na Mac)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                e.preventDefault();
-                if (searchInputRef.current) {
-                    searchInputRef.current.focus();
-                    searchInputRef.current.select();
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
 
     // Funkcja do pobierania przetargów z API
     const fetchTendersFromAPI = useCallback(async (formattedStartDate: string, formattedEndDate: string): Promise<Tender[]> => {
@@ -373,6 +358,26 @@ const Tenders: React.FC = () => {
         return result;
     }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters, isFavorite, isToBeEntered, isNotToBeEntered]);
 
+    // CSV export removed — feature intentionally disabled
+
+    // Obsługa skrótów klawiszowych
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ctrl+F lub Cmd+F (na Mac) - fokus na wyszukiwarkę
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                if (searchInputRef.current) {
+                    searchInputRef.current.focus();
+                    searchInputRef.current.select();
+                }
+            }
+            // (Ctrl+E export was removed)
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     useEffect(() => {
         // Liczenie przetargów per źródło
         const counts: Record<TenderSource, number> = {
@@ -456,6 +461,7 @@ const Tenders: React.FC = () => {
                                 </button>
                             </li>
                         </ul>
+                        {/* CSV export button removed */}
                     </div>
                     <div className={styles.tabContent}>
                         {activeTab === 'tenders' ? (
@@ -671,142 +677,20 @@ const Tenders: React.FC = () => {
                 )}
                 {!isLoading && (
                     <ul className={styles.tendersList}>
-                    {displayedTenders.map((tender) => (
-                        <li 
-                            key={tender.publicationNumber} 
-                            className={`${styles.tenderCard} 
-                                ${isFavorite(tender.publicationNumber) ? styles.tenderCardFavorite : ''}
-                                ${isToBeEntered(tender.publicationNumber) ? styles.tenderCardToBeEntered : ''}
-                                ${isNotToBeEntered(tender.publicationNumber) ? styles.tenderCardNotToBeEntered : ''}
-                            `}
-                        >
-                            <div className={styles.cardHeader}>
-                                <div className={styles.publicationNumber}>
-                                    Numer publikacji: {tender.publicationNumber}
-                                </div>
-                                <div className={styles.cardActions}>
-                                    <button
-                                        className={`${styles.statusButton} ${isToBeEntered(tender.publicationNumber) ? styles.toBeEnteredActive : ''}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleToBeEntered(tender.publicationNumber);
-                                        }}
-                                        aria-label={isToBeEntered(tender.publicationNumber) ? "Usuń z do wpisania" : "Oznacz jako do wpisania"}
-                                        title={isToBeEntered(tender.publicationNumber) ? "Usuń z do wpisania" : "Oznacz jako do wpisania"}
-                                    >
-                                        ✓
-                                    </button>
-                                    <button
-                                        className={`${styles.statusButton} ${isNotToBeEntered(tender.publicationNumber) ? styles.notToBeEnteredActive : ''}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleNotToBeEntered(tender.publicationNumber);
-                                        }}
-                                        aria-label={isNotToBeEntered(tender.publicationNumber) ? "Usuń z nie do wpisania" : "Oznacz jako nie do wpisania"}
-                                        title={isNotToBeEntered(tender.publicationNumber) ? "Usuń z nie do wpisania" : "Oznacz jako nie do wpisania"}
-                                    >
-                                        ✕
-                                    </button>
-                                    <button
-                                        className={`${styles.favoriteButton} ${isFavorite(tender.publicationNumber) ? styles.favoriteActive : ''}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            isFavorite(tender.publicationNumber) 
-                                                ? removeFromFavorites(tender.publicationNumber)
-                                                : addToFavorites(tender);
-                                        }}
-                                        aria-label={isFavorite(tender.publicationNumber) ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
-                                        title={isFavorite(tender.publicationNumber) ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
-                                    >
-                                        {isFavorite(tender.publicationNumber) ? '★' : '☆'}
-                                    </button>
-                                </div>
-                            </div>
-                            <div className={styles.badgesContainer}>
-                                <span className={styles.sourceBadge} style={{
-                                    backgroundColor: getSourceConfig(tender.source).backgroundColor,
-                                    color: getSourceConfig(tender.source).color
-                                }}>
-                                    {getSourceConfig(tender.source).label}
-                                </span>
-                                {tender.orderType && (
-                                    <span className={styles.orderTypeBadge} style={{
-                                        backgroundColor: getOrderTypeConfig(tender.orderType as OrderType).backgroundColor,
-                                        color: getOrderTypeConfig(tender.orderType as OrderType).color
-                                    }}>
-                                        {getOrderTypeConfig(tender.orderType as OrderType).label}
-                                    </span>
-                                )}
-                            </div>
-                            <h2 className={styles.title}>
-                                {tender.title}
-                            </h2>
-                            <div className={styles.info}>
-                                <div className={styles.infoItem}>
-                                    <span className={styles.infoLabel}>Data publikacji</span>
-                                    <span className={styles.infoValue}>
-                                        {tender.publicationDate}
-                                        {tender.publicationTime && tender.source === TenderSource.E_ZAMOWIENIA && (
-                                            <span className={styles.publicationTime}> {tender.publicationTime}</span>
-                                        )}
-                                    </span>
-                                </div>
-                                <div className={styles.infoItem}>
-                                    <span className={styles.infoLabel}>Termin składania</span>
-                                    <span className={styles.infoValue}>{tender.deadlineDate}</span>
-                                </div>
-                                <div className={styles.infoItem}>
-                                    <span className={styles.infoLabel}>Miasto</span>
-                                    <span className={styles.infoValue}>{tender.buyerCity}</span>
-                                </div>
-                                <div className={styles.infoItem}>
-                                    <span className={styles.infoLabel}>Zamawiający</span>
-                                    <span className={styles.infoValue}>{tender.buyerName}</span>
-                                </div>
-                            </div>
-                            <div className={styles.cpvSection}>
-                                {getDisplayedCpvCodes(tender).length > 0 && (
-                                    <div className={styles.cpvContainer}>
-                                        <button 
-                                            className={styles.cpvToggle}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setExpandedCpvCards(prev => ({
-                                                    ...prev,
-                                                    [tender.publicationNumber]: !prev[tender.publicationNumber]
-                                                }));
-                                            }}
-                                        >
-                                            Kody CPV ({getDisplayedCpvCodes(tender).length})
-                                            {expandedCpvCards[tender.publicationNumber] ? ' ▼' : ' ▶'}
-                                        </button>
-                                        {expandedCpvCards[tender.publicationNumber] && (
-                                            <div className={styles.cpvCodes}>
-                                                {getDisplayedCpvCodes(tender).map((cpv: string) => (
-                                                    <div key={cpv} className={styles.cpvCodeContainer}>
-                                                        <span className={styles.cpvCode}>
-                                                            {cpv}
-                                                        </span>
-                                                        <span className={styles.cpvName}>
-                                                            {getCpvName(cpv)}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <a 
-                                href={tender.link} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className={styles.link}
-                            >
-                                Zobacz ogłoszenie
-                            </a>
-                        </li>
-                    ))}
+                        {displayedTenders.map((tender) => {
+                            const cpvCodes = getDisplayedCpvCodes(tender);
+                            return (
+                                <TenderCard
+                                    key={tender.publicationNumber}
+                                    tender={tender}
+                                    cpvCodes={cpvCodes}
+                                    onToggleToBeEntered={toggleToBeEntered}
+                                    onToggleNotToBeEntered={toggleNotToBeEntered}
+                                    isToBeEntered={isToBeEntered}
+                                    isNotToBeEntered={isNotToBeEntered}
+                                />
+                            );
+                        })}
                     </ul>
                 )}
                             </div>

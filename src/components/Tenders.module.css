@@ -75,6 +75,40 @@
 .tabsContainer {
     margin-bottom: 24px;
     border-bottom: 2px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.exportButtonContainer {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.exportButton {
+    padding: 10px 20px;
+    background: var(--button-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.exportButton:hover {
+    background: var(--button-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.exportButton:active {
+    transform: translateY(0);
 }
 
 .tabs {
@@ -712,6 +746,97 @@
     background: var(--cpv-bg-hover);
 }
 
+.notesSection {
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.notesToggle {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-align: left;
+}
+
+.notesToggle:hover {
+    background: var(--bg-secondary);
+    border-color: var(--button-primary);
+}
+
+.notesContainer {
+    margin-top: 8px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.notesInput {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    resize: vertical;
+    min-height: 60px;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+}
+
+.notesInput:focus {
+    outline: none;
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.notesInput::placeholder {
+    color: var(--text-secondary);
+}
+
+.notesActions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.notesSaveButton,
+.notesDeleteButton {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.notesSaveButton {
+    background: var(--button-primary);
+    color: white;
+}
+
+.notesSaveButton:hover {
+    background: var(--button-primary-hover);
+}
+
+.notesDeleteButton {
+    background: #e74c3c;
+    color: white;
+}
+
+.notesDeleteButton:hover {
+    background: #c0392b;
+}
+
 .link {
     display: inline-block;
     margin-top: 16px;
@@ -759,6 +884,13 @@
 @media (max-width: 768px) {
     .tabsContainer {
         margin-bottom: 16px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .exportButton {
+        width: 100%;
+        margin-top: 8px;
     }
     
     .tabs {

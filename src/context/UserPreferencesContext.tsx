@@ -13,6 +13,7 @@ interface UserPreferencesContextType {
     selectedTenders: Set<string>;
     toBeEnteredTenders: Set<string>;
     notToBeEnteredTenders: Set<string>;
+    notes: Record<string, string>;
     addToFavorites: (tender: Tender) => void;
     removeFromFavorites: (publicationNumber: string) => void;
     isFavorite: (publicationNumber: string) => boolean;
@@ -26,6 +27,9 @@ interface UserPreferencesContextType {
     toggleNotToBeEntered: (publicationNumber: string) => void;
     isToBeEntered: (publicationNumber: string) => boolean;
     isNotToBeEntered: (publicationNumber: string) => boolean;
+    getNote: (publicationNumber: string) => string;
+    setNote: (publicationNumber: string, note: string) => void;
+    deleteNote: (publicationNumber: string) => void;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
@@ -51,6 +55,11 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         return saved ? JSON.parse(saved) : [];
     });
 
+    const [notes, setNotes] = useState<Record<string, string>>(() => {
+        const saved = localStorage.getItem('tenderNotes');
+        return saved ? JSON.parse(saved) : {};
+    });
+
     useEffect(() => {
         localStorage.setItem('favorites', JSON.stringify(favorites));
     }, [favorites]);
@@ -66,6 +75,10 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
     useEffect(() => {
         localStorage.setItem('notToBeEnteredTenders', JSON.stringify(Array.from(notToBeEnteredTenders)));
     }, [notToBeEnteredTenders]);
+
+    useEffect(() => {
+        localStorage.setItem('tenderNotes', JSON.stringify(notes));
+    }, [notes]);
 
     const addToFavorites = (tender: Tender) => {
         setFavorites(prev => {
@@ -165,12 +178,36 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         return notToBeEnteredTenders.has(publicationNumber);
     };
 
+    const getNote = (publicationNumber: string): string => {
+        return notes[publicationNumber] || '';
+    };
+
+    const setNote = (publicationNumber: string, note: string) => {
+        setNotes(prev => {
+            if (note.trim() === '') {
+                const newNotes = { ...prev };
+                delete newNotes[publicationNumber];
+                return newNotes;
+            }
+            return { ...prev, [publicationNumber]: note };
+        });
+    };
+
+    const deleteNote = (publicationNumber: string) => {
+        setNotes(prev => {
+            const newNotes = { ...prev };
+            delete newNotes[publicationNumber];
+            return newNotes;
+        });
+    };
+
     const value = {
         favorites,
         emailAlerts,
         selectedTenders,
         toBeEnteredTenders,
         notToBeEnteredTenders,
+        notes,
         addToFavorites,
         removeFromFavorites,
         isFavorite,
@@ -183,7 +220,10 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         toggleToBeEntered,
         toggleNotToBeEntered,
         isToBeEntered,
-        isNotToBeEntered
+        isNotToBeEntered,
+        getNote,
+        setNote,
+        deleteNote
     };
 
     return (
