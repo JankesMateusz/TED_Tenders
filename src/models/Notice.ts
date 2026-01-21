@@ -15,6 +15,7 @@ export class Notice implements Tender {
     changeNoticeVersionIdentifier: string | null;
     source: TenderSource;
     orderType?: "Delivery" | "Services" | "Works"; // Tylko dla eZamówienia
+    buyerMainActivity?: string;
     
     constructor(data: any, source: TenderSource = TenderSource.TED) {
         this.publicationNumber = data["publication-number"];
@@ -28,6 +29,7 @@ export class Notice implements Tender {
         this.buyerCity = data["buyer-city"]?.mul?.[0] || "Brak miasta";
         this.changeNoticeVersionIdentifier = data["change-notice-version-identifier"] || null;
         this.source = source;
+        this.buyerMainActivity = this.extractBuyerActivity(data["authority-main-activity"]);
     }
 
     private extractCountry(titleObj: any): string {
@@ -58,5 +60,16 @@ export class Notice implements Tender {
             return `https://ted.europa.eu/udl?uri=TED:NOTICE:${data["publication-number"]}:TEXT:PL:HTML`;
         }
         return "#";
+    }
+
+    private extractBuyerActivity(activityField: any): string | undefined {
+        if (!activityField) return undefined;
+        try {
+            const value = Array.isArray(activityField) ? activityField[0] : activityField;
+            return typeof value === 'string' ? value.trim() : undefined;
+        } catch (error) {
+            console.warn('Error extracting buyer activity:', activityField, error);
+            return undefined;
+        }
     }
 }

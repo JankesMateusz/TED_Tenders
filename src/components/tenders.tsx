@@ -206,8 +206,23 @@ const Tenders: React.FC = () => {
     // Gdy zmieniamy startDate w trybie pojedynczego dnia, aktualizuj endDate
     const handleStartDateChange = (date: Date | null) => {
         setStartDate(date);
-        if (!useDateRange && date) {
+        if (useDateRange) {
+            setEndDate(null);
+        } else if (date) {
             setEndDate(date);
+        } else {
+            setEndDate(null);
+        }
+    };
+
+    const handleUseDateRangeChange = (value: boolean) => {
+        setUseDateRange(value);
+        if (value) {
+            setEndDate(null);
+        } else if (startDate) {
+            setEndDate(startDate);
+        } else {
+            setEndDate(null);
         }
     };
 
@@ -417,7 +432,7 @@ const Tenders: React.FC = () => {
                 setStartDate={handleStartDateChange}
                 setEndDate={setEndDate}
                 useDateRange={useDateRange}
-                setUseDateRange={setUseDateRange}
+                setUseDateRange={handleUseDateRangeChange}
                 tendersCountBySource={tendersCountBySource}
                 onAllTendersClick={handleAllTendersClick}
                 onFilterClick={handleFilterClick}

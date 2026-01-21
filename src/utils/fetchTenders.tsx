@@ -45,6 +45,7 @@ export const fetchTenders = async (startDate: string, endDate: string): Promise<
                     "publication-number",
                     "buyer-city",
                     "organisation-name-buyer",
+                    "authority-main-activity",
                     "change-notice-version-identifier",
                     "deadline-receipt-tender-date-lot",
                 ],

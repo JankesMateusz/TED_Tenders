@@ -14,5 +14,6 @@ export interface Tender {
     orderType?: "Delivery" | "Services" | "Works";
     changeNoticeVersionIdentifier?: string | null;
     country?: string;
+    buyerMainActivity?: string;
 }
 

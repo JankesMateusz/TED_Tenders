@@ -4,11 +4,39 @@ import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig } from '../utils/tenderSources';
 import styles from './StatisticsTab.module.css';
 
+const ACTIVITY_LABELS: Record<string, string> = {
+    health: 'Zdrowie',
+    'general-public-services': 'Administracja publiczna',
+    defence: 'Obrona',
+    'public-order-and-safety': 'Porządek i bezpieczeństwo',
+    environment: 'Środowisko',
+    'economic-and-financial-affairs': 'Sprawy gospodarczo-finansowe',
+    'housing-and-community-amenities': 'Budownictwo i infrastruktura komunalna',
+    'recreation-culture-and-religion': 'Rekreacja, kultura i religia',
+    education: 'Edukacja',
+    'social-protection': 'Ochrona socjalna',
+    other: 'Inne'
+};
+
+const formatActivityLabel = (rawKey: string): string => {
+    const normalizedKey = rawKey.toLowerCase();
+    if (ACTIVITY_LABELS[normalizedKey]) {
+        return ACTIVITY_LABELS[normalizedKey];
+    }
+    return normalizedKey
+        .split('-')
+        .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+        .join(' ');
+};
+
 interface StatisticsTabProps {
     statistics: Statistics;
 }
 
 export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics }) => {
+    const buyerActivityEntries = Object.entries(statistics.byBuyerActivity);
+    const hasBuyerActivity = buyerActivityEntries.length > 0;
+
     return (
         <div className={styles.statisticsContainer}>
             <div className={styles.statsGrid}>
@@ -80,6 +108,20 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics }) => {
                             {Object.entries(statistics.byOrderType).map(([type, count]) => (
                                 <div key={type} className={styles.orderTypeItem}>
                                     <span className={styles.orderTypeLabel}>{type}</span>
+                                    <span className={styles.orderTypeCount}>{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {hasBuyerActivity && (
+                    <div className={styles.section}>
+                        <h3 className={styles.sectionTitle}>Według działalności zamawiającego</h3>
+                        <div className={styles.orderTypeStats}>
+                            {buyerActivityEntries.map(([activity, count]) => (
+                                <div key={activity} className={styles.orderTypeItem}>
+                                    <span className={styles.orderTypeLabel}>{formatActivityLabel(activity)}</span>
                                     <span className={styles.orderTypeCount}>{count}</span>
                                 </div>
                             ))}

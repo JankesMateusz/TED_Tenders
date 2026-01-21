@@ -8,6 +8,7 @@ export interface Statistics {
     byOrderType: Partial<Record<OrderType, number>>;
     topCities: Array<{ city: string; count: number }>;
     topBuyers: Array<{ buyer: string; count: number }>;
+    byBuyerActivity: Record<string, number>;
     byStatus: {
         favorites: number;
         toBeEntered: number;
@@ -68,6 +69,7 @@ export const calculateStatistics = (
         byOrderType: {},
         topCities: [],
         topBuyers: [],
+        byBuyerActivity: {},
         byStatus: {
             favorites: 0,
             toBeEntered: 0,
@@ -88,6 +90,7 @@ export const calculateStatistics = (
     
     const cityMap = new Map<string, number>();
     const buyerMap = new Map<string, number>();
+    const activityMap = new Map<string, number>();
     
     tenders.forEach(tender => {
         // By source
@@ -107,6 +110,14 @@ export const calculateStatistics = (
         // Top buyers
         if (tender.buyerName && tender.buyerName !== 'Brak danych') {
             buyerMap.set(tender.buyerName, (buyerMap.get(tender.buyerName) || 0) + 1);
+        }
+
+        // Buyer activity
+        if (tender.buyerMainActivity) {
+            const activityKey = tender.buyerMainActivity.trim().toLowerCase();
+            if (activityKey) {
+                activityMap.set(activityKey, (activityMap.get(activityKey) || 0) + 1);
+            }
         }
         
         // By status
@@ -150,6 +161,13 @@ export const calculateStatistics = (
         .map(([buyer, count]) => ({ buyer, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
+
+    stats.byBuyerActivity = Array.from(activityMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .reduce((acc, [activity, count]) => {
+            acc[activity] = count;
+            return acc;
+        }, {} as Record<string, number>);
     
     return stats;
 };
