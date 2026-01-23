@@ -9,6 +9,8 @@ export interface Statistics {
     topCities: Array<{ city: string; count: number }>;
     topBuyers: Array<{ buyer: string; count: number }>;
     byBuyerActivity: Record<string, number>;
+    ezamowieniaHourlyDistribution: Record<string, number[]>;
+    dailyDistributionBySource: Record<string, Record<TenderSource, number>>;
     byStatus: {
         favorites: number;
         toBeEntered: number;
@@ -70,6 +72,8 @@ export const calculateStatistics = (
         topCities: [],
         topBuyers: [],
         byBuyerActivity: {},
+        ezamowieniaHourlyDistribution: {},
+        dailyDistributionBySource: {},
         byStatus: {
             favorites: 0,
             toBeEntered: 0,
@@ -91,6 +95,8 @@ export const calculateStatistics = (
     const cityMap = new Map<string, number>();
     const buyerMap = new Map<string, number>();
     const activityMap = new Map<string, number>();
+    const ezamowieniaHourlyMap = new Map<string, number[]>();
+    const dailySourceMap = new Map<string, Record<TenderSource, number>>();
     
     tenders.forEach(tender => {
         // By source
@@ -148,6 +154,44 @@ export const calculateStatistics = (
             if (pubDate >= weekAgo) stats.dateStats.thisWeek++;
             if (pubDate >= monthAgo) stats.dateStats.thisMonth++;
         }
+
+        // Hourly distribution for eZamówienia
+        if (
+            tender.source === TenderSource.E_ZAMOWIENIA &&
+            tender.publicationTime &&
+            tender.publicationDate &&
+            tender.publicationDate !== 'Brak daty' &&
+            tender.publicationDate !== 'Błąd formatu daty'
+        ) {
+            const [hourStr] = tender.publicationTime.split(':');
+            const hour = Number(hourStr);
+            if (!Number.isNaN(hour) && hour >= 0 && hour < 24) {
+                if (!ezamowieniaHourlyMap.has(tender.publicationDate)) {
+                    ezamowieniaHourlyMap.set(tender.publicationDate, Array(24).fill(0));
+                }
+                const buckets = ezamowieniaHourlyMap.get(tender.publicationDate);
+                if (buckets) {
+                    buckets[hour] += 1;
+                }
+            }
+        }
+
+        // Daily distribution by source
+        if (tender.publicationDate && 
+            tender.publicationDate !== 'Brak daty' && 
+            tender.publicationDate !== 'Błąd formatu daty') {
+            if (!dailySourceMap.has(tender.publicationDate)) {
+                dailySourceMap.set(tender.publicationDate, {
+                    [TenderSource.TED]: 0,
+                    [TenderSource.E_ZAMOWIENIA]: 0,
+                    [TenderSource.BAZA_KONKURENCYJNOSCI]: 0
+                });
+            }
+            const sourceCounts = dailySourceMap.get(tender.publicationDate);
+            if (sourceCounts) {
+                sourceCounts[tender.source] += 1;
+            }
+        }
     });
     
     // Top cities (top 10)
@@ -168,6 +212,18 @@ export const calculateStatistics = (
             acc[activity] = count;
             return acc;
         }, {} as Record<string, number>);
+
+    stats.ezamowieniaHourlyDistribution = Array.from(ezamowieniaHourlyMap.entries())
+        .sort((a, b) => parseDate(b[0]).getTime() - parseDate(a[0]).getTime())
+        .reduce((acc, [date, hours]) => {
+            acc[date] = hours;
+            return acc;
+        }, {} as Record<string, number[]>);
+
+    stats.dailyDistributionBySource = Object.fromEntries(
+        Array.from(dailySourceMap.entries())
+            .sort((a, b) => parseDate(a[0]).getTime() - parseDate(b[0]).getTime())
+    );
     
     return stats;
 };

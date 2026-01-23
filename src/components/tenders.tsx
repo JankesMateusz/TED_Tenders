@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { fetchTenders } from "../utils/fetchTenders";
 import { fetchEzamowienia } from "../utils/fetchEzamowienia";
-import { filterTendersByCpvCodes, isItRelatedCpv, removeChangeNotices } from "../utils/cpvFilter";
-import { normalizeName } from "../utils/stringUtils";
+import { isItRelatedCpv, removeChangeNotices } from "../utils/cpvFilter";
 import { useUserPreferences } from "../context/UserPreferencesContext";
-import { getSourceConfig, getOrderTypeConfig, OrderType } from "../utils/tenderSources";
+import { OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
-import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS, MESSAGES } from "../constants";
+import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
 import { saveTendersToCache, getTendersFromCache } from "../utils/tendersCache";
 import { calculateStatistics } from "../utils/calculateStatistics";
+import { filterAndSortTenders } from "../utils/tenderFilters";
 import { StatisticsTab } from "./StatisticsTab";
+import { FiltersPanel } from "./FiltersPanel";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import TenderCard from "./TenderCard";
@@ -260,26 +261,6 @@ const Tenders: React.FC = () => {
         );
     };
 
-    const parseDate = (dateStr: string): Date => {
-        // Format: DD-MM-YYYY
-        if (!dateStr || dateStr === "Brak daty" || dateStr === "Błąd formatu daty") {
-            return new Date(0); // Najstarsza możliwa data dla sortowania
-        }
-        try {
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                const [day, month, year] = parts.map(Number);
-                const date = new Date(year, month - 1, day);
-                if (!isNaN(date.getTime())) {
-                    return date;
-                }
-            }
-        } catch (error) {
-            console.warn('Error parsing date:', dateStr, error);
-        }
-        return new Date(0);
-    };
-
     const getDisplayedCpvCodes = (tender: Tender): string[] => {
         const cpvCodes = isFiltered 
             ? tender.cpvCodes.filter((cpv: string) => isItRelatedCpv(cpv))
@@ -288,86 +269,18 @@ const Tenders: React.FC = () => {
     };
 
     const displayedTenders = useMemo(() => {
-        let result = [...tenders];
-        
-        // Filtrowanie po źródle
-        result = result.filter(tender => selectedSources.includes(tender.source));
-        
-        // Filtrowanie po typie zamówienia (tylko dla eZamówienia)
-        result = result.filter(tender => {
-            if (tender.source === TenderSource.E_ZAMOWIENIA && tender.orderType) {
-                return selectedOrderTypes.includes(tender.orderType);
-            }
-            // Dla innych źródeł (TED, Baza Konkurencyjności) nie filtrujemy po typie zamówienia
-            return true;
+        return filterAndSortTenders(tenders, {
+            selectedSources,
+            selectedOrderTypes,
+            selectedBuyer,
+            selectedCity,
+            isFiltered,
+            searchQuery,
+            statusFilters,
+            isFavorite,
+            isToBeEntered,
+            isNotToBeEntered
         });
-        
-        // Filtrowanie po zamawiającym z użyciem znormalizowanej nazwy
-        if (selectedBuyer) {
-            const normalizedSelected = normalizeName(selectedBuyer);
-            result = result.filter(tender => {
-                const normalizedTenderName = normalizeName(tender.buyerName);
-                return normalizedTenderName === normalizedSelected;
-            });
-        }
-        
-        // Filtrowanie po mieście z użyciem znormalizowanej nazwy
-        if (selectedCity) {
-            const normalizedSelected = normalizeName(selectedCity);
-            result = result.filter(tender => {
-                const normalizedTenderCity = normalizeName(tender.buyerCity);
-                return normalizedTenderCity === normalizedSelected;
-            });
-        }
-        
-        // Filtrowanie po CPV jeśli włączone
-        if (isFiltered) {
-            result = filterTendersByCpvCodes(result);
-        }
-        
-        // Filtrowanie po wyszukiwaniu
-        if (searchQuery.trim()) {
-            const query = searchQuery.trim().toLowerCase();
-            result = result.filter(tender => {
-                // Wyszukiwanie po tytule
-                if (tender.title?.toLowerCase().includes(query)) return true;
-                // Wyszukiwanie po zamawiającym
-                if (tender.buyerName?.toLowerCase().includes(query)) return true;
-                // Wyszukiwanie po mieście
-                if (tender.buyerCity?.toLowerCase().includes(query)) return true;
-                // Wyszukiwanie po numerze publikacji
-                if (tender.publicationNumber?.toLowerCase().includes(query)) return true;
-                // Wyszukiwanie po kodach CPV
-                if (tender.cpvCodes?.some((cpv: string) => cpv.toLowerCase().includes(query))) return true;
-                return false;
-            });
-        }
-        
-        // Filtrowanie po statusach (OR - wystarczy jeden wybrany status)
-        const hasAnyStatusFilter = statusFilters.favorites || statusFilters.toBeEntered || statusFilters.notToBeEntered || statusFilters.unmarked;
-        if (hasAnyStatusFilter) {
-            result = result.filter(tender => {
-                const isFav = isFavorite(tender.publicationNumber);
-                const isToBe = isToBeEntered(tender.publicationNumber);
-                const isNotToBe = isNotToBeEntered(tender.publicationNumber);
-                const isUnmarked = !isFav && !isToBe && !isNotToBe;
-                
-                // OR logic - wystarczy że przetarg spełnia jeden z wybranych statusów
-                return (statusFilters.favorites && isFav) ||
-                       (statusFilters.toBeEntered && isToBe) ||
-                       (statusFilters.notToBeEntered && isNotToBe) ||
-                       (statusFilters.unmarked && isUnmarked);
-            });
-        }
-        
-        // Sortowanie po dacie publikacji (najnowsze na górze)
-        result.sort((a, b) => {
-            const dateA = parseDate(a.publicationDate);
-            const dateB = parseDate(b.publicationDate);
-            return dateB.getTime() - dateA.getTime();
-        });
-        
-        return result;
     }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters, isFavorite, isToBeEntered, isNotToBeEntered]);
 
     // Obsługa skrótów klawiszowych
@@ -475,183 +388,21 @@ const Tenders: React.FC = () => {
                     <div className={styles.tabContent}>
                         {activeTab === 'tenders' ? (
                             <div className={styles.container}>
-                                <div className={styles.searchSection}>
-                    <div className={styles.searchInputWrapper}>
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder={PLACEHOLDER_TEXTS.SEARCH}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Delete' && searchQuery) {
-                                    e.preventDefault();
-                                    setSearchQuery("");
-                                }
-                            }}
-                            className={styles.searchInput}
-                        />
-                        {searchQuery && (
-                            <button
-                                className={styles.clearSearchButton}
-                                onClick={() => setSearchQuery("")}
-                                aria-label="Wyczyść wyszukiwanie"
-                                title="Wyczyść wyszukiwanie"
-                            >
-                                ✕
-                            </button>
-                        )}
-                    </div>
-                </div>
-                <div className={styles.filtersSection}>
-                    <div className={styles.sourceFilters}>
-                        <span className={styles.sourceFiltersLabel}>Źródła:</span>
-                        {[TenderSource.TED, TenderSource.E_ZAMOWIENIA, TenderSource.BAZA_KONKURENCYJNOSCI].map((source) => {
-                            const config = getSourceConfig(source);
-                            const isSelected = selectedSources.includes(source);
-                            return (
-                                <label key={source} className={styles.sourceFilterLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() => handleSourceToggle(source)}
-                                        className={styles.sourceCheckbox}
-                                    />
-                                    <span 
-                                        className={styles.sourceFilterBadge}
-                                        style={{
-                                            backgroundColor: isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.1)',
-                                            color: isSelected ? config.color : 'var(--text-secondary)',
-                                            border: `1px solid ${isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.2)'}`
-                                        }}
-                                    >
-                                        {config.label}
-                                    </span>
-                                </label>
-                            );
-                        })}
-                    </div>
-                    {selectedSources.includes(TenderSource.E_ZAMOWIENIA) && (
-                        <div className={styles.sourceFilters}>
-                            <span className={styles.sourceFiltersLabel}>Typy:</span>
-                            {DEFAULT_ORDER_TYPES.map((orderType) => {
-                                const config = getOrderTypeConfig(orderType);
-                                const isSelected = selectedOrderTypes.includes(orderType);
-                                return (
-                                    <label key={orderType} className={styles.sourceFilterLabel}>
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => handleOrderTypeToggle(orderType)}
-                                            className={styles.sourceCheckbox}
-                                        />
-                                        <span 
-                                            className={styles.sourceFilterBadge}
-                                            style={{
-                                                backgroundColor: isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.1)',
-                                                color: isSelected ? config.color : 'var(--text-secondary)',
-                                                border: `1px solid ${isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.2)'}`
-                                            }}
-                                        >
-                                            {config.label}
-                                        </span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                    )}
-                    <div className={styles.statusCounts}>
-                        <span className={styles.statusCountItem}>
-                            <span className={styles.statusCountLabel}>Do wpisania:</span>
-                            <span className={styles.statusCountValue} style={{ color: '#2ecc71' }}>
-                                {toBeEnteredCount}
-                            </span>
-                        </span>
-                        <span className={styles.statusCountItem}>
-                            <span className={styles.statusCountLabel}>Nie do wpisania:</span>
-                            <span className={styles.statusCountValue} style={{ color: '#e74c3c' }}>
-                                {notToBeEnteredCount}
-                            </span>
-                        </span>
-                    </div>
-                </div>
-                <div className={styles.statusFiltersSection}>
-                    <div className={styles.sourceFilters}>
-                        <span className={styles.sourceFiltersLabel}>Filtruj po statusie:</span>
-                        <label className={styles.sourceFilterLabel}>
-                            <input
-                                type="checkbox"
-                                checked={statusFilters.favorites}
-                                onChange={() => setStatusFilters(prev => ({...prev, favorites: !prev.favorites}))}
-                                className={styles.sourceCheckbox}
-                            />
-                            <span 
-                                className={styles.sourceFilterBadge}
-                                style={{
-                                    backgroundColor: statusFilters.favorites ? '#f39c12' : 'rgba(0, 0, 0, 0.1)',
-                                    color: statusFilters.favorites ? '#ffffff' : 'var(--text-secondary)',
-                                    border: `1px solid ${statusFilters.favorites ? '#f39c12' : 'rgba(0, 0, 0, 0.2)'}`
-                                }}
-                            >
-                                Ulubione
-                            </span>
-                        </label>
-                        <label className={styles.sourceFilterLabel}>
-                            <input
-                                type="checkbox"
-                                checked={statusFilters.toBeEntered}
-                                onChange={() => setStatusFilters(prev => ({...prev, toBeEntered: !prev.toBeEntered}))}
-                                className={styles.sourceCheckbox}
-                            />
-                            <span 
-                                className={styles.sourceFilterBadge}
-                                style={{
-                                    backgroundColor: statusFilters.toBeEntered ? '#2ecc71' : 'rgba(0, 0, 0, 0.1)',
-                                    color: statusFilters.toBeEntered ? '#ffffff' : 'var(--text-secondary)',
-                                    border: `1px solid ${statusFilters.toBeEntered ? '#2ecc71' : 'rgba(0, 0, 0, 0.2)'}`
-                                }}
-                            >
-                                Do wpisania
-                            </span>
-                        </label>
-                        <label className={styles.sourceFilterLabel}>
-                            <input
-                                type="checkbox"
-                                checked={statusFilters.notToBeEntered}
-                                onChange={() => setStatusFilters(prev => ({...prev, notToBeEntered: !prev.notToBeEntered}))}
-                                className={styles.sourceCheckbox}
-                            />
-                            <span 
-                                className={styles.sourceFilterBadge}
-                                style={{
-                                    backgroundColor: statusFilters.notToBeEntered ? '#e74c3c' : 'rgba(0, 0, 0, 0.1)',
-                                    color: statusFilters.notToBeEntered ? '#ffffff' : 'var(--text-secondary)',
-                                    border: `1px solid ${statusFilters.notToBeEntered ? '#e74c3c' : 'rgba(0, 0, 0, 0.2)'}`
-                                }}
-                            >
-                                Nie do wpisania
-                            </span>
-                        </label>
-                        <label className={styles.sourceFilterLabel}>
-                            <input
-                                type="checkbox"
-                                checked={statusFilters.unmarked}
-                                onChange={() => setStatusFilters(prev => ({...prev, unmarked: !prev.unmarked}))}
-                                className={styles.sourceCheckbox}
-                            />
-                            <span 
-                                className={styles.sourceFilterBadge}
-                                style={{
-                                    backgroundColor: statusFilters.unmarked ? '#95a5a6' : 'rgba(0, 0, 0, 0.1)',
-                                    color: statusFilters.unmarked ? '#ffffff' : 'var(--text-secondary)',
-                                    border: `1px solid ${statusFilters.unmarked ? '#95a5a6' : 'rgba(0, 0, 0, 0.2)'}`
-                                }}
-                            >
-                                Nieoznaczone
-                            </span>
-                        </label>
-                    </div>
-                </div>
+                                <FiltersPanel
+                                    searchQuery={searchQuery}
+                                    onSearchChange={setSearchQuery}
+                                    searchInputRef={searchInputRef}
+                                    selectedSources={selectedSources}
+                                    onSourceToggle={handleSourceToggle}
+                                    selectedOrderTypes={selectedOrderTypes}
+                                    onOrderTypeToggle={handleOrderTypeToggle}
+                                    statusFilters={statusFilters}
+                                    onStatusFilterChange={(filter) => 
+                                        setStatusFilters(prev => ({...prev, [filter]: !prev[filter as keyof typeof prev]}))
+                                    }
+                                    toBeEnteredCount={toBeEnteredCount}
+                                    notToBeEnteredCount={notToBeEnteredCount}
+                                />
                 {isLoading && (
                     <>
                         <div className={styles.progressBarContainer}>
@@ -704,7 +455,10 @@ const Tenders: React.FC = () => {
                 )}
                             </div>
                         ) : (
-                            <StatisticsTab statistics={statistics} />
+                            <StatisticsTab 
+                                statistics={statistics} 
+                                isDateRange={useDateRange}
+                            />
                         )}
                     </div>
                 </div>
