@@ -24,7 +24,7 @@ const cpvCodes = [
     "30121200", "30121300", "30121400", "30124500", "50313200",
     "30120000", "30121000", "30124000", "38520000", "32420000",
     "30234500", "32330000", "32323500", "39162100", "72268000",
-    "48310000", "48190000",
+    "48310000", "48190000", "72263000",
     // Original codes with suffixes
     "30200000-1", "30210000-4", "30211000-1", "30211100-2", "30211200-3",
     "30211300-4", "30211400-5", "30211500-6", "30212000-8", "30213000-5",
@@ -59,6 +59,7 @@ const cpvCodes = [
 
 // Function to check if a tender CPV code is IT-related
 export const isItRelatedCpv = (code: string): boolean => {
+    if (!code) return false;
     const baseCode = code.split('-')[0];
     return cpvCodes.some(cpvCode => {
         // Check if the filter code has a suffix
