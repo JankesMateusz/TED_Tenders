@@ -143,7 +143,8 @@ export const cpvMapping: { [key: string]: string } = {
     "32500000-8": "Urządzenia telekomunikacyjne",
     "32250000-0": "Telefony komórkowe",
     "64212000-5": "Usługi telefonii komórkowej",
-    "32323000": "Monitory video"
+    "32323000": "Monitory video",
+    "32322000": "Urządzenia multimedialne"
 };
 
 export const getCpvName = (code: string): string => {
