@@ -24,3 +24,8 @@ yarn-error.log*
 
 # API configuration
 src/config/api.ts
+
+# Firebase emulators
+*-debug.log
+.firebase/
+functions/node_modules/
