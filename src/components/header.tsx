@@ -5,7 +5,7 @@ import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
 import { TenderSource } from "../types/TenderSource";
 import { tenderSourceConfig } from "../utils/tenderSources";
-import { formatLastRefresh } from "../utils/dateUtils";
+import { formatRelativeTime } from "../utils/dateUtils";
 import { DATE_FORMAT, PLACEHOLDER_TEXTS } from "../constants";
 
 interface HeaderProps {
@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({
                         ({isFiltered ? 'tylko IT' : 'wszystkie branże'})
                     </span>
                     <span className={styles.lastRefresh} title="Ostatnie udane pobranie nowych przetargów ze źródeł (przez dowolnego użytkownika)">
-                        Ostatnia aktualizacja: {lastRefreshAt ? formatLastRefresh(lastRefreshAt) : 'brak danych'}
+                        Ostatnia aktualizacja: {lastRefreshAt ? formatRelativeTime(lastRefreshAt) : 'brak danych'}
                     </span>
                 </div>
             </div>

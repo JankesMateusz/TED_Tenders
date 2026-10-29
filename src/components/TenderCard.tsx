@@ -1,9 +1,12 @@
 import React, { useState, memo } from 'react';
 import { Tender } from '../types/Tender';
+import { TenderComment } from '../types/TenderComment';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { STATUS_CONFIG, TENDER_STATUSES, statusTooltip } from '../utils/tenderStatus';
+import { useAuth } from '../context/AuthContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import CommentsPopover from './CommentsPopover';
 import styles from './Tenders.module.css';
 
 type Props = {
@@ -11,9 +14,15 @@ type Props = {
     cpvCodes: string[];
     /** False, gdy przetargu nie ma już w bazie wspólnej (kopia z zakładki "Zapisane"): wtedy statusu nie da się zmienić. */
     canSetStatus: boolean;
+    comments: TenderComment[];
+    /** False, gdy przetargu nie ma już w bazie wspólnej: komentarze są wtedy niedostępne, podobnie jak status. */
+    canComment: boolean;
+    onAddComment: (tender: Tender, text: string) => Promise<boolean>;
+    onDeleteComment: (comment: TenderComment) => void;
 };
 
-const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus }) => {
+const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment }) => {
+    const { user } = useAuth();
     const { isFavorite, toggleFavorite, toggleStatus } = useUserPreferences();
 
     const [expanded, setExpanded] = useState<boolean>(false);
@@ -56,6 +65,14 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus }) => {
                             </button>
                         );
                     })}
+                    {canComment && (
+                        <CommentsPopover
+                            comments={comments}
+                            currentUid={user?.uid ?? null}
+                            onAdd={(text) => onAddComment(tender, text)}
+                            onDelete={onDeleteComment}
+                        />
+                    )}
                     <button
                         className={`${styles.favoriteButton} ${fav ? styles.favoriteActive : ''}`}
                         onClick={(e) => {

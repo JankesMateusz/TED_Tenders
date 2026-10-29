@@ -4,6 +4,7 @@ import { useUserPreferences } from "../context/UserPreferencesContext";
 import { OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
+import { TenderComment } from "../types/TenderComment";
 import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
 import { toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
@@ -11,6 +12,7 @@ import { StatusFilters, filterAndSortTenders } from "../utils/tenderFilters";
 import { TenderStatus } from "../types/TenderStatus";
 import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
+import { useComments } from "../hooks/useComments";
 import { StatisticsTab } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
 import Header from "./header";
@@ -58,6 +60,9 @@ const refreshDayWithRetry = async (day: string) => {
         }
     }
 };
+
+// Stała referencja, żeby karty bez komentarzy nie renderowały się od nowa przy każdej zmianie
+const NO_COMMENTS: TenderComment[] = [];
 
 const Tenders: React.FC = () => {
     const [tenders, setTenders] = useState<Tender[]>([]);
@@ -111,6 +116,8 @@ const Tenders: React.FC = () => {
             ),
         []
     );
+
+    const { commentsByTender, commentsError, addComment, deleteComment } = useComments(startDay, endDay);
 
     // Nasłuch przetargów z bazy dla wybranego zakresu dat (zmiany od innych użytkowników widać na bieżąco)
     useEffect(() => {
@@ -427,6 +434,7 @@ const Tenders: React.FC = () => {
                 {activeTab === 'tenders' && loadError && <p className={styles.message} role="alert">{loadError}</p>}
                 {activeTab === 'tenders' && refreshError && <p className={styles.message} role="alert">{refreshError}</p>}
                 {actionError && <p className={styles.message} role="alert">{actionError}</p>}
+                {commentsError && <p className={styles.message} role="alert">{commentsError}</p>}
                 {activeTab === 'tenders' && isRefreshing && !isLoading && (
                     <p className={styles.message}>
                         {REFRESHING_MESSAGE}
@@ -453,6 +461,10 @@ const Tenders: React.FC = () => {
                                     tender={tender}
                                     cpvCodes={cpvCodes}
                                     canSetStatus={liveTendersById.has(tender.id)}
+                                    comments={commentsByTender[tender.id] ?? NO_COMMENTS}
+                                    canComment={liveTendersById.has(tender.id)}
+                                    onAddComment={addComment}
+                                    onDeleteComment={deleteComment}
                                 />
                             );
                         })}
