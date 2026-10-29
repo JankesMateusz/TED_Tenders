@@ -16,7 +16,9 @@ Repozytorium źródłowe jest na GitHubie (ten folder to pobrana kopia, stąd br
 
 ## Bezpieczeństwo (do naprawy w pierwszej kolejności)
 
-> Stan na koniec etapu 2 (docs/plan.md): punkty 1, 3, 4 i 5 są rozwiązane w kodzie (usunięto `getApiKey` i proxy, nowe funkcje wymagają logowania i roli). Zmiany działają na razie tylko w projekcie testowym; **produkcja nadal ma stary kod**, więc luka z punktu 1 jest tam otwarta do czasu wdrożenia. Punkt 2 (klucz w buildzie frontendu: `scripts/createApiConfig.js`, workflow GitHub Actions) jest do posprzątania w etapie 5.
+> **Stan aktualny (po etapie 4 i porządkach, patrz `docs/handoff.md`):** to jest przegląd z początku prac, więc opisy „Architektury" i „Jakości kodu" poniżej dotyczą starej wersji i w większości są już nieaktualne (m.in. `fetchTenders`, `tendersCache`, `localStorage` ze statusami zostały zastąpione serwerem i Firestore; README jest przepisane; `firebase.json` wskazuje `nodejs22`; są testy).
+>
+> Punkty 1–5 z listy bezpieczeństwa są rozwiązane **w kodzie**: usunięto `getApiKey` i proxy, nowe funkcje wymagają logowania i roli, a klucz TED nie jest już potrzebny (wyszukiwanie TED v3 jest publiczne). Punkt 2 posprzątano: `src/config/api.ts` nie był nigdzie importowany, ale `scripts/createApiConfig.js` zapisywał klucz jako plik `build/static/js/config/api.ts`, który trafiał na hosting. Skrypt, jego wywołanie w `npm run build` i krok w workflow zostały usunięte. **Produkcja nadal ma stary kod**, więc luka z punktu 1 (publiczny `getApiKey`) jest tam otwarta do czasu wdrożenia (etap 5, patrz handoff). Klucz TED warto zrotować po wdrożeniu.
 
 1. **Publiczny endpoint `getApiKey`** (`functions/index.ts`): funkcja HTTP bez uwierzytelniania zwraca wartość `API_KEY` z Secret Managera. Każdy znający URL może pobrać klucz TED. Do usunięcia, a klucz warto zrotować.
 2. **Klucz TED w buildzie frontendu**: workflow `.github/workflows/firebase-deploy.yml` i `scripts/createApiConfig.js` zapisują `TED_API_KEY` do plików konfiguracyjnych. Wygląda to na pozostałość sprzed proxy. Do zweryfikowania, czy `src/config/api.ts` jest gdziekolwiek importowany. Jeśli trafia do bundla, klucz jest jawny.

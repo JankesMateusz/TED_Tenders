@@ -14,11 +14,12 @@ Użytkownik komunikuje się po polsku. Odpowiadaj po polsku, zwięźle, z uzasad
 - **Commity i pushe tylko za wyraźną zgodą.** Dotychczas pytałem przed każdą porcją commitów i pushem. Commit message kończy się linią współautora podaną w system-reminderze sesji (do tej pory: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`).
 - **Nic nie wdrażaj na produkcję** (projekt `tendersted`). Wszystko robimy na projekcie testowym `tenders-test-b5bb3` i na emulatorach. Merge do `main` uruchamia GitHub Actions i wdraża hosting na produkcję (patrz sekcja 8).
 - Użytkownik pytany o decyzje odpowiada konkretnie. Nie pytaj o rzeczy, które da się rozstrzygnąć rozsądnym domyślnym wyborem; opisz założenie i idź dalej.
-- Użytkownik sprawdza zmiany w przeglądarce sam i raportuje wyniki. Nie widziałeś interfejsu na żywo, więc zawsze zaznaczaj, co zweryfikowano tylko typami, buildem i testami.
+- Użytkownik sprawdza zmiany w przeglądarce sam i raportuje wyniki. Nie widziałeś interfejsu na żywo, więc zawsze zaznaczaj, co zweryfikowano tylko typami, buildem i testami. Reguły Firestore na projekt testowy wdrażaj dopiero po jego zgodzie (tak było dotąd), bo frontend z nowymi regułami zmienia to, co użytkownik zobaczy.
+- Użytkownik wstrzymał na razie wdrożenie na produkcję, bo planuje kolejne funkcjonalności. Zapytaj o jego plany, zanim zaczniesz etap 5.
 
 ## 3. Środowisko (Windows 11, PowerShell 5.1)
 
-- **Katalog projektu:** `C:\Users\janke\Desktop\Projekty\TED_Tenders-main`. Repozytorium: `https://github.com/JankesMateusz/TED_Tenders.git`. Gałąź robocza: `feature/shared-tenders` (wypchnięta na `origin`, 13 commitów przed `main`). `main` nie ruszamy do etapu 5. Lokalna gałąź `master` to stary, zbędny commit z `git init` (zawiera `node_modules`); można ją usunąć za zgodą użytkownika.
+- **Katalog projektu:** `C:\Users\janke\Desktop\Projekty\TED_Tenders-main`. Repozytorium: `https://github.com/JankesMateusz/TED_Tenders.git`. Gałąź robocza: `feature/shared-tenders` (wypchnięta na `origin`, ok. 19 commitów przed `origin/main`). `main` nie ruszamy do czasu wdrożenia na produkcję (etap 5). Na `origin` jest też stara gałąź `development`, niezwiązana z tymi pracami. Lokalna gałąź `master` to stary, zbędny commit z `git init` (zawiera `node_modules`); można ją usunąć za zgodą użytkownika.
 - **Node 24, npm 11.** `npx firebase` to firebase-tools 14.4.0 (z `devDependencies`).
 - **Java 21** (Microsoft OpenJDK) jest w `C:\Program Files\Microsoft\jdk-21.0.13.21-hotspot\bin`, ale proces agenta jej nie widzi w `PATH`. Przed każdym poleceniem z emulatorami ustaw: `$env:PATH = 'C:\Program Files\Microsoft\jdk-21.0.13.21-hotspot\bin;' + $env:PATH`.
 - **`gcloud`** jest w `%LOCALAPPDATA%\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd` (poza `PATH` agenta). Poświadczenia aplikacji (ADC) są ustawione, więc skrypty z Admin SDK działają na projekcie testowym.
@@ -35,7 +36,7 @@ Użytkownik komunikuje się po polsku. Odpowiadaj po polsku, zwięźle, z uzasad
 
 | Projekt | Rola | Stan |
 |---|---|---|
-| `tenders-test-b5bb3` | testowy | Authentication (email i hasło) włączone, Firestore `(default)` w `europe-central2`, wdrożone funkcje `inviteUser` i `refreshTenders` (Node 22, `europe-central2`), reguły i indeksy z TTL, polityka czyszczenia obrazów 1 dzień. Jest tu konto admina użytkownika (rola `admin`). Dane testowe (kilka tysięcy dokumentów `tenders`) wygasają same po 30 dniach. |
+| `tenders-test-b5bb3` | testowy | Authentication (email i hasło) włączone, Firestore `(default)` w `europe-central2`, wdrożone funkcje `inviteUser` i `refreshTenders` (Node 22, `europe-central2`), reguły (aktualne, w tym statusy i gwiazdki z etapu 4) i indeksy z TTL, polityka czyszczenia obrazów 1 dzień. Jest tu konto admina użytkownika (rola `admin`). Dane testowe (kilka tysięcy dokumentów `tenders`) wygasają same po 30 dniach. |
 | `tendersted` | **produkcja** | Stary kod: hosting, funkcje `api` (`/tedProxy`, `/health`) i `getApiKey` w `us-central1` oraz sekret `API_KEY` w Secret Managerze. **Publiczny `getApiKey` zwraca klucz TED każdemu.** Nie ma tam Authentication ani Firestore skonfigurowanych pod nową wersję. |
 
 Pozostałe projekty na koncie (`tenders-app-32189`, `tendersapptests`) nie są częścią tych prac.
@@ -59,41 +60,52 @@ Konfiguracja webowa testowego projektu jest w `.env.local` (poza Gitem; wzór w 
 
 ### Model danych (Firestore)
 - `tenders/{źródło}_{numer}`: id z `/` i spacjami zamienionymi na `_` (numery eZamówień zawierają `/`). Pola: `source` (`TED` | `E_ZAMOWIENIA`), `publicationNumber`, `title`, `buyerName`, `buyerCity`, `country`, `publicationDate` (`YYYY-MM-DD`, czas warszawski), `publicationTime` (`HH:MM` lub `null`), `deadlineDate` (`YYYY-MM-DD` lub `null`), `cpvCodes[]`, `link`, `orderType` (`Delivery` | `Services` | `Works` lub `null`), `buyerMainActivity`, `fetchedAt`, `expireAt` (TTL = pierwszy zapis + 30 dni). Tylko funkcja tworzy dokumenty i nigdy nie nadpisuje istniejących.
+  - **Wspólny status** (ustawiany z klienta, opcjonalny): `status` (`toEnter` | `entered` | `toClarify` | `notToEnter`), `statusBy` (uid), `statusByEmail` (do podpowiedzi z autorem; członek nie czyta cudzych profili `users`), `statusAt` (czas serwera). Pola ustawia się albo usuwa wszystkie naraz; reguła sprawdza autora i e-mail względem tokenu logowania.
+- `users/{uid}/favorites/{tenderId}`: gwiazdka. Kopia przetargu **w formacie interfejsu** (daty `DD-MM-RRRR`, bez `id` i bez pól statusu) plus `savedAt`. Bez TTL. Dostęp tylko właściciela (także admin nie czyta cudzych).
 - `refreshLog/{YYYY-MM-DD}`: `day`, `complete` (dzień pobrany po jego zakończeniu), `refreshedAt`, `refreshedBy`, `expireAt` (TTL).
 - `users/{uid}`: `email`, `role`, `createdAt`, `invitedBy`. Zapis tylko przez Functions.
 - `meta/refreshLock`: blokada odświeżania, tylko serwer.
 - Polityki TTL na polu `expireAt` kolekcji `tenders` i `refreshLog` są w `firestore.indexes.json`.
 
 ### Reguły (`firestore.rules`)
-Dostęp daje wyłącznie custom claim `role` ∈ {`admin`, `member`} (samo zalogowanie nie wystarcza, bo konto może założyć każdy znający publiczny klucz API). `users`: odczyt własnego dokumentu lub wszystkich dla admina. `tenders` i `refreshLog`: odczyt dla członków. Wszystkie zapisy z klienta zablokowane; reszta zamknięta.
+Dostęp daje wyłącznie custom claim `role` ∈ {`admin`, `member`} (samo zalogowanie nie wystarcza, bo konto może założyć każdy znający publiczny klucz API). `users`: odczyt własnego dokumentu lub wszystkich dla admina, zapis tylko przez Functions. `users/{uid}/favorites`: pełny dostęp tylko właściciela z rolą. `tenders`: odczyt dla członków; klient nie tworzy ani nie usuwa dokumentów, może jedynie zmienić pola statusu (`affectedKeys().hasOnly([...])`) na poprawny komplet albo je usunąć. `refreshLog`: odczyt dla członków, zapis tylko serwer. Reszta zamknięta.
 
 ### Frontend (`src/`, React 19, CRA, TypeScript 4.9, CSS Modules)
 - `firebase.ts`: inicjalizacja SDK (Auth, Firestore, Functions w `europe-central2`), łączenie z emulatorami przy `REACT_APP_USE_EMULATORS=true`.
 - `context/AuthContext.tsx`, `components/LoginScreen.tsx`, `NoAccessScreen.tsx`, `UserBar.tsx`, `AdminPanel.tsx` (zaproszenia, lista użytkowników), `Auth.module.css`. `App.tsx` ma bramkę dostępu (logowanie → rola → aplikacja).
 - `components/tenders.tsx`: główny komponent; nasłuch przetargów (`subscribeToTenders`), odświeżanie (`refresh`, w trybie zakresu po kolei brakujące dni z paskiem postępu, ponawianie przy zajętej blokadzie), filtry, statystyki.
 - `utils/tendersApi.ts` (Firestore + callable), `tenderMapping.ts` (dokument → typ `Tender` w formacie interfejsu, daty `DD-MM-RRRR`), `refreshPlan.ts` (które dni pobrać), `dateUtils.ts` (`toDayString`, `addDays`, `parseDate`), `tenderFilters.ts` (filtrowanie i sortowanie po dacie, a w dniu po godzinie), `cpvFilter.ts` (**jedyne źródło prawdy dla listy CPV IT**; plik CSV z CPV jest zbędny), `calculateStatistics.ts`.
-- **Statusy i gwiazdki są nadal lokalne** (`context/UserPreferencesContext.tsx`, `localStorage`). To zakres etapu 4.
+- **Statusy i gwiazdki (etap 4):**
+  - `types/TenderStatus.ts` i `utils/tenderStatus.ts`: jedyne źródło prawdy dla 4 statusów (nazwa, ikona, kolor: `toEnter` ✎ niebieski, `entered` ✓ zielony, `toClarify` ? bursztynowy, `notToEnter` ✕ czerwony) oraz podpowiedzi z autorem (`statusTooltip`).
+  - `types/Tender.ts` ma `id` (id dokumentu; **kluczem w interfejsie jest `id`, nie `publicationNumber`**, bo numery nie są unikalne między źródłami) oraz opcjonalne `status`, `statusByEmail`, `statusAt`.
+  - `context/UserPreferencesContext.tsx` (nazwa zachowana): nasłuch gwiazdek z `users/{uid}/favorites`, `toggleFavorite`, `toggleStatus` (ponowne wybranie statusu go zdejmuje), `actionError`. Status czytany jest z samego przetargu, nie z kontekstu.
+  - `utils/tendersApi.ts`: `setTenderStatus`, `subscribeToFavorites`, `addFavorite`, `removeFavorite`; `tenderMapping.ts`: `favoriteToDoc` / `favoriteFromDoc`.
+  - `TenderCard.tsx`: 4 przyciski statusu + gwiazdka; kolor karty przez zmienną CSS `--status-color`; podpowiedź (atrybut `title`) z autorem. `FiltersPanel.tsx`, `calculateStatistics.ts`, `StatisticsTab.tsx` generują statusy z konfiguracji.
+  - `tenders.tsx`: zakładki **Przetargi / Zapisane / Statystyki**. Zagwiazdkowany przetarg znika z głównej listy użytkownika i jest w „Zapisane" (niezależnie od zakresu dat, te same filtry). Status można zmienić tylko dla przetargu, który jest jeszcze w bazie wspólnej w wybranym zakresie (`canSetStatus`); kopia z „Zapisane", której oryginał wygasł, ma samą gwiazdkę. Statystyki liczą listę główną (bez własnych gwiazdek).
+  - Stare statusy i ulubione z `localStorage` zostały porzucone zgodnie z ustaleniem (bez migracji).
 
 ## 6. Testy i weryfikacja
 
-| Polecenie | Zakres | Wynik na koniec etapu 3 |
+| Polecenie | Zakres | Wynik (ostatnio uruchomione na końcu etapu 4 i porządków) |
 |---|---|---|
 | `npm run test:unit` | mappery, daty (po zbudowaniu funkcji) | 15/15 |
-| `npm run test:rules` | reguły Firestore na emulatorze | 13/13 |
+| `npm run test:rules` | reguły Firestore na emulatorze (w tym statusy i gwiazdki) | 26/26 |
 | `npm run test:functions` | `inviteUser` + `refreshTenders` na emulatorach, z lokalnym serwerem udającym TED i eZamówienia | 20/20 |
-| `$env:CI='true'; npx react-scripts test --watchAll=false` | testy frontendu (Jest) | 15/15 |
+| `$env:CI='true'; npx react-scripts test --watchAll=false` | testy frontendu (Jest): mapowanie, statusy, kopia gwiazdki, filtry, statystyki, plan odświeżania | 24/24 |
 | `npx tsc --noEmit -p tsconfig.json` | typy frontendu | bez błędów |
 | `npx eslint src --ext ts,tsx` | lint | bez ostrzeżeń |
-| `$env:CI='false'; npx react-scripts build` | build | przechodzi (ostrzeżenia o mapach źródeł `react-datepicker` są stare) |
+| `$env:CI='false'; npm run build` | build | przechodzi (ostrzeżenia o mapach źródeł `react-datepicker` są stare); w buildzie nie ma już pliku `config/api.ts` |
 
 Testy emulatorów wymagają Javy w `PATH` (sekcja 3). Test integracyjny już raz wykrył realny błąd (`admin.firestore.FieldValue` jest `undefined` przy `import * as admin` w firebase-admin 13; używaj importów modułowych `firebase-admin/firestore`, `/auth`).
 
 Na prawdziwych API (projekt testowy) `refreshTenders` zweryfikowano ręcznie: ok. 900 przetargów dziennie (ok. 75–90 z TED, reszta z eZamówień), 2–4 s na dzień, drugie wywołanie dopisuje 0.
 
+**Zweryfikowane przez użytkownika w przeglądarce (projekt testowy):** pobieranie dnia i zakresu dat, statusy (4 stany, kolory, podpowiedź z autorem), gwiazdki i zakładka „Zapisane", współdzielenie statusów między dwoma kontami. Poprawiony został błąd licznika „Przetargi" zmieniającego się z zakładką (`5a95234`).
+
 **Niezweryfikowane lub czekające na użytkownika:**
-- Wygląd i działanie interfejsu w przeglądarce nie były widziane przez agenta. Użytkownik sprawdził pobieranie pojedynczego dnia (działa), a tryb zakresu po poprawce (`a7b9528`) czeka na jego potwierdzenie.
-- Zaproszenie drugiej osoby z panelu admina na wdrożonej funkcji nie zostało potwierdzone przez użytkownika (działa w testach na emulatorze).
 - Ścieżka ponawiania po 429 przetestowana tylko atrapą; na prawdziwym TED jeszcze nie wystąpiła (wcześniej raz wystąpił sam 429).
+- Porządki z etapu 5 (README, usunięcie klucza TED z builda i CI) zweryfikowano buildem i testami; **workflow GitHub Actions nie był uruchamiany** (zmieniony tylko tekstowo).
+- Układ na telefonie i w ciemnym motywie dla nowych elementów (4 przyciski statusu, zakładka „Zapisane") nie był oglądany.
 
 ## 7. Odkrycia o źródłach danych (ważne, nie do powtórnego odkrywania)
 
@@ -103,21 +115,30 @@ Na prawdziwych API (projekt testowy) `refreshTenders` zweryfikowano ręcznie: ok
 
 ## 8. Kolejne kroki
 
-### Etap 4: wspólne statusy i indywidualne gwiazdki (następny)
-Założenia ustalone z użytkownikiem:
-- Wspólny status przetargu: `toEnter` („do wpisania"), `notToEnter` („nie do wpisania"), `toClarify` („do wyjaśnienia", nowy trzeci stan). Wzajemnie wykluczające się. Widoczne u wszystkich. Przechowywane w dokumencie przetargu (pola `status`, `statusBy`, `statusAt`), więc znikają razem z przetargiem po miesiącu. Odświeżenie nie nadpisuje tych pól (funkcja tworzy tylko nowe dokumenty).
-- Gwiazdka jest **indywidualna**: `users/{uid}/favorites/{tenderId}` z **pełną kopią przetargu** z chwili oznaczenia i **bez TTL**; zostaje, dopóki użytkownik jej sam nie usunie (przetarg z gwiazdką przeżywa usunięcie oryginału z `tenders`).
-- Reguły: klient może zmieniać tylko pola `status`, `statusBy`, `statusAt` istniejącego przetargu (np. `request.resource.data.diff(resource.data).affectedKeys().hasOnly([...])`), z dozwolonymi wartościami i `statusBy == request.auth.uid`; ulubione tylko właściciel. Dopisz testy reguł.
-- Do przepisania: `UserPreferencesContext` (dziś `localStorage`), przyciski w `TenderCard.tsx`, filtry statusów w `FiltersPanel.tsx` (dodać „do wyjaśnienia"), licznik i statystyki w `calculateStatistics.ts`/`tenders.tsx`, mapowanie statusu w `tenderMapping.ts`. Użytkownik zaczyna od zera, **bez migracji** danych z `localStorage`.
-- **Otwarte pytanie do użytkownika (jeszcze bez odpowiedzi):** jak ma wyglądać trzeci stan i informacja, kto ustawił wspólny status. Proponowana odpowiedź domyślna: dopasować do istniejących przycisków na karcie i pokazać autora w podpowiedzi lub drobnym tekście.
-- **Do przemyślenia:** gwiazdkowane przetargi starsze niż miesiąc nie są w `tenders`, więc obecny filtr „ulubione" (działa na przetargach z wybranego zakresu dat) ich nie pokaże. Prawdopodobnie potrzebny osobny widok „Ulubione" czytający z `users/{uid}/favorites` niezależnie od zakresu dat.
+### Etapy 0–4: zrobione
+Szczegóły w `docs/plan.md` (sekcja „Status"). Etap 4 (wspólne statusy, indywidualne gwiazdki, zakładka „Zapisane") jest wdrożony na projekt testowy i sprawdzony przez użytkownika.
 
-### Etap 5: porządki i wdrożenie na produkcję
-- Zaktualizować `README.md` (jest nieaktualny: wspomina `EmailAlertDialog`, powiadomienia email, `services/`; brakuje opisu logowania, emulatorów, testów, zmiennych `REACT_APP_FIREBASE_*`).
-- Usunąć pozostałości klucza TED w buildzie: `scripts/createApiConfig.js` (uruchamiany w `npm run build`) i krok „Create API config" w `.github/workflows/firebase-deploy.yml`.
-- Przygotować produkcję: decyzja, czy używać projektu `tendersted`, czy nowego; włączyć Authentication (email i hasło) i Firestore (region `europe-central2`); wdrożyć reguły, indeksy (TTL), funkcje; **usunąć stare funkcje** `api` i `getApiKey` z `us-central1` (np. `firebase functions:delete`); założyć pierwszego admina skryptem `setAdmin.js` (ADC); dodać domenę produkcyjną w Authentication → Authorized domains; dodać do CI zmienne `REACT_APP_FIREBASE_*` (publiczna konfiguracja webowa) tak, by `npm run build` je dostał; ustawić alert budżetowy; sprawdzić, że `runtime` i `predeploy` w `firebase.json` działają przy wdrożeniu produkcyjnym.
-- Przejrzeć diff do `main`: commit `1bdf845` przestaje śledzić `functions/node_modules`, więc PR pokaże ok. 5900 usuniętych plików (zamierzone). Dopiero po przygotowaniu produkcji otworzyć PR i zmergować, bo merge uruchamia wdrożenie hosting na produkcję.
+### Porządki z etapu 5: zrobione
+- `README.md` przepisany (logowanie, Firebase, emulatory, testy, wdrożenie).
+- Usunięto pozostałości klucza TED: `scripts/createApiConfig.js` (zapisywał klucz do pliku `build/static/js/config/api.ts`, który trafiał na hosting), jego wywołanie w `npm run build`, krok „Create API config" w workflow i wpis w `.gitignore`. Klucz TED nie jest już nigdzie potrzebny.
+- Workflow `firebase-deploy.yml` buduje teraz z sekretami `REACT_APP_FIREBASE_*` (do ustawienia w repozytorium, patrz niżej).
+
+### Etap 5: wdrożenie na produkcję (WSTRZYMANE na prośbę użytkownika)
+Nie zaczynaj bez wyraźnego polecenia. Do zrobienia:
+- Decyzja, czy używać projektu `tendersted`, czy nowego.
+- Włączyć Authentication (email i hasło) i Firestore (region `europe-central2`); wdrożyć reguły, indeksy (TTL), funkcje.
+- **Usunąć stare funkcje** `api` i `getApiKey` z `us-central1` (np. `firebase functions:delete`) i sekret `API_KEY`; po wdrożeniu zrotować klucz TED (był publicznie dostępny przez `getApiKey`).
+- Założyć pierwszego admina skryptem `functions/scripts/setAdmin.js` (ADC); dodać domenę produkcyjną w Authentication → Authorized domains.
+- **Dodać sekrety repozytorium GitHub** `REACT_APP_FIREBASE_API_KEY`, `..._AUTH_DOMAIN`, `..._PROJECT_ID`, `..._STORAGE_BUCKET`, `..._MESSAGING_SENDER_ID`, `..._APP_ID` (publiczna konfiguracja webowa produkcyjnego projektu). Bez nich build w CI wyprodukuje aplikację bez konfiguracji. Istniejące `FIREBASE_SERVICE_ACCOUNT` i `FIREBASE_PROJECT_ID` muszą wskazywać ten sam projekt.
+- Ustawić alert budżetowy; sprawdzić, że `runtime` i `predeploy` w `firebase.json` działają przy wdrożeniu produkcyjnym.
+- Przejrzeć diff do `main`: commit `1bdf845` przestaje śledzić `functions/node_modules`, więc PR pokaże ok. 5900 usuniętych plików (zamierzone). Dopiero po przygotowaniu produkcji otworzyć PR i zmergować, bo **merge do `main` uruchamia wdrożenie hostingu na produkcję**. Workflow wdraża tylko hosting; reguły i funkcje trzeba wdrożyć ręcznie (`firebase deploy --only ... --project <projekt>`).
 - Zebrać końcowy raport zgodnie z `docs/CLAUDE.md`.
+
+### Znane drobiazgi (poza zakresem, do decyzji użytkownika)
+- `axios` jest w `dependencies`, ale nic w `src/` go nie używa; `puppeteer` (devDependency) służy tylko skryptowi `scripts/generate-favicon.js`.
+- `src/resources/kody_cpv_it.csv` nie jest nigdzie używany (źródłem prawdy jest `cpvFilter.ts`); można usunąć.
+- W `cpvFilter.ts` są duplikaty i warianty kodów CPV (patrz `docs/code-review-notes.md`).
+- Zakładka „Zapisane (n)" pokazuje liczbę wszystkich gwiazdek, a „Przetargi (n)" liczbę po filtrach.
 
 ### Pomysły na później (poza minimum, bez decyzji)
 Baza Konkurencyjności (scraping, świadomie pominięta); usuwanie lub wyłączanie użytkowników z panelu admina; historia zmian statusu; zapytania po stronie serwera, gdyby koszt odczytów zakresów miesięcznych (kilkanaście tysięcy dokumentów na wczytanie) zaczął przeszkadzać.
@@ -126,4 +147,4 @@ Baza Konkurencyjności (scraping, świadomie pominięta); usuwanie lub wyłącza
 
 1. Przeczytaj `docs/CLAUDE.md`, `docs/goals.md`, `docs/plan.md` i ten plik. `git status` i `git log --oneline -15` na gałęzi `feature/shared-tenders`.
 2. Sprawdź środowisko: Java w `PATH` (sekcja 3), `npx firebase use` (powinno być `test`), `npm run test:unit`.
-3. Zapytaj użytkownika o potwierdzenie testu trybu zakresu dat i o odpowiedź na otwarte pytanie z etapu 4, a potem zaplanuj etap 4 w małych krokach (reguły i testy reguł → model i kontekst → interfejs), tak jak etapy 1–3.
+3. Zapytaj użytkownika, co chce zrobić dalej: planował kolejne funkcjonalności i usprawnienia (jeszcze nie opisane) przed wdrożeniem na produkcję. Nową pracę planuj w małych krokach (reguły i testy reguł → model i kontekst → interfejs), tak jak etapy 1–4, i pamiętaj o zasadach z sekcji 2.

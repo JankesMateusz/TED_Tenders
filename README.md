@@ -1,115 +1,89 @@
-# Zamówienia TED - Wyszukiwarka zamówień publicznych
+# Zamówienia TED: wspólna wyszukiwarka przetargów IT
 
-Aplikacja React do przeglądania i filtrowania zamówień publicznych z bazy TED (Tenders Electronic Daily). Aplikacja jest w pełni responsywna i zoptymalizowana dla urządzeń mobilnych.
+Aplikacja dla małego, zaproszonego zespołu do przeglądania zamówień publicznych na sprzęt IT z **TED** i **eZamówień**. Wszyscy zalogowani widzą tę samą listę przetargów i te same statusy. Dane pobiera serwer (Cloud Functions) i zapisuje w Firestore; przeglądarka tylko je czyta.
 
 ## Funkcje
 
-- 📱 **W pełni responsywna** - działa świetnie na wszystkich urządzeniach
-- 🌙 **Tryb ciemny/jasny** - automatyczne przełączanie motywów
-- 🔍 **Filtrowanie** - tylko zamówienia IT lub wszystkie branże
-- ⭐ **Ulubione** - zapisywanie interesujących przetargów
-- 📧 **Powiadomienia email** - wysyłanie wybranych przetargów na email
-- 📅 **Wybór daty** - przeglądanie przetargów z konkretnego dnia
-- 🏷️ **Kody CPV** - szczegółowe informacje o kodach klasyfikacji
-- 📊 **Statusy** - oznaczanie przetargów do udziału lub rezygnacji
+- **Logowanie i zaproszenia**: e-mail i hasło. Kont nie zakłada się samodzielnie: admin zaprasza osoby z panelu „Użytkownicy" i przekazuje im link do ustawienia hasła.
+- **Wspólna lista**: przetargi z wybranego dnia lub zakresu dat. Przy wejściu, zmianie dnia i po kliknięciu „Odśwież" serwer dopisuje brakujące przetargi (dla zakresu pobiera po kolei dni, których jeszcze nie było).
+- **Wspólne statusy**: do wpisania ✎ (niebieski), wpisany ✓ (zielony), do wyjaśnienia ? (bursztynowy), nie do wpisania ✕ (czerwony). Widoczne dla wszystkich; po najechaniu na kartę podpowiedź pokazuje, kto i kiedy ustawił status.
+- **Zapisane (gwiazdka)**: indywidualne. Zagwiazdkowany przetarg trafia do zakładki „Zapisane" (niezależnie od zakresu dat) i nie wygasa.
+- **Filtry**: źródło, typ zamówienia, zamawiający, miasto, kody CPV związane z IT, wyszukiwanie tekstowe, status.
+- **Statystyki** wybranego zakresu, motyw jasny/ciemny, układ responsywny.
 
-## Responsywność
+Przetargi w bazie wygasają po 30 dniach od pierwszego zapisu (TTL). Zapisane kopie i konta zostają.
 
-Aplikacja została zaprojektowana z myślą o urządzeniach mobilnych:
+## Architektura
 
-- **Mobile-first design** - projektowanie zaczynając od urządzeń mobilnych
-- **Touch-friendly** - przyciski i interakcje zoptymalizowane dla dotyku
-- **Adaptive layout** - układ dostosowuje się do różnych rozmiarów ekranów
-- **PWA ready** - może być zainstalowana jako aplikacja na urządzeniach mobilnych
+```
+przeglądarka (React) ──czyta na żywo──> Firestore <──zapisuje── Cloud Functions ──> TED, eZamówienia
+        │                                                              ▲
+        └──────── refreshTenders / inviteUser (callable) ──────────────┘
+```
 
-### Breakpointy
+- **Frontend** (`src/`): React 19, TypeScript, CSS Modules, Firebase SDK.
+- **Functions** (`functions/`, Node 22, region `europe-central2`): `refreshTenders`, `inviteUser`.
+- **Firestore**: `tenders`, `refreshLog`, `users` (+ `users/{uid}/favorites`), `meta`. Reguły w `firestore.rules`, indeksy i polityki TTL w `firestore.indexes.json`.
+- **Dostęp** daje wyłącznie custom claim `role` (`admin` lub `member`); samo zalogowanie nie wystarcza.
 
-- **Desktop**: > 1024px
-- **Tablet**: 768px - 1024px  
-- **Mobile**: 480px - 768px
-- **Small Mobile**: < 480px
+Szczegóły (model danych, decyzje, odkrycia o API źródeł): `docs/handoff.md` i `docs/plan.md`.
 
-## Technologie
+## Uruchomienie lokalne
 
-- **React 19** - nowoczesny framework JavaScript
-- **TypeScript** - typowanie statyczne
-- **CSS Modules** - modułowe style
-- **React DatePicker** - komponent wyboru daty
-- **Axios** - HTTP client
-- **PostCSS + Autoprefixer** - automatyczne prefiksy CSS
-
-## Instalacja i uruchomienie
-
-### Wymagania
-
-- Node.js 16+ 
-- npm lub yarn
-
-### Instalacja
+Wymagane: Node.js 22+, npm, Java 21 (tylko dla emulatorów Firebase).
 
 ```bash
-# Klonowanie repozytorium
-git clone <repository-url>
-cd ted-eu
-
-# Instalacja zależności
 npm install
-
-# Uruchomienie w trybie deweloperskim
-npm start
+npm --prefix functions install
+cp .env.example .env.local   # uzupełnij wartościami z konsoli Firebase (Project settings -> Your apps)
+npm start                    # http://localhost:3000
 ```
 
-Aplikacja będzie dostępna pod adresem [http://localhost:3000](http://localhost:3000)
+W `.env.local`:
 
-### Build produkcyjny
+| Zmienna | Znaczenie |
+|---|---|
+| `REACT_APP_FIREBASE_*` | Publiczna konfiguracja webowa projektu Firebase (nie jest sekretem). |
+| `REACT_APP_USE_EMULATORS` | `false` = połączenie z projektem Firebase, `true` = z lokalnymi emulatorami. |
+
+Praca z emulatorami: `npm run emulators`, w `.env.local` ustaw `REACT_APP_USE_EMULATORS=true`. Pierwszego admina nadaje skrypt `functions/scripts/setAdmin.js` (wymaga podania `projectId`; na prawdziwym projekcie wypisuje link do ustawienia hasła).
+
+Wszystkie prace i testy prowadzimy na projekcie testowym lub emulatorach. Polecenia `firebase deploy` zawsze z jawnym `--project`.
+
+## Testy i kontrole
+
+| Polecenie | Zakres |
+|---|---|
+| `npm run test:unit` | mappery źródeł i daty (po zbudowaniu funkcji) |
+| `npm run test:rules` | reguły Firestore na emulatorze |
+| `npm run test:functions` | `inviteUser` i `refreshTenders` na emulatorach, ze sztucznym serwerem udającym TED i eZamówienia |
+| `CI=true npx react-scripts test --watchAll=false` | testy frontendu (Jest) |
+| `npx tsc --noEmit -p tsconfig.json` | typy frontendu |
+| `npx eslint src --ext ts,tsx` | lint |
+
+Testy emulatorów wymagają Javy w `PATH`.
+
+## Build i wdrożenie
 
 ```bash
-npm run build
+npm run build                                          # frontend do katalogu build/
+npx firebase deploy --only firestore:rules,firestore:indexes --project <projekt>
+npx firebase deploy --only functions --project <projekt>
 ```
 
-## Struktura projektu
+Push do `main` uruchamia GitHub Actions (`.github/workflows/firebase-deploy.yml`), które buduje frontend i **wdraża sam hosting na produkcję**. Reguły i funkcje wdraża się osobno poleceniami powyżej. Workflow wymaga sekretów repozytorium `REACT_APP_FIREBASE_*` (te same wartości co w `.env.local`), `FIREBASE_SERVICE_ACCOUNT` i `FIREBASE_PROJECT_ID`.
+
+## Struktura
 
 ```
 src/
-├── components/          # Komponenty React
-│   ├── Header.tsx      # Nagłówek z kontrolkami
-│   ├── Tenders.tsx     # Główny komponent listy przetargów
-│   └── EmailAlertDialog.tsx # Dialog powiadomień email
-├── context/            # Konteksty React
-│   ├── ThemeContext.tsx # Zarządzanie motywami
-│   └── UserPreferencesContext.tsx # Preferencje użytkownika
-├── services/           # Serwisy API
-├── utils/              # Funkcje pomocnicze
-└── styles/             # Style globalne
-```
-
-## Dostosowywanie
-
-### Motywy
-
-Aplikacja używa CSS Custom Properties do motywów. Możesz dostosować kolory w `src/styles/theme.css`.
-
-### Responsywność
-
-Style responsywne są zdefiniowane w każdym pliku CSS Module z użyciem media queries:
-
-```css
-@media (max-width: 768px) {
-  /* Style dla urządzeń mobilnych */
-}
-
-@media (max-width: 480px) {
-  /* Style dla małych urządzeń mobilnych */
-}
-```
-
-## Deployment
-
-Aplikacja jest gotowa do deploymentu na Firebase Hosting:
-
-```bash
-npm run build
-firebase deploy
+├── components/   # Tenders (lista), TenderCard, FiltersPanel, StatisticsTab, logowanie, panel admina
+├── context/      # AuthContext (logowanie, rola), UserPreferencesContext (statusy, zapisane), ThemeContext
+├── utils/        # tendersApi (Firestore i funkcje), tenderMapping, tenderFilters, tenderStatus, cpvFilter, refreshPlan
+└── types/
+functions/        # Cloud Functions (TypeScript): refresh, inviteUser, mappery TED i eZamówień
+tests/            # testy reguł, mapperów i funkcji (emulatory)
+docs/             # zasady pracy, cel, plan, przekazanie pracy
 ```
 
 ## Licencja
