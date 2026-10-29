@@ -22,7 +22,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && node scripts/createApiConfig.js",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "emulators": "firebase emulators:start --project demo-tenders",
     "test:rules": "firebase emulators:exec --only firestore --project demo-rules-test \"node --test tests/firestore.rules.test.mjs\"",
