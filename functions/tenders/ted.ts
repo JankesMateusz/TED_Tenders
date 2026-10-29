@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { dayFromTedDate } from './dates';
+import { requestWithRetry } from './http';
 import { SourceResult, TenderRecord } from './model';
 
 // Adres można podmienić w testach (functions/.env.demo-tenders). Wyszukiwanie ogłoszeń jest w TED publiczne, bez klucza API.
@@ -64,11 +64,13 @@ export const fetchTed = async (day: string): Promise<SourceResult> => {
   const records: TenderRecord[] = [];
   try {
     for (let page = 1; page <= MAX_PAGES; page++) {
-      const response = await axios.post(
-        TED_API_URL,
-        { query: buildQuery(day), fields: FIELDS, page, limit: PAGE_SIZE },
-        { headers: { 'Content-Type': 'application/json' }, timeout: REQUEST_TIMEOUT_MS }
-      );
+      const response = await requestWithRetry<{ notices?: any[] }>({
+        method: 'post',
+        url: TED_API_URL,
+        data: { query: buildQuery(day), fields: FIELDS, page, limit: PAGE_SIZE },
+        headers: { 'Content-Type': 'application/json' },
+        timeout: REQUEST_TIMEOUT_MS,
+      });
       const notices: any[] = response.data?.notices ?? [];
       for (const notice of notices) {
         const record = mapTedNotice(notice, day);

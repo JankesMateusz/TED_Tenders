@@ -23,7 +23,7 @@ interface HeaderProps {
     isLoading: boolean;
     /** Trwa pobieranie nowych przetargów ze źródeł (nie blokuje przeglądania listy). */
     isRefreshing: boolean;
-    /** Odświeżanie ze źródeł jest możliwe tylko dla pojedynczego dnia z ostatniego miesiąca. */
+    /** Odświeżanie ze źródeł jest możliwe tylko dla dni z ostatniego miesiąca. */
     canRefresh: boolean;
 }
 
@@ -141,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({
                         onClick={onRefresh}
                         disabled={isRefreshing || !canRefresh}
                         aria-label="Odśwież przetargi"
-                        title={canRefresh ? "Pobierz nowe przetargi" : "Odświeżanie dostępne dla pojedynczego dnia z ostatniego miesiąca"}
+                        title={canRefresh ? "Pobierz nowe przetargi" : "Odświeżanie dostępne dla dni z ostatniego miesiąca"}
                     >
                         {isRefreshing ? '⟳' : '↻'}
                     </button>

@@ -1,12 +1,9 @@
-import { Unsubscribe, collection, onSnapshot, query, where } from 'firebase/firestore';
+import { Unsubscribe, collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
 import { Tender } from '../types/Tender';
-import { addDays, toDayString } from './dateUtils';
+import { RefreshLogEntry } from './refreshPlan';
 import { tenderFromDoc } from './tenderMapping';
-
-/** Ile dni wstecz serwer pozwala odświeżać (functions/tenders/refresh.ts). */
-const MAX_REFRESH_PAST_DAYS = 31;
 
 export interface RefreshResult {
     date: string;
@@ -23,9 +20,17 @@ const refreshTendersCallable = httpsCallable<{ date: string }, RefreshResult>(fu
 export const refreshTendersForDay = async (day: string): Promise<RefreshResult> =>
     (await refreshTendersCallable({ date: day })).data;
 
-/** Czy serwer przyjmie odświeżenie tego dnia (nie z przyszłości i nie starsze niż miesiąc). */
-export const canRefreshDay = (day: string, today: string = toDayString(new Date())): boolean =>
-    day <= today && day >= addDays(today, -MAX_REFRESH_PAST_DAYS);
+/** Wpisy dziennika odświeżeń (które dni były już pobrane) dla dni z podanego zakresu, kluczem jest dzień. */
+export const fetchRefreshLog = async (startDay: string, endDay: string): Promise<Record<string, RefreshLogEntry>> => {
+    const snapshot = await getDocs(
+        query(collection(db, 'refreshLog'), where('day', '>=', startDay), where('day', '<=', endDay))
+    );
+    const log: Record<string, RefreshLogEntry> = {};
+    snapshot.forEach((doc) => {
+        log[doc.data().day] = { complete: doc.data().complete === true };
+    });
+    return log;
+};
 
 /**
  * Nasłuchuje przetargów opublikowanych w podanym zakresie dni (włącznie). Zmiany, także od innych

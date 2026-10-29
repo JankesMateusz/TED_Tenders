@@ -4,10 +4,11 @@ import { REGION, requireMember } from '../access';
 import { addDays, isValidDay, todayInWarsaw } from './dates';
 import { fetchEzamowienia } from './ezamowienia';
 import { SourceResult } from './model';
-import { saveNewTenders } from './store';
+import { expiryFrom, saveNewTenders } from './store';
 import { fetchTed } from './ted';
 
 const LOCK_PATH = 'meta/refreshLock';
+const REFRESH_LOG_COLLECTION = 'refreshLog';
 /** Blokada wygasa sama, gdyby funkcja przerwała pracę bez jej zwolnienia. */
 const LOCK_TTL_MS = 6 * 60 * 1000;
 const FUNCTION_TIMEOUT_SECONDS = 300;
@@ -59,6 +60,8 @@ export const refreshTenders = onCall(
   async (request) => {
     const uid = requireMember(request);
     const day = resolveDay(request.data?.date);
+    // Dzień pobrany po jego zakończeniu jest kompletny; pobrany w trakcie może nie mieć jeszcze późniejszych ogłoszeń
+    const dayIsOver = todayInWarsaw() > day;
 
     await acquireLock(uid);
     try {
@@ -72,6 +75,19 @@ export const refreshTenders = onCall(
       }
 
       const saved = await saveNewTenders(records);
+
+      // Zapis tylko po pełnym sukcesie, żeby dzień z brakującym źródłem został pobrany ponownie
+      if (errors.length === 0) {
+        const now = new Date();
+        await getFirestore().doc(`${REFRESH_LOG_COLLECTION}/${day}`).set({
+          day,
+          complete: dayIsOver,
+          refreshedAt: Timestamp.fromDate(now),
+          refreshedBy: uid,
+          expireAt: expiryFrom(now),
+        });
+      }
+
       return {
         date: day,
         fetched: { TED: ted.records.length, E_ZAMOWIENIA: ezamowienia.records.length },

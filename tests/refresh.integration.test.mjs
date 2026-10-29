@@ -63,6 +63,9 @@ const ezNotice = (number, publicationDate) => ({
 const stub = {
     tedFails: false,
     ezFails: false,
+    // Ile kolejnych zapytań do TED ma dostać 429, zanim źródło zacznie odpowiadać
+    tedRateLimited: 0,
+    tedRequests: 0,
     tedNotices: [tedNotice('100001-2026'), tedNotice('100002-2026'), tedNotice('100003-2026', { 'change-notice-version-identifier': '2' })],
     // 11 w dniu odświeżania (wymusza drugą stronę) + 1 z poprzedniego dnia, który trzeba odfiltrować
     ezByType: {
@@ -92,7 +95,12 @@ const server = http.createServer(async (request, response) => {
 
     if (url.pathname === '/ted' && request.method === 'POST') {
         const body = JSON.parse(await readBody(request));
+        stub.tedRequests++;
         if (stub.tedFails) return send(500, { error: 'boom' });
+        if (stub.tedRateLimited > 0) {
+            stub.tedRateLimited--;
+            return send(429, { error: 'Too Many Requests' });
+        }
         return send(200, { notices: body.page === 1 ? stub.tedNotices : [] });
     }
 
@@ -217,6 +225,29 @@ describe('refreshTenders', () => {
         assert.deepEqual(data.errors, []);
     });
 
+    it('ponawia zapytanie, gdy TED ogranicza tempo (429), i kończy sukcesem', async () => {
+        stub.tedNotices.push(tedNotice('100005-2026'));
+        stub.tedRateLimited = 2;
+        stub.tedRequests = 0;
+
+        const { data } = await refreshTenders({});
+
+        assert.deepEqual(data.errors, []);
+        assert.equal(data.created.TED, 1);
+        assert.equal(stub.tedRequests, 3, 'dwa odrzucone zapytania i jedno udane');
+    });
+
+    it('zgłasza błąd źródła, gdy 429 trwa mimo ponawiania', async () => {
+        stub.tedRateLimited = 100;
+        stub.tedRequests = 0;
+
+        const { data } = await refreshTenders({});
+
+        assert.deepEqual(data.errors, ['TED']);
+        assert.equal(stub.tedRequests, 4, 'pierwsze zapytanie i trzy ponowienia');
+        stub.tedRateLimited = 0;
+    });
+
     it('nie pozwala na równoległe odświeżanie', async () => {
         await db.doc('meta/refreshLock').set({
             lockedUntil: admin.firestore.Timestamp.fromMillis(Date.now() + 60000),
@@ -229,9 +260,44 @@ describe('refreshTenders', () => {
         assert.deepEqual(data.errors, []);
     });
 
-    it('pozwala odświeżyć wskazany dzień z przeszłości', async () => {
+    it('pozwala odświeżyć wskazany dzień z przeszłości i oznacza go jako kompletny w dzienniku', async () => {
         const { data } = await refreshTenders({ date: yesterday });
         assert.equal(data.date, yesterday);
         assert.deepEqual(data.fetched.E_ZAMOWIENIA, 1);
+
+        const log = (await db.doc(`refreshLog/${yesterday}`).get()).data();
+        assert.equal(log.day, yesterday);
+        assert.equal(log.complete, true);
+        const days = (log.expireAt.toMillis() - Date.now()) / DAY_MS;
+        assert.ok(days > 29.9 && days <= 30, `expireAt dziennika za ${days} dni`);
+    });
+
+    it('dzisiejszy dzień jest w dzienniku jako niekompletny', async () => {
+        const log = (await db.doc(`refreshLog/${today}`).get()).data();
+        assert.equal(log.day, today);
+        assert.equal(log.complete, false);
+        assert.ok(log.refreshedBy);
+    });
+
+    it('nie zapisuje dziennika, gdy odświeżenie się nie powiodło', async () => {
+        const failedDay = addDays(today, -2);
+        stub.tedFails = true;
+        stub.ezFails = true;
+        await expectCode(refreshTenders({ date: failedDay }), 'unavailable');
+        stub.tedFails = false;
+        stub.ezFails = false;
+
+        assert.equal((await db.doc(`refreshLog/${failedDay}`).get()).exists, false);
+    });
+
+    it('nie zapisuje dziennika dnia, w którym jedno ze źródeł zawiodło', async () => {
+        // Wczoraj ma dane w stubie eZamówień, więc awaria samego TED to częściowy sukces, a nie "unavailable"
+        await db.doc(`refreshLog/${yesterday}`).delete();
+        stub.tedFails = true;
+        const { data } = await refreshTenders({ date: yesterday });
+        stub.tedFails = false;
+
+        assert.deepEqual(data.errors, ['TED']);
+        assert.equal((await db.doc(`refreshLog/${yesterday}`).get()).exists, false);
     });
 });

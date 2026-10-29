@@ -82,6 +82,24 @@ describe('tenders', () => {
     });
 });
 
+describe('refreshLog', () => {
+    beforeEach(async () => {
+        await env.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'refreshLog/2026-10-28'), { day: '2026-10-28', complete: true });
+        });
+    });
+
+    it('członek czyta dziennik, konto bez roli nie', async () => {
+        await assertSucceeds(getDoc(doc(dbFor('member1', { role: 'member' }), 'refreshLog/2026-10-28')));
+        await assertFails(getDoc(doc(dbFor('plain1', {}), 'refreshLog/2026-10-28')));
+    });
+
+    it('nikt nie zapisuje dziennika z klienta', async () => {
+        await assertFails(setDoc(doc(dbFor('admin1', { role: 'admin' }), 'refreshLog/2026-10-28'), { complete: false }));
+        await assertFails(setDoc(doc(dbFor('member1', { role: 'member' }), 'refreshLog/2026-10-27'), { complete: true }));
+    });
+});
+
 describe('pozostałe kolekcje', () => {
     it('są zablokowane dla każdej roli, także blokada odświeżania', async () => {
         await assertFails(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'meta/refreshLock')));

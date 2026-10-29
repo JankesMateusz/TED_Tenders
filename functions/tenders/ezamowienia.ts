@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { addDays, toWarsaw } from './dates';
+import { requestWithRetry } from './http';
 import { OrderType, SourceResult, TenderRecord } from './model';
 
 // Adres można podmienić w testach (functions/.env.demo-tenders).
@@ -66,7 +66,9 @@ const fetchOrderType = async (day: string, orderType: OrderType): Promise<Tender
   const records: TenderRecord[] = [];
 
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const response = await axios.get(EZAMOWIENIA_API_URL, {
+    const response = await requestWithRetry<EzamowieniaNotice[]>({
+      method: 'get',
+      url: EZAMOWIENIA_API_URL,
       params: {
         noticeType: 'ContractNotice',
         isTenderAmountBelowEU: 'true',

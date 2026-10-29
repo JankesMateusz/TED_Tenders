@@ -8,7 +8,8 @@ import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
 import { toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
 import { filterAndSortTenders } from "../utils/tenderFilters";
-import { canRefreshDay, refreshTendersForDay, subscribeToTenders } from "../utils/tendersApi";
+import { fetchRefreshLog, refreshTendersForDay, subscribeToTenders } from "../utils/tendersApi";
+import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { StatisticsTab } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
 import Header from "./header";
@@ -22,10 +23,31 @@ const REFRESH_ERROR_MESSAGES: Record<string, string> = {
     "functions/unauthenticated": "Sesja wygasła. Zaloguj się ponownie."
 };
 const REFRESH_IN_PROGRESS_CODE = "functions/resource-exhausted";
+// Serwer odświeża jeden dzień naraz (blokada). Gdy zajmuje go ktoś inny, czekamy i ponawiamy.
+const IN_PROGRESS_RETRY_DELAY_MS = 3000;
+const IN_PROGRESS_MAX_ATTEMPTS = 6;
+const IN_PROGRESS_MESSAGE = "Inne odświeżanie nadal trwa. Spróbuj ponownie za chwilę.";
 const PARTIAL_FAILURE_MESSAGE = "Nie wszystkie źródła odpowiedziały. Spróbuj odświeżyć ponownie za chwilę.";
 const GENERIC_REFRESH_ERROR = "Nie udało się odświeżyć przetargów.";
 const LOAD_ERROR_MESSAGE = "Nie udało się wczytać przetargów z bazy.";
-const REFRESHING_MESSAGE = "Pobieranie nowych przetargów...";
+const REFRESHING_MESSAGE = "Pobieranie nowych przetargów";
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Odświeża dzień; jeśli serwer jest zajęty odświeżaniem innej osoby, czeka i ponawia. */
+const refreshDayWithRetry = async (day: string) => {
+    for (let attempt = 1; ; attempt++) {
+        try {
+            return await refreshTendersForDay(day);
+        } catch (error) {
+            const code = (error as { code?: string })?.code;
+            if (code !== REFRESH_IN_PROGRESS_CODE || attempt >= IN_PROGRESS_MAX_ATTEMPTS) {
+                throw error;
+            }
+            await sleep(IN_PROGRESS_RETRY_DELAY_MS);
+        }
+    }
+};
 
 const Tenders: React.FC = () => {
     const [tenders, setTenders] = useState<Tender[]>([]);
@@ -40,6 +62,9 @@ const Tenders: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [refreshError, setRefreshError] = useState<string | null>(null);
+    // Postęp odświeżania wielu dni (tryb zakresu); null, gdy odświeżany jest jeden dzień lub nic
+    const [refreshProgress, setRefreshProgress] = useState<{ done: number; total: number } | null>(null);
+    const refreshRunId = useRef(0);
     const [isFiltered, setIsFiltered] = useState<boolean>(false);
     const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
         [TenderSource.TED]: 0,
@@ -81,8 +106,9 @@ const Tenders: React.FC = () => {
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
     const startDay = startDate ? toDayString(startDate) : null;
     const endDay = useDateRange ? (endDate ? toDayString(endDate) : null) : startDay;
-    // Odświeżanie ze źródeł dotyczy tylko pojedynczego dnia, który serwer przyjmie
-    const dayToRefresh = !useDateRange && startDay && canRefreshDay(startDay) ? startDay : null;
+    const todayDay = toDayString(new Date());
+    // Czy w wybranym zakresie jest choć jeden dzień, który serwer przyjmie do odświeżenia
+    const canRefreshAny = Boolean(startDay && endDay && listDays(startDay, endDay).some((day) => canRefreshDay(day, todayDay)));
 
     // Nasłuch przetargów z bazy dla wybranego zakresu dat (zmiany od innych użytkowników widać na bieżąco)
     useEffect(() => {
@@ -109,28 +135,48 @@ const Tenders: React.FC = () => {
         );
     }, [startDay, endDay]);
 
-    // Prosi serwer o pobranie nowych przetargów wybranego dnia; wyniki pojawią się przez nasłuch bazy
+    // Prosi serwer o pobranie nowych przetargów: dla pojedynczego dnia tego dnia, dla zakresu po kolei
+    // wszystkich dni, których jeszcze nie pobrano. Wyniki pojawiają się na liście przez nasłuch bazy.
     const refresh = useCallback(async () => {
-        if (!dayToRefresh) return;
+        if (!startDay || !endDay) return;
+
+        // Nowe wywołanie (np. zmiana dnia) przerywa poprzednie po zakończeniu bieżącego dnia
+        const runId = ++refreshRunId.current;
+        const isCurrentRun = () => runId === refreshRunId.current;
 
         setIsRefreshing(true);
         setRefreshError(null);
+        setRefreshProgress(null);
         try {
-            const result = await refreshTendersForDay(dayToRefresh);
-            if (result.errors.length > 0) {
+            // Pojedynczy dzień odświeżamy zawsze; zakres tylko w brakujących dniach
+            const log = useDateRange ? await fetchRefreshLog(startDay, endDay) : {};
+            const days = daysToRefresh(startDay, endDay, log, todayDay);
+
+            let hadPartialFailure = false;
+            for (let index = 0; index < days.length; index++) {
+                if (!isCurrentRun()) return;
+                setRefreshProgress({ done: index, total: days.length });
+                const result = await refreshDayWithRetry(days[index]);
+                hadPartialFailure = hadPartialFailure || result.errors.length > 0;
+            }
+
+            if (isCurrentRun() && hadPartialFailure) {
                 setRefreshError(PARTIAL_FAILURE_MESSAGE);
             }
         } catch (error) {
+            if (!isCurrentRun()) return;
             const code = (error as { code?: string })?.code ?? "";
-            // Inne odświeżenie już trwa: jego wyniki dotrą przez nasłuch, więc to nie jest błąd
-            if (code !== REFRESH_IN_PROGRESS_CODE) {
-                console.error("Błąd odświeżania przetargów:", error);
-                setRefreshError(REFRESH_ERROR_MESSAGES[code] ?? GENERIC_REFRESH_ERROR);
-            }
+            console.error("Błąd odświeżania przetargów:", error);
+            setRefreshError(
+                code === REFRESH_IN_PROGRESS_CODE ? IN_PROGRESS_MESSAGE : REFRESH_ERROR_MESSAGES[code] ?? GENERIC_REFRESH_ERROR
+            );
         } finally {
-            setIsRefreshing(false);
+            if (isCurrentRun()) {
+                setIsRefreshing(false);
+                setRefreshProgress(null);
+            }
         }
-    }, [dayToRefresh]);
+    }, [startDay, endDay, useDateRange, todayDay]);
 
     // Odświeżenie przy wejściu do aplikacji i po zmianie dnia
     useEffect(() => {
@@ -294,7 +340,7 @@ const Tenders: React.FC = () => {
                 selectedSources={selectedSources}
                 isLoading={isLoading}
                 isRefreshing={isRefreshing}
-                canRefresh={dayToRefresh !== null}
+                canRefresh={canRefreshAny}
             />
             <div className={styles.mainContent}>
                 {activeTab === 'tenders' && (
@@ -366,7 +412,14 @@ const Tenders: React.FC = () => {
                 )}
                 {loadError && <p className={styles.message} role="alert">{loadError}</p>}
                 {refreshError && <p className={styles.message} role="alert">{refreshError}</p>}
-                {isRefreshing && !isLoading && <p className={styles.message}>{REFRESHING_MESSAGE}</p>}
+                {isRefreshing && !isLoading && (
+                    <p className={styles.message}>
+                        {REFRESHING_MESSAGE}
+                        {refreshProgress && refreshProgress.total > 1
+                            ? ` (${refreshProgress.done + 1}/${refreshProgress.total})`
+                            : "..."}
+                    </p>
+                )}
                 {displayedTenders.length === 0 && !isLoading && !isRefreshing && !loadError && (
                     <p className={styles.message}>
                         {isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}

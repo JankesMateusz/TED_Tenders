@@ -10,6 +10,9 @@ const READ_CHUNK_SIZE = 300;
 const ALREADY_EXISTS = 6;
 const MAX_WRITE_ATTEMPTS = 3;
 
+/** Moment wygaśnięcia dokumentu zapisanego w podanej chwili (dla pól `expireAt` objętych polityką TTL). */
+export const expiryFrom = (now: Date): Timestamp => Timestamp.fromMillis(now.getTime() + RETENTION_DAYS * DAY_MS);
+
 export interface SaveResult {
   /** Ile przetargów dopisano, per źródło. */
   created: Record<TenderSource, number>;
@@ -38,7 +41,7 @@ export const saveNewTenders = async (records: TenderRecord[], now: Date = new Da
   }
 
   const fetchedAt = Timestamp.fromDate(now);
-  const expireAt = Timestamp.fromMillis(now.getTime() + RETENTION_DAYS * DAY_MS);
+  const expireAt = expiryFrom(now);
   const created: Record<TenderSource, number> = { TED: 0, E_ZAMOWIENIA: 0 };
 
   const writer = db.bulkWriter();

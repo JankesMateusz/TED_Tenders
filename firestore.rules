@@ -25,6 +25,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Dzienniki odświeżeń (które dni zostały już pobrane): odczyt dla członków, zapis tylko z Cloud Function.
+    match /refreshLog/{day} {
+      allow read: if hasRole();
+      allow write: if false;
+    }
+
     // Pozostałe kolekcje (m.in. blokada odświeżania `meta`, a w kolejnych etapach ulubione) są zamknięte.
     match /{document=**} {
       allow read, write: if false;
