@@ -39,6 +39,11 @@ const run = async () => {
     { merge: true }
   );
   console.log(`Użytkownik ${email} (${user.uid}) jest teraz administratorem.`);
+
+  if (!password) {
+    const link = await admin.auth().generatePasswordResetLink(email);
+    console.log(`Link do ustawienia hasła:\n${link}`);
+  }
 };
 
 run().catch((error) => {
