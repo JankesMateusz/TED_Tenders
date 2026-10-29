@@ -7,7 +7,8 @@ import { Tender } from "../types/Tender";
 import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
 import { toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
-import { filterAndSortTenders } from "../utils/tenderFilters";
+import { StatusFilters, filterAndSortTenders } from "../utils/tenderFilters";
+import { TenderStatus } from "../types/TenderStatus";
 import { fetchRefreshLog, refreshTendersForDay, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { StatisticsTab } from "./StatisticsTab";
@@ -31,6 +32,15 @@ const PARTIAL_FAILURE_MESSAGE = "Nie wszystkie źródła odpowiedziały. Spróbu
 const GENERIC_REFRESH_ERROR = "Nie udało się odświeżyć przetargów.";
 const LOAD_ERROR_MESSAGE = "Nie udało się wczytać przetargów z bazy.";
 const REFRESHING_MESSAGE = "Pobieranie nowych przetargów";
+
+const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznacz przetarg gwiazdką, aby trafił do tej zakładki.";
+const NO_STATUS_FILTERS: StatusFilters = {
+    toEnter: false,
+    entered: false,
+    toClarify: false,
+    notToEnter: false,
+    unmarked: false
+};
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -79,28 +89,10 @@ const Tenders: React.FC = () => {
     const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>([...DEFAULT_ORDER_TYPES]);
     const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
     const [selectedCity, setSelectedCity] = useState<string | null>(null);
-    const {
-        isFavorite,
-        toggleToBeEntered,
-        toggleNotToBeEntered,
-        isToBeEntered,
-        isNotToBeEntered,
-        toBeEnteredTenders,
-        notToBeEnteredTenders
-    } = useUserPreferences();
+    const { favorites, isFavorite, actionError } = useUserPreferences();
     // expanded state for CPV cards is now managed inside TenderCard
-    const [statusFilters, setStatusFilters] = useState<{
-        favorites: boolean;
-        toBeEntered: boolean;
-        notToBeEntered: boolean;
-        unmarked: boolean;
-    }>({
-        favorites: false,
-        toBeEntered: false,
-        notToBeEntered: false,
-        unmarked: false
-    });
-    const [activeTab, setActiveTab] = useState<'tenders' | 'statistics'>('tenders');
+    const [statusFilters, setStatusFilters] = useState<StatusFilters>(NO_STATUS_FILTERS);
+    const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
@@ -254,20 +246,29 @@ const Tenders: React.FC = () => {
         return Array.from(new Set(cpvCodes));
     };
 
+    // Przetargi z bazy wspólnej po id; tylko dla nich można zmienić status (kopie z "Zapisane" mogły już wygasnąć)
+    const liveTendersById = useMemo(() => new Map(tenders.map((tender) => [tender.id, tender])), [tenders]);
+
+    // Własne gwiazdki znikają z głównej listy i są w zakładce "Zapisane", gdzie (jeśli przetarg jest
+    // jeszcze w bazie) widać też aktualny wspólny status.
+    const savedTenders = useMemo(
+        () => favorites.map((favorite) => liveTendersById.get(favorite.id) ?? favorite),
+        [favorites, liveTendersById]
+    );
+    const unsavedTenders = useMemo(() => tenders.filter((tender) => !isFavorite(tender.id)), [tenders, isFavorite]);
+    const listedTenders = activeTab === 'saved' ? savedTenders : unsavedTenders;
+
     const displayedTenders = useMemo(() => {
-        return filterAndSortTenders(tenders, {
+        return filterAndSortTenders(listedTenders, {
             selectedSources,
             selectedOrderTypes,
             selectedBuyer,
             selectedCity,
             isFiltered,
             searchQuery,
-            statusFilters,
-            isFavorite,
-            isToBeEntered,
-            isNotToBeEntered
+            statusFilters
         });
-    }, [tenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters, isFavorite, isToBeEntered, isNotToBeEntered]);
+    }, [listedTenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters]);
 
     // Obsługa skrótów klawiszowych
     useEffect(() => {
@@ -304,24 +305,17 @@ const Tenders: React.FC = () => {
         setTendersCountBySource(counts);
     }, [displayedTenders]);
 
-    // Liczenie przetargów oznaczonych jako "do wpisania" i "nie do wpisania"
-    const toBeEnteredCount = useMemo(() => {
-        return displayedTenders.filter(tender => toBeEnteredTenders.has(tender.publicationNumber)).length;
-    }, [displayedTenders, toBeEnteredTenders]);
+    // Liczba przetargów z każdym wspólnym statusem na wyświetlanej liście
+    const statusCounts = useMemo(() => {
+        const counts = { toEnter: 0, entered: 0, toClarify: 0, notToEnter: 0 } as Record<TenderStatus, number>;
+        displayedTenders.forEach((tender) => {
+            if (tender.status) counts[tender.status]++;
+        });
+        return counts;
+    }, [displayedTenders]);
 
-    const notToBeEnteredCount = useMemo(() => {
-        return displayedTenders.filter(tender => notToBeEnteredTenders.has(tender.publicationNumber)).length;
-    }, [displayedTenders, notToBeEnteredTenders]);
-
-    // Oblicz statystyki
-    const statistics = useMemo(() => {
-        return calculateStatistics(
-            displayedTenders,
-            isFavorite,
-            isToBeEntered,
-            isNotToBeEntered
-        );
-    }, [displayedTenders, isFavorite, isToBeEntered, isNotToBeEntered]);
+    // Statystyki dotyczą przetargów z wybranego zakresu dat, bez własnych gwiazdek (te są w "Zapisane")
+    const statistics = useMemo(() => calculateStatistics(displayedTenders), [displayedTenders]);
 
     return (
         <div className={styles.app}>
@@ -343,7 +337,7 @@ const Tenders: React.FC = () => {
                 canRefresh={canRefreshAny}
             />
             <div className={styles.mainContent}>
-                {activeTab === 'tenders' && (
+                {activeTab !== 'statistics' && (
                     <BuyersSidebar
                         displayedTenders={displayedTenders}
                         selectedBuyer={selectedBuyer}
@@ -360,7 +354,15 @@ const Tenders: React.FC = () => {
                                     className={`${styles.tab} ${activeTab === 'tenders' ? styles.tabActive : ''}`}
                                     onClick={() => setActiveTab('tenders')}
                                 >
-                                    Przetargi ({displayedTenders.length})
+                                    Przetargi ({activeTab === 'tenders' ? displayedTenders.length : unsavedTenders.length})
+                                </button>
+                            </li>
+                            <li>
+                                <button
+                                    className={`${styles.tab} ${activeTab === 'saved' ? styles.tabActive : ''}`}
+                                    onClick={() => setActiveTab('saved')}
+                                >
+                                    Zapisane ({favorites.length})
                                 </button>
                             </li>
                             <li>
@@ -374,7 +376,7 @@ const Tenders: React.FC = () => {
                         </ul>
                     </div>
                     <div className={styles.tabContent}>
-                        {activeTab === 'tenders' ? (
+                        {activeTab !== 'statistics' ? (
                             <div className={styles.container}>
                                 <FiltersPanel
                                     searchQuery={searchQuery}
@@ -386,12 +388,11 @@ const Tenders: React.FC = () => {
                                     onOrderTypeToggle={handleOrderTypeToggle}
                                     statusFilters={statusFilters}
                                     onStatusFilterChange={(filter) =>
-                                        setStatusFilters(prev => ({...prev, [filter]: !prev[filter as keyof typeof prev]}))
+                                        setStatusFilters(prev => ({...prev, [filter]: !prev[filter]}))
                                     }
-                                    toBeEnteredCount={toBeEnteredCount}
-                                    notToBeEnteredCount={notToBeEnteredCount}
+                                    statusCounts={statusCounts}
                                 />
-                {isLoading && (
+                {activeTab === 'tenders' && isLoading && (
                     <div className={styles.skeletonContainer}>
                         {[...Array(3)].map((_, index) => (
                             <div key={index} className={styles.skeletonCard}>
@@ -410,9 +411,10 @@ const Tenders: React.FC = () => {
                         ))}
                     </div>
                 )}
-                {loadError && <p className={styles.message} role="alert">{loadError}</p>}
-                {refreshError && <p className={styles.message} role="alert">{refreshError}</p>}
-                {isRefreshing && !isLoading && (
+                {activeTab === 'tenders' && loadError && <p className={styles.message} role="alert">{loadError}</p>}
+                {activeTab === 'tenders' && refreshError && <p className={styles.message} role="alert">{refreshError}</p>}
+                {actionError && <p className={styles.message} role="alert">{actionError}</p>}
+                {activeTab === 'tenders' && isRefreshing && !isLoading && (
                     <p className={styles.message}>
                         {REFRESHING_MESSAGE}
                         {refreshProgress && refreshProgress.total > 1
@@ -420,24 +422,24 @@ const Tenders: React.FC = () => {
                             : "..."}
                     </p>
                 )}
-                {displayedTenders.length === 0 && !isLoading && !isRefreshing && !loadError && (
+                {activeTab === 'tenders' && displayedTenders.length === 0 && !isLoading && !isRefreshing && !loadError && (
                     <p className={styles.message}>
                         {isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}
                     </p>
                 )}
-                {!isLoading && (
+                {activeTab === 'saved' && favorites.length === 0 && (
+                    <p className={styles.message}>{NO_SAVED_TENDERS_MESSAGE}</p>
+                )}
+                {(activeTab === 'saved' || !isLoading) && (
                     <ul className={styles.tendersList}>
                         {displayedTenders.map((tender) => {
                             const cpvCodes = getDisplayedCpvCodes(tender);
                             return (
                                 <TenderCard
-                                    key={tender.publicationNumber}
+                                    key={tender.id}
                                     tender={tender}
                                     cpvCodes={cpvCodes}
-                                    onToggleToBeEntered={toggleToBeEntered}
-                                    onToggleNotToBeEntered={toggleNotToBeEntered}
-                                    isToBeEntered={isToBeEntered}
-                                    isNotToBeEntered={isNotToBeEntered}
+                                    canSetStatus={liveTendersById.has(tender.id)}
                                 />
                             );
                         })}
@@ -448,6 +450,7 @@ const Tenders: React.FC = () => {
                             <StatisticsTab
                                 statistics={statistics}
                                 isDateRange={useDateRange}
+                                savedCount={favorites.length}
                             />
                         )}
                     </div>

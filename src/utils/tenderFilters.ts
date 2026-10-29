@@ -1,5 +1,6 @@
 import { Tender } from '../types/Tender';
 import { TenderSource } from '../types/TenderSource';
+import { TenderStatus } from '../types/TenderStatus';
 import { OrderType } from './tenderSources';
 import { filterTendersByCpvCodes } from './cpvFilter';
 import { normalizeName } from './stringUtils';
@@ -12,16 +13,11 @@ interface FilterOptions {
     selectedCity: string | null;
     isFiltered: boolean;
     searchQuery: string;
-    statusFilters: {
-        favorites: boolean;
-        toBeEntered: boolean;
-        notToBeEntered: boolean;
-        unmarked: boolean;
-    };
-    isFavorite: (id: string) => boolean;
-    isToBeEntered: (id: string) => boolean;
-    isNotToBeEntered: (id: string) => boolean;
+    statusFilters: StatusFilters;
 }
+
+/** Które statusy (lub brak statusu) mają być widoczne; gdy żaden nie jest wybrany, filtr jest wyłączony. */
+export type StatusFilters = Record<TenderStatus | 'unmarked', boolean>;
 
 /**
  * Filtruje i sortuje przetargi według podanych kryteriów
@@ -86,23 +82,8 @@ export const filterAndSortTenders = (
     }
     
     // Filtrowanie po statusach (OR - wystarczy jeden wybrany status)
-    const hasAnyStatusFilter = options.statusFilters.favorites || 
-                               options.statusFilters.toBeEntered || 
-                               options.statusFilters.notToBeEntered || 
-                               options.statusFilters.unmarked;
-    if (hasAnyStatusFilter) {
-        result = result.filter(tender => {
-            const isFav = options.isFavorite(tender.publicationNumber);
-            const isToBe = options.isToBeEntered(tender.publicationNumber);
-            const isNotToBe = options.isNotToBeEntered(tender.publicationNumber);
-            const isUnmarked = !isFav && !isToBe && !isNotToBe;
-            
-            // OR logic - wystarczy że przetarg spełnia jeden z wybranych statusów
-            return (options.statusFilters.favorites && isFav) ||
-                   (options.statusFilters.toBeEntered && isToBe) ||
-                   (options.statusFilters.notToBeEntered && isNotToBe) ||
-                   (options.statusFilters.unmarked && isUnmarked);
-        });
+    if (Object.values(options.statusFilters).some(Boolean)) {
+        result = result.filter(tender => options.statusFilters[tender.status ?? 'unmarked']);
     }
     
     // Sortowanie po dacie publikacji (najnowsze na górze), w obrębie dnia po godzinie (jeśli źródło ją podaje)

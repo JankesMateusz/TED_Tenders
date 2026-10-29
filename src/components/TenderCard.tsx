@@ -2,76 +2,68 @@ import React, { useState, memo } from 'react';
 import { Tender } from '../types/Tender';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
+import { STATUS_CONFIG, TENDER_STATUSES, statusTooltip } from '../utils/tenderStatus';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import styles from './Tenders.module.css';
 
 type Props = {
     tender: Tender;
     cpvCodes: string[];
-    onToggleToBeEntered?: (id: string) => void;
-    onToggleNotToBeEntered?: (id: string) => void;
-    isToBeEntered?: (id: string) => boolean;
-    isNotToBeEntered?: (id: string) => boolean;
+    /** False, gdy przetargu nie ma już w bazie wspólnej (kopia z zakładki "Zapisane"): wtedy statusu nie da się zmienić. */
+    canSetStatus: boolean;
 };
 
-const TenderCard: React.FC<Props> = ({ tender, cpvCodes, onToggleToBeEntered: propsOnToggleToBeEntered, onToggleNotToBeEntered: propsOnToggleNotToBeEntered, isToBeEntered: propsIsToBeEntered, isNotToBeEntered: propsIsNotToBeEntered }) => {
-    const {
-        addToFavorites,
-        removeFromFavorites,
-        isFavorite
-    } = useUserPreferences();
+const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus }) => {
+    const { isFavorite, toggleFavorite, toggleStatus } = useUserPreferences();
 
     const [expanded, setExpanded] = useState<boolean>(false);
 
     const srcCfg = getSourceConfig(tender.source);
     const orderCfg = tender.orderType ? getOrderTypeConfig(tender.orderType as OrderType) : null;
 
-    const fav = isFavorite(tender.publicationNumber);
-    const toBe = propsIsToBeEntered ? propsIsToBeEntered(tender.publicationNumber) : false;
-    const notToBe = propsIsNotToBeEntered ? propsIsNotToBeEntered(tender.publicationNumber) : false;
+    const fav = isFavorite(tender.id);
+    const statusColor = tender.status ? STATUS_CONFIG[tender.status].color : undefined;
+    const statusHint = tender.status ? statusTooltip(tender.status, tender.statusByEmail, tender.statusAt) : undefined;
 
     return (
         <li
-            key={tender.publicationNumber}
-            className={`${styles.tenderCard} ${fav ? styles.tenderCardFavorite : ''} ${toBe ? styles.tenderCardToBeEntered : ''} ${notToBe ? styles.tenderCardNotToBeEntered : ''}`}
+            className={`${styles.tenderCard} ${tender.status ? styles.tenderCardStatus : ''}`}
+            style={statusColor ? ({ '--status-color': statusColor } as React.CSSProperties) : undefined}
+            // Podpowiedź z autorem statusu pojawia się po chwili najechania, z opóźnieniem przeglądarki
+            title={statusHint}
         >
             <div className={styles.cardHeader}>
                 <div className={styles.publicationNumber}>Numer publikacji: {tender.publicationNumber}</div>
                 <div className={styles.cardActions}>
-                    {propsOnToggleToBeEntered && (
-                        <button
-                            className={`${styles.statusButton} ${toBe ? styles.toBeEnteredActive : ''}`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                propsOnToggleToBeEntered(tender.publicationNumber);
-                            }}
-                            aria-label={toBe ? 'Usuń z do wpisania' : 'Oznacz jako do wpisania'}
-                            title={toBe ? 'Usuń z do wpisania' : 'Oznacz jako do wpisania'}
-                        >
-                            ✓
-                        </button>
-                    )}
-                    {propsOnToggleNotToBeEntered && (
-                        <button
-                            className={`${styles.statusButton} ${notToBe ? styles.notToBeEnteredActive : ''}`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                propsOnToggleNotToBeEntered(tender.publicationNumber);
-                            }}
-                            aria-label={notToBe ? 'Usuń z nie do wpisania' : 'Oznacz jako nie do wpisania'}
-                            title={notToBe ? 'Usuń z nie do wpisania' : 'Oznacz jako nie do wpisania'}
-                        >
-                            ✕
-                        </button>
-                    )}
+                    {canSetStatus && TENDER_STATUSES.map((status) => {
+                        const config = STATUS_CONFIG[status];
+                        const active = tender.status === status;
+                        const actionLabel = active ? `Usuń status: ${config.label}` : `Oznacz jako: ${config.label}`;
+                        return (
+                            <button
+                                key={status}
+                                className={styles.statusButton}
+                                style={active ? { color: config.color } : undefined}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleStatus(tender, status);
+                                }}
+                                aria-label={actionLabel}
+                                aria-pressed={active}
+                                title={active ? statusHint : actionLabel}
+                            >
+                                {config.icon}
+                            </button>
+                        );
+                    })}
                     <button
                         className={`${styles.favoriteButton} ${fav ? styles.favoriteActive : ''}`}
                         onClick={(e) => {
                             e.stopPropagation();
-                            fav ? removeFromFavorites(tender.publicationNumber) : addToFavorites(tender);
+                            toggleFavorite(tender);
                         }}
-                        aria-label={fav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
-                        title={fav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+                        aria-label={fav ? 'Usuń z zapisanych' : 'Zapisz'}
+                        title={fav ? 'Usuń z zapisanych' : 'Zapisz'}
                     >
                         {fav ? '★' : '☆'}
                     </button>

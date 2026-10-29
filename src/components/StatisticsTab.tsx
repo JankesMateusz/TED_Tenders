@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Statistics } from '../utils/calculateStatistics';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig } from '../utils/tenderSources';
+import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
 import styles from './StatisticsTab.module.css';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -45,9 +46,11 @@ const parseStatisticDate = (dateStr: string): number => {
 interface StatisticsTabProps {
     statistics: Statistics;
     isDateRange: boolean;
+    /** Liczba gwiazdek zalogowanego użytkownika (niezależnie od wybranego zakresu dat). */
+    savedCount: number;
 }
 
-export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDateRange }) => {
+export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDateRange, savedCount }) => {
     const buyerActivityEntries = Object.entries(statistics.byBuyerActivity);
     const hasBuyerActivity = buyerActivityEntries.length > 0;
     const hourlyEntries = useMemo(
@@ -100,19 +103,19 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                 </div>
                 
                 <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: '#f39c12' }}>
-                        {statistics.byStatus.favorites}
-                    </div>
-                    <div className={styles.statLabel}>Ulubionych</div>
+                    <div className={styles.statValue}>{savedCount}</div>
+                    <div className={styles.statLabel}>Zapisanych</div>
                 </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: '#2ecc71' }}>
-                        {statistics.byStatus.toBeEntered}
+
+                {TENDER_STATUSES.map((status) => (
+                    <div key={status} className={styles.statCard}>
+                        <div className={styles.statValue} style={{ color: STATUS_CONFIG[status].color }}>
+                            {statistics.byStatus[status]}
+                        </div>
+                        <div className={styles.statLabel}>{STATUS_CONFIG[status].label}</div>
                     </div>
-                    <div className={styles.statLabel}>Do wpisania</div>
-                </div>
-                
+                ))}
+
                 <div className={styles.statCard}>
                     <div className={styles.statValue} style={{ color: '#e74c3c' }}>
                         {statistics.deadlineStats.upcoming}

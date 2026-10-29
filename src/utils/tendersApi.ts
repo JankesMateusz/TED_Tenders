@@ -1,9 +1,23 @@
-import { Unsubscribe, collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
+import {
+    Unsubscribe,
+    collection,
+    deleteDoc,
+    deleteField,
+    doc,
+    getDocs,
+    onSnapshot,
+    query,
+    serverTimestamp,
+    setDoc,
+    updateDoc,
+    where
+} from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
 import { Tender } from '../types/Tender';
+import { TenderStatus } from '../types/TenderStatus';
 import { RefreshLogEntry } from './refreshPlan';
-import { tenderFromDoc } from './tenderMapping';
+import { favoriteFromDoc, favoriteToDoc, tenderFromDoc } from './tenderMapping';
 
 export interface RefreshResult {
     date: string;
@@ -44,6 +58,51 @@ export const subscribeToTenders = (
 ): Unsubscribe =>
     onSnapshot(
         query(collection(db, 'tenders'), where('publicationDate', '>=', startDay), where('publicationDate', '<=', endDay)),
-        (snapshot) => onData(snapshot.docs.map((doc) => tenderFromDoc(doc.data()))),
+        (snapshot) => onData(snapshot.docs.map((doc) => tenderFromDoc(doc.data(), doc.id))),
         onError
     );
+
+/**
+ * Ustawia wspólny status przetargu albo (dla `null`) go zdejmuje. Reguły wymagają, by autorem był
+ * zalogowany użytkownik, a czas pochodził z serwera.
+ */
+export const setTenderStatus = async (
+    tenderId: string,
+    status: TenderStatus | null,
+    user: { uid: string; email: string | null }
+): Promise<void> => {
+    const ref = doc(db, 'tenders', tenderId);
+    if (status === null) {
+        await updateDoc(ref, {
+            status: deleteField(),
+            statusBy: deleteField(),
+            statusByEmail: deleteField(),
+            statusAt: deleteField()
+        });
+        return;
+    }
+    await updateDoc(ref, {
+        status,
+        statusBy: user.uid,
+        statusByEmail: user.email,
+        statusAt: serverTimestamp()
+    });
+};
+
+/** Nasłuchuje gwiazdek użytkownika (kopii przetargów bez ograniczenia czasowego). */
+export const subscribeToFavorites = (
+    uid: string,
+    onData: (tenders: Tender[]) => void,
+    onError: (error: Error) => void
+): Unsubscribe =>
+    onSnapshot(
+        collection(db, 'users', uid, 'favorites'),
+        (snapshot) => onData(snapshot.docs.map((favorite) => favoriteFromDoc(favorite.data(), favorite.id))),
+        onError
+    );
+
+export const addFavorite = (uid: string, tender: Tender): Promise<void> =>
+    setDoc(doc(db, 'users', uid, 'favorites', tender.id), { ...favoriteToDoc(tender), savedAt: serverTimestamp() });
+
+export const removeFavorite = (uid: string, tenderId: string): Promise<void> =>
+    deleteDoc(doc(db, 'users', uid, 'favorites', tenderId));

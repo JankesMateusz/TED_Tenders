@@ -2,14 +2,15 @@ import React from 'react';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
 import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS } from '../constants';
+import { TenderStatus } from '../types/TenderStatus';
+import { StatusFilters } from '../utils/tenderFilters';
+import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
 import styles from './Tenders.module.css';
 
-interface StatusFilters {
-    favorites: boolean;
-    toBeEntered: boolean;
-    notToBeEntered: boolean;
-    unmarked: boolean;
-}
+const STATUS_FILTER_OPTIONS: Array<{ key: keyof StatusFilters; label: string; color: string }> = [
+    ...TENDER_STATUSES.map((status) => ({ key: status, ...STATUS_CONFIG[status] })),
+    { key: 'unmarked', label: 'Nieoznaczone', color: '#95a5a6' }
+];
 
 interface FiltersPanelProps {
     searchQuery: string;
@@ -21,8 +22,7 @@ interface FiltersPanelProps {
     onOrderTypeToggle: (orderType: OrderType) => void;
     statusFilters: StatusFilters;
     onStatusFilterChange: (filter: keyof StatusFilters) => void;
-    toBeEnteredCount: number;
-    notToBeEnteredCount: number;
+    statusCounts: Record<TenderStatus, number>;
 }
 
 export const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -35,8 +35,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onOrderTypeToggle,
     statusFilters,
     onStatusFilterChange,
-    toBeEnteredCount,
-    notToBeEnteredCount
+    statusCounts
 }) => {
     return (
         <>
@@ -129,96 +128,40 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 )}
                 
                 <div className={styles.statusCounts}>
-                    <span className={styles.statusCountItem}>
-                        <span className={styles.statusCountLabel}>Do wpisania:</span>
-                        <span className={styles.statusCountValue} style={{ color: '#2ecc71' }}>
-                            {toBeEnteredCount}
+                    {TENDER_STATUSES.map((status) => (
+                        <span key={status} className={styles.statusCountItem}>
+                            <span className={styles.statusCountLabel}>{STATUS_CONFIG[status].label}:</span>
+                            <span className={styles.statusCountValue} style={{ color: STATUS_CONFIG[status].color }}>
+                                {statusCounts[status]}
+                            </span>
                         </span>
-                    </span>
-                    <span className={styles.statusCountItem}>
-                        <span className={styles.statusCountLabel}>Nie do wpisania:</span>
-                        <span className={styles.statusCountValue} style={{ color: '#e74c3c' }}>
-                            {notToBeEnteredCount}
-                        </span>
-                    </span>
+                    ))}
                 </div>
             </div>
             
             <div className={styles.statusFiltersSection}>
                 <div className={styles.sourceFilters}>
                     <span className={styles.sourceFiltersLabel}>Filtruj po statusie:</span>
-                    <label className={styles.sourceFilterLabel}>
-                        <input
-                            type="checkbox"
-                            checked={statusFilters.favorites}
-                            onChange={() => onStatusFilterChange('favorites')}
-                            className={styles.sourceCheckbox}
-                        />
-                        <span 
-                            className={styles.sourceFilterBadge}
-                            style={{
-                                backgroundColor: statusFilters.favorites ? '#f39c12' : 'rgba(0, 0, 0, 0.1)',
-                                color: statusFilters.favorites ? '#ffffff' : 'var(--text-secondary)',
-                                border: `1px solid ${statusFilters.favorites ? '#f39c12' : 'rgba(0, 0, 0, 0.2)'}`
-                            }}
-                        >
-                            Ulubione
-                        </span>
-                    </label>
-                    <label className={styles.sourceFilterLabel}>
-                        <input
-                            type="checkbox"
-                            checked={statusFilters.toBeEntered}
-                            onChange={() => onStatusFilterChange('toBeEntered')}
-                            className={styles.sourceCheckbox}
-                        />
-                        <span 
-                            className={styles.sourceFilterBadge}
-                            style={{
-                                backgroundColor: statusFilters.toBeEntered ? '#2ecc71' : 'rgba(0, 0, 0, 0.1)',
-                                color: statusFilters.toBeEntered ? '#ffffff' : 'var(--text-secondary)',
-                                border: `1px solid ${statusFilters.toBeEntered ? '#2ecc71' : 'rgba(0, 0, 0, 0.2)'}`
-                            }}
-                        >
-                            Do wpisania
-                        </span>
-                    </label>
-                    <label className={styles.sourceFilterLabel}>
-                        <input
-                            type="checkbox"
-                            checked={statusFilters.notToBeEntered}
-                            onChange={() => onStatusFilterChange('notToBeEntered')}
-                            className={styles.sourceCheckbox}
-                        />
-                        <span 
-                            className={styles.sourceFilterBadge}
-                            style={{
-                                backgroundColor: statusFilters.notToBeEntered ? '#e74c3c' : 'rgba(0, 0, 0, 0.1)',
-                                color: statusFilters.notToBeEntered ? '#ffffff' : 'var(--text-secondary)',
-                                border: `1px solid ${statusFilters.notToBeEntered ? '#e74c3c' : 'rgba(0, 0, 0, 0.2)'}`
-                            }}
-                        >
-                            Nie do wpisania
-                        </span>
-                    </label>
-                    <label className={styles.sourceFilterLabel}>
-                        <input
-                            type="checkbox"
-                            checked={statusFilters.unmarked}
-                            onChange={() => onStatusFilterChange('unmarked')}
-                            className={styles.sourceCheckbox}
-                        />
-                        <span 
-                            className={styles.sourceFilterBadge}
-                            style={{
-                                backgroundColor: statusFilters.unmarked ? '#95a5a6' : 'rgba(0, 0, 0, 0.1)',
-                                color: statusFilters.unmarked ? '#ffffff' : 'var(--text-secondary)',
-                                border: `1px solid ${statusFilters.unmarked ? '#95a5a6' : 'rgba(0, 0, 0, 0.2)'}`
-                            }}
-                        >
-                            Nieoznaczone
-                        </span>
-                    </label>
+                    {STATUS_FILTER_OPTIONS.map(({ key, label, color }) => (
+                        <label key={key} className={styles.sourceFilterLabel}>
+                            <input
+                                type="checkbox"
+                                checked={statusFilters[key]}
+                                onChange={() => onStatusFilterChange(key)}
+                                className={styles.sourceCheckbox}
+                            />
+                            <span
+                                className={styles.sourceFilterBadge}
+                                style={{
+                                    backgroundColor: statusFilters[key] ? color : 'rgba(0, 0, 0, 0.1)',
+                                    color: statusFilters[key] ? '#ffffff' : 'var(--text-secondary)',
+                                    border: `1px solid ${statusFilters[key] ? color : 'rgba(0, 0, 0, 0.2)'}`
+                                }}
+                            >
+                                {label}
+                            </span>
+                        </label>
+                    ))}
                 </div>
             </div>
         </>
