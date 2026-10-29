@@ -58,6 +58,21 @@ Odświeżenie tworzy tylko nowe dokumenty. Identyfikator dokumentu jest determin
 
 Każdy etap ma kończyć się działającą, sprawdzoną funkcją, którą da się przejrzeć osobno.
 
+## Status
+
+- Etap 0 (środowisko): zrobiony.
+- Etap 1 (konta, role, zaproszenia, reguły): zrobiony i wdrożony na projekt testowy `tenders-test-b5bb3`.
+- Etap 2 (pobieranie po stronie serwera): zrobiony i wdrożony na projekt testowy. `refreshTenders` zweryfikowany na prawdziwych API (74 przetargi TED + 847 eZamówień z jednego dnia w ok. 4 s, drugie odświeżenie dopisuje 0). Stary proxy i `getApiKey` usunięte z kodu. **Produkcja nadal działa na starym kodzie** i nie należy jej wdrażać przed etapem 3.
+- Etap 3 i dalsze: do zrobienia.
+
+## Ustalenia z etapu 2
+
+- Wyszukiwanie TED v3 działa bez klucza API, więc `refreshTenders` nie używa klucza ani Secret Managera. Gdyby TED zaczął go wymagać, trzeba dodać `defineSecret` i nagłówek `Authorization`.
+- Filtr dat API eZamówień jest zawodny: zakres ISO z `Z` potrafi zwrócić również następny dzień (542 rekordy zamiast 138 dla jednego dnia). Sama data bez godziny działa poprawnie. Serwer pyta więc o doby UTC (dzień poprzedni i wybrany) i przycina wyniki do dnia w strefie `Europe/Warsaw`. Obecny frontend używa formatu ISO, więc dotychczas zawyżał liczbę przetargów dla dni z przeszłości.
+- API eZamówień zwraca maksymalnie 10 rekordów na stronę, niezależnie od `PageSize`.
+- Identyfikator dokumentu: `{źródło}_{numer}` ze znakami `/` i spacjami zamienionymi na `_` (numery eZamówień zawierają `/`).
+- Dane testowe w projekcie testowym (ok. 900 dokumentów z 2026-10-29) wygasną same po 30 dniach.
+
 ## Założenia do potwierdzenia
 
 - Tryb zakresu dat w interfejsie zostaje jako przeglądanie tego, co już jest w bazie. Odświeżanie dotyczy zawsze jednego dnia.
