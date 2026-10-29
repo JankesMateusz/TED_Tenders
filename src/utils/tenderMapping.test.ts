@@ -1,4 +1,4 @@
-import { favoriteFromDoc, favoriteToDoc, formatDay, tenderFromDoc } from './tenderMapping';
+import { commentFromDoc, favoriteFromDoc, favoriteToDoc, formatDay, tenderFromDoc } from './tenderMapping';
 
 describe('formatDay', () => {
     it('zamienia RRRR-MM-DD na DD-MM-RRRR', () => {
@@ -130,5 +130,20 @@ describe('kopia ulubionego przetargu', () => {
         const { status, statusByEmail, statusAt, ...expected } = tender;
         expect(restored).toEqual(expect.objectContaining(expected));
         expect(restored.status).toBeUndefined();
+    });
+});
+
+describe('commentFromDoc', () => {
+    const doc = { tenderId: 'TED_1', text: 'Dlaczego?', authorUid: 'u1', authorEmail: 'a@example.com' };
+
+    it('mapuje pola komentarza i zamienia czas serwera na Date', () => {
+        const createdAt = new Date(2026, 9, 29, 12, 0);
+        expect(commentFromDoc({ ...doc, createdAt: { toDate: () => createdAt } }, 'c1')).toEqual({ ...doc, id: 'c1', createdAt });
+    });
+
+    it('przy jeszcze nienadanym czasie serwera używa bieżącego', () => {
+        const before = Date.now();
+        const comment = commentFromDoc({ ...doc, createdAt: null }, 'c1');
+        expect(comment.createdAt.getTime()).toBeGreaterThanOrEqual(before);
     });
 });

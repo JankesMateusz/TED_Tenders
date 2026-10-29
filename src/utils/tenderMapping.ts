@@ -1,4 +1,5 @@
 import { Tender } from '../types/Tender';
+import { TenderComment } from '../types/TenderComment';
 import { TenderSource } from '../types/TenderSource';
 import { isTenderStatus } from './tenderStatus';
 
@@ -67,4 +68,14 @@ export const favoriteFromDoc = (data: Record<string, any>, id: string): Tender =
     country: data.country,
     buyerMainActivity: data.buyerMainActivity,
     changeNoticeVersionIdentifier: null
+});
+
+/** Zamienia dokument z kolekcji `comments`. `createdAt` bywa chwilowo puste, zanim serwer nada czas (wtedy bierzemy bieżący). */
+export const commentFromDoc = (data: Record<string, any>, id: string): TenderComment => ({
+    id,
+    tenderId: data.tenderId,
+    text: data.text,
+    authorUid: data.authorUid,
+    authorEmail: data.authorEmail,
+    createdAt: typeof data.createdAt?.toDate === 'function' ? data.createdAt.toDate() : new Date()
 });

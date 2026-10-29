@@ -1,5 +1,7 @@
 import {
+    Timestamp,
     Unsubscribe,
+    addDoc,
     collection,
     deleteDoc,
     deleteField,
@@ -19,7 +21,9 @@ import { db, functions } from '../firebase';
 import { Tender } from '../types/Tender';
 import { TenderStatus } from '../types/TenderStatus';
 import { RefreshLogEntry } from './refreshPlan';
-import { favoriteFromDoc, favoriteToDoc, tenderFromDoc } from './tenderMapping';
+import { TenderComment } from '../types/TenderComment';
+import { parseDate, toDayString } from './dateUtils';
+import { commentFromDoc, favoriteFromDoc, favoriteToDoc, tenderFromDoc } from './tenderMapping';
 
 export interface RefreshResult {
     date: string;
@@ -122,3 +126,45 @@ export const addFavorite = (uid: string, tender: Tender): Promise<void> =>
 
 export const removeFavorite = (uid: string, tenderId: string): Promise<void> =>
     deleteDoc(doc(db, 'users', uid, 'favorites', tenderId));
+
+/** Komentarz wygasa po miesiącu, razem z przetargiem (reguły dopuszczają najwyżej 31 dni). */
+const COMMENT_TTL_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Nasłuchuje komentarzy do przetargów opublikowanych w podanym zakresie dni (włącznie), tym samym
+ * zapytaniem po dacie co przetargi, więc jeden nasłuch obejmuje wszystkie karty.
+ */
+export const subscribeToComments = (
+    startDay: string,
+    endDay: string,
+    onData: (comments: TenderComment[]) => void,
+    onError: (error: Error) => void
+): Unsubscribe =>
+    onSnapshot(
+        query(collection(db, 'comments'), where('publicationDate', '>=', startDay), where('publicationDate', '<=', endDay)),
+        (snapshot) => onData(snapshot.docs.map((comment) => commentFromDoc(comment.data(), comment.id))),
+        onError
+    );
+
+/**
+ * Dodaje komentarz do przetargu. Reguły wymagają autora i e-maila zgodnych z kontem, czasu serwera
+ * oraz daty publikacji identycznej jak w przetargu (stąd przeliczenie z formatu interfejsu).
+ */
+export const addComment = async (
+    tender: Tender,
+    text: string,
+    user: { uid: string; email: string | null }
+): Promise<void> => {
+    await addDoc(collection(db, 'comments'), {
+        tenderId: tender.id,
+        publicationDate: toDayString(parseDate(tender.publicationDate)),
+        text,
+        authorUid: user.uid,
+        authorEmail: user.email,
+        createdAt: serverTimestamp(),
+        expireAt: Timestamp.fromMillis(Date.now() + COMMENT_TTL_DAYS * DAY_MS)
+    });
+};
+
+export const deleteComment = (commentId: string): Promise<void> => deleteDoc(doc(db, 'comments', commentId));
