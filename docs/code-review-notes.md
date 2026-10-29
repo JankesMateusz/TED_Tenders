@@ -10,7 +10,7 @@ Repozytorium źródłowe jest na GitHubie (ten folder to pobrana kopia, stąd br
 - `src/components/tenders.tsx`: główny komponent. Przy zmianie daty pobiera równolegle dane z TED i eZamówień, zapisuje je do cache w `localStorage` (TTL 30 min, odświeżanie w tle).
 - TED (`src/utils/fetchTenders.tsx`): zapytania przez proxy (Cloud Function `/tedProxy`), które dokłada klucz API z Secret Managera. Filtr: kupujący z Polski, `cn-standard`, `classification-cpv=teeq`. Stronicowanie po 250.
 - eZamówienia (`src/utils/fetchEzamowienia.tsx`): publiczne API wywoływane bezpośrednio z przeglądarki, osobno dla Delivery / Services / Works. Parametr `isTenderAmountBelowEU=true` ogranicza wyniki do zamówień poniżej progów UE. Stronicowanie po 10.
-- Filtr IT (`src/utils/cpvFilter.ts`): twardo zakodowana tablica kodów CPV, dopasowanie po prefiksie.
+- Filtr IT (`src/utils/cpvFilter.ts`) i nazwy kodów (`cpvMapping.ts`) czerpią z jednej tabeli `src/utils/cpvCodes.ts` (8-cyfrowe kody, dopasowanie dokładne). Rozwiązane po wcześniejszym przeglądzie.
 - Stan użytkownika (`src/context/UserPreferencesContext.tsx`): ulubione, „do wpisania", „nie do wpisania" w `localStorage`, bez backendu.
 - Filtrowanie i sortowanie: `src/utils/tenderFilters.ts` (czysta funkcja).
 

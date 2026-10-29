@@ -78,7 +78,7 @@ Dostęp daje wyłącznie custom claim `role` ∈ {`admin`, `member`} (samo zalog
 - `firebase.ts`: inicjalizacja SDK (Auth, Firestore, Functions w `europe-central2`), łączenie z emulatorami przy `REACT_APP_USE_EMULATORS=true`.
 - `context/AuthContext.tsx`, `components/LoginScreen.tsx`, `NoAccessScreen.tsx`, `UserBar.tsx`, `AdminPanel.tsx` (zaproszenia, lista użytkowników), `Auth.module.css`. `App.tsx` ma bramkę dostępu (logowanie → rola → aplikacja).
 - `components/tenders.tsx`: główny komponent; nasłuch przetargów (`subscribeToTenders`), odświeżanie (`refresh`, w trybie zakresu po kolei brakujące dni z paskiem postępu, ponawianie przy zajętej blokadzie), filtry, statystyki.
-- `utils/tendersApi.ts` (Firestore + callable), `tenderMapping.ts` (dokument → typ `Tender` w formacie interfejsu, daty `DD-MM-RRRR`), `refreshPlan.ts` (które dni pobrać), `dateUtils.ts` (`toDayString`, `addDays`, `parseDate`), `tenderFilters.ts` (filtrowanie i sortowanie po dacie, a w dniu po godzinie), `cpvFilter.ts` (**jedyne źródło prawdy dla listy CPV IT**; plik CSV z CPV jest zbędny), `calculateStatistics.ts`.
+- `utils/tendersApi.ts` (Firestore + callable), `tenderMapping.ts` (dokument → typ `Tender` w formacie interfejsu, daty `DD-MM-RRRR`), `refreshPlan.ts` (które dni pobrać), `dateUtils.ts` (`toDayString`, `addDays`, `parseDate`), `tenderFilters.ts` (filtrowanie i sortowanie po dacie, a w dniu po godzinie), `cpvCodes.ts` (**jedyne źródło prawdy: lista CPV IT wraz z oficjalnymi nazwami**), `cpvFilter.ts` i `cpvMapping.ts` (filtr i nazwa na karcie, oba z `cpvCodes.ts`). Kody o niskiej trafności (np. pomoce dydaktyczne, nadzór wideo) zostają celowo, bo zamawiający często błędnie klasyfikują przetargi ze sprzętem IT, `calculateStatistics.ts`.
 - **Statusy i gwiazdki (etap 4):**
   - `types/TenderStatus.ts` i `utils/tenderStatus.ts`: jedyne źródło prawdy dla 4 statusów (nazwa, ikona, kolor: `toEnter` ✎ niebieski, `entered` ✓ zielony, `toClarify` ? bursztynowy, `notToEnter` ✕ czerwony) oraz podpowiedzi z autorem (`statusTooltip`).
   - `types/Tender.ts` ma `id` (id dokumentu; **kluczem w interfejsie jest `id`, nie `publicationNumber`**, bo numery nie są unikalne między źródłami) oraz opcjonalne `status`, `statusByEmail`, `statusAt`.
@@ -151,8 +151,6 @@ Nie zaczynaj bez wyraźnego polecenia. Do zrobienia:
 
 ### Znane drobiazgi (poza zakresem, do decyzji użytkownika)
 - `axios` jest w `dependencies`, ale nic w `src/` go nie używa; `puppeteer` (devDependency) służy tylko skryptowi `scripts/generate-favicon.js`.
-- `src/resources/kody_cpv_it.csv` nie jest nigdzie używany (źródłem prawdy jest `cpvFilter.ts`); można usunąć.
-- W `cpvFilter.ts` są duplikaty i warianty kodów CPV (patrz `docs/code-review-notes.md`).
 - Zakładka „Zapisane (n)" pokazuje liczbę wszystkich gwiazdek, a „Przetargi (n)" liczbę po filtrach.
 
 ### Pomysły na później (poza minimum, bez decyzji)

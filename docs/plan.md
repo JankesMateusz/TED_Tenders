@@ -16,7 +16,7 @@ Cel (z `goals.md`): kilka zaproszonych osób widzi wspólną listę przetargów 
 - Nowe funkcje działają w regionie `europe-central2`, a Functions w runtime Node 22.
 - Klucz TED: do wymiany za kilka miesięcy (nowy wniosek w TED). Endpoint `getApiKey` i proxy znikną w etapie 2.
 - Firebase na planie Blaze. Prace i testy na osobnym projekcie testowym oraz w Firebase Emulator Suite, bez dotykania produkcji.
-- `src/resources/kody_cpv_it.csv` jest zbędny. Źródłem prawdy dla CPV jest `src/utils/cpvFilter.ts`.
+- Źródłem prawdy dla CPV jest `src/utils/cpvCodes.ts` (plik CSV usunięty).
 
 ## Architektura docelowa
 
