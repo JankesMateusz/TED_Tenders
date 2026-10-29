@@ -63,7 +63,17 @@ Każdy etap ma kończyć się działającą, sprawdzoną funkcją, którą da si
 - Etap 0 (środowisko): zrobiony.
 - Etap 1 (konta, role, zaproszenia, reguły): zrobiony i wdrożony na projekt testowy `tenders-test-b5bb3`.
 - Etap 2 (pobieranie po stronie serwera): zrobiony i wdrożony na projekt testowy. `refreshTenders` zweryfikowany na prawdziwych API (74 przetargi TED + 847 eZamówień z jednego dnia w ok. 4 s, drugie odświeżenie dopisuje 0). Stary proxy i `getApiKey` usunięte z kodu. **Produkcja nadal działa na starym kodzie** i nie należy jej wdrażać przed etapem 3.
-- Etap 3 i dalsze: do zrobienia.
+- Etap 3 (frontend na Firestore): zrobiony. Aplikacja czyta przetargi z bazy (nasłuch na żywo), a przy wejściu, zmianie dnia i po kliknięciu „Odśwież" prosi serwer o dopisanie nowych. Reguły z odczytem `tenders` wdrożone na projekt testowy. **Nie sprawdzono wizualnie w przeglądarce** (tylko typy, lint, build, testy jednostkowe i odczyt z prawdziwej bazy).
+- Etap 4 i dalsze: do zrobienia.
+
+## Ustalenia z etapu 3
+
+- Dokumenty z bazy są mapowane na dotychczasowy typ `Tender` (daty `DD-MM-RRRR`), więc filtry, statystyki i karty działają bez zmian.
+- Tryb zakresu dat tylko czyta z bazy; odświeżanie ze źródeł działa dla pojedynczego dnia z ostatnich 31 dni (przycisk jest poza tym nieaktywny).
+- Wejście do aplikacji pokazuje od razu to, co jest w bazie, a odświeżenie idzie w tle. Równoległe odświeżenie przez inną osobę nie jest traktowane jako błąd.
+- Daty wybierane w interfejsie liczone są lokalnie (`toDayString`), a nie przez `toISOString`, które potrafiło przesunąć dzień.
+- Zakres miesiąca to kilka–kilkanaście tysięcy odczytów dokumentów na każde wczytanie (jeden dzień to ok. 900). Przy kilku użytkownikach mieści się w darmowym limicie Firestore lub kosztuje grosze; gdyby to się zmieniło, trzeba ograniczyć zakres lub dodać zapytania po stronie serwera.
+- Usunięte: `fetchTenders`, `fetchEzamowienia`, `tendersCache`, klasa `Notice`, `removeChangeNotices` oraz wpis `proxy` w `package.json`.
 
 ## Ustalenia z etapu 2
 
