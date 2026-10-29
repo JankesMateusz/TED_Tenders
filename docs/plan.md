@@ -1,5 +1,7 @@
 # Plan: współdzielenie przetargów i oznaczeń (Firebase)
 
+> Nowa sesja agenta: zacznij od `docs/handoff.md` (stan środowiska, architektura, testy, następne kroki).
+
 Cel (z `goals.md`): kilka zaproszonych osób widzi wspólną listę przetargów i wspólne oznaczenia. Rozbudowa dopiero po osiągnięciu tego minimum.
 
 ## Ustalone decyzje
