@@ -69,11 +69,20 @@ Każdy etap ma kończyć się działającą, sprawdzoną funkcją, którą da si
 ## Ustalenia z etapu 3
 
 - Dokumenty z bazy są mapowane na dotychczasowy typ `Tender` (daty `DD-MM-RRRR`), więc filtry, statystyki i karty działają bez zmian.
-- Tryb zakresu dat tylko czyta z bazy; odświeżanie ze źródeł działa dla pojedynczego dnia z ostatnich 31 dni (przycisk jest poza tym nieaktywny).
+- Tryb zakresu dat sam dociąga brakujące dni (patrz niżej, „Zakres dat"); odświeżanie ze źródeł działa tylko dla dni z ostatnich 31 dni, dla starszych aplikacja tylko czyta z bazy.
 - Wejście do aplikacji pokazuje od razu to, co jest w bazie, a odświeżenie idzie w tle. Równoległe odświeżenie przez inną osobę nie jest traktowane jako błąd.
 - Daty wybierane w interfejsie liczone są lokalnie (`toDayString`), a nie przez `toISOString`, które potrafiło przesunąć dzień.
 - Zakres miesiąca to kilka–kilkanaście tysięcy odczytów dokumentów na każde wczytanie (jeden dzień to ok. 900). Przy kilku użytkownikach mieści się w darmowym limicie Firestore lub kosztuje grosze; gdyby to się zmieniło, trzeba ograniczyć zakres lub dodać zapytania po stronie serwera.
 - Usunięte: `fetchTenders`, `fetchEzamowienia`, `tendersCache`, klasa `Notice`, `removeChangeNotices` oraz wpis `proxy` w `package.json`.
+
+### Zakres dat (poprawka po pierwszym teście w przeglądarce)
+
+Pierwsza wersja trybu zakresu tylko czytała z bazy, więc dni, których nikt wcześniej nie otworzył, były puste. Teraz:
+- Serwer po w pełni udanym odświeżeniu zapisuje `refreshLog/{dzień}` z polem `complete` (dzień pobrany po jego zakończeniu) i `expireAt` (TTL jak przetargi). Dzień, w którym któreś źródło zawiodło, nie dostaje wpisu.
+- Klient w trybie zakresu pobiera po kolei dni bez kompletnego wpisu oraz dzisiejszy (`src/utils/refreshPlan.ts`), z postępem „3/7". Pojedynczy dzień jest odświeżany zawsze.
+- Jeśli serwer jest zajęty odświeżaniem innej osoby, klient czeka 3 s i ponawia (maks. 6 prób).
+- Koszt: dzień to ok. 2–4 s i ok. 400–900 zapisów, więc cały miesiąc za pierwszym razem to ok. 2 minuty i kilkanaście tysięcy zapisów.
+- TED zwrócił `429 Too Many Requests` przy kilku odświeżeniach pod rząd, więc zapytania do TED i eZamówień są ponawiane z narastającym opóźnieniem (1, 3, 8 s, z uwzględnieniem `Retry-After`). Ścieżkę ponawiania pokrywają testy z atrapą; na prawdziwym TED nie udało się jej jeszcze wywołać.
 
 ## Ustalenia z etapu 2
 
