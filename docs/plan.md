@@ -10,7 +10,8 @@ Cel (z `goals.md`): kilka zaproszonych osób widzi wspólną listę przetargów 
 - W bazie zapisujemy wszystkie pobrane przetargi i trzymamy je miesiąc od zapisu. Wyjątek: przetargi z gwiazdką zostają, dopóki użytkownik sam jej nie usunie.
 - Odświeżanie pobiera przetargi z jednego dnia: dzisiejszego albo wskazanego przez użytkownika. Powtórne odświeżenie dopisuje tylko te przetargi, których jeszcze nie ma w bazie (przetargi opublikowane po poprzednim odświeżeniu). Brak przetargów z danego dnia (urlop, święta) nie jest problemem.
 - Zaczynamy od zera, bez migracji ulubionych i statusów z `localStorage`.
-- Zaproszenie: konto tworzy admin, a zaproszona osoba dostaje od Firebase mail z linkiem do ustawienia hasła (standardowy szablon resetu hasła).
+- Zaproszenie: admin wpisuje email w panelu „Użytkownicy", funkcja `inviteUser` zakłada konto z rolą `member` i zwraca link do ustawienia hasła, który admin przekazuje osobie ręcznie (zamknięty zespół, bez wysyłki maili).
+- Nowe funkcje działają w regionie `europe-central2`, a Functions w runtime Node 22.
 - Klucz TED: do wymiany za kilka miesięcy (nowy wniosek w TED). Endpoint `getApiKey` i proxy znikną w etapie 2.
 - Firebase na planie Blaze. Prace i testy na osobnym projekcie testowym oraz w Firebase Emulator Suite, bez dotykania produkcji.
 - `src/resources/kody_cpv_it.csv` jest zbędny. Źródłem prawdy dla CPV jest `src/utils/cpvFilter.ts`.

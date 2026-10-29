@@ -1,9 +1,25 @@
 rules_version = '2';
 
-// Tymczasowo: pełna blokada dostępu klientów. Właściwe reguły (role, przetargi, ulubione)
-// powstaną w etapie 1 planu (docs/plan.md).
+// Dostęp daje wyłącznie rola z custom claim (`role`), nadawana przez Cloud Functions.
+// Samo zalogowanie nie wystarcza: konto może założyć każdy, kto zna publiczny klucz API.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function hasRole() {
+      return request.auth != null && request.auth.token.get('role', null) in ['admin', 'member'];
+    }
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.get('role', null) == 'admin';
+    }
+
+    // Profile użytkowników: zapis tylko przez Cloud Functions (Admin SDK).
+    match /users/{uid} {
+      allow read: if isAdmin() || (hasRole() && request.auth.uid == uid);
+      allow write: if false;
+    }
+
+    // Pozostałe kolekcje (przetargi, ulubione) dojdą w kolejnych etapach planu.
     match /{document=**} {
       allow read, write: if false;
     }

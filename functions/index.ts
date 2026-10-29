@@ -5,6 +5,8 @@ import axios from 'axios';
 import * as express from 'express';
 import * as cors from 'cors';
 
+export { inviteUser } from './users';
+
 // Inicjalizacja Firebase Admin SDK
 admin.initializeApp();
 

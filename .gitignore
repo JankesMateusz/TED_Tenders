@@ -29,3 +29,4 @@ src/config/api.ts
 *-debug.log
 .firebase/
 functions/node_modules/
+functions/lib/
