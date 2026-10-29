@@ -13,16 +13,42 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.get('role', null) == 'admin';
     }
 
+    // Wspólny status przetargu: albo komplet poprawnych pól ustawiony przez zalogowaną osobę
+    // (`statusAt` to czas serwera), albo komplet pól usunięty (zdjęcie statusu).
+    function statusFieldsAreSet() {
+      let data = request.resource.data;
+      return data.status in ['toEnter', 'entered', 'notToEnter', 'toClarify']
+        && data.statusBy == request.auth.uid
+        && data.statusByEmail == request.auth.token.get('email', null)
+        && data.statusAt == request.time;
+    }
+
+    function statusFieldsAreCleared() {
+      let data = request.resource.data;
+      return !('status' in data) && !('statusBy' in data)
+        && !('statusByEmail' in data) && !('statusAt' in data);
+    }
+
     // Profile użytkowników: zapis tylko przez Cloud Functions (Admin SDK).
     match /users/{uid} {
       allow read: if isAdmin() || (hasRole() && request.auth.uid == uid);
       allow write: if false;
+
+      // Gwiazdki są indywidualne: pełna kopia przetargu, bez TTL, dostęp tylko dla właściciela.
+      match /favorites/{tenderId} {
+        allow read, write: if hasRole() && request.auth.uid == uid;
+      }
     }
 
     // Przetargi: odczyt dla członków; dokumenty zakłada wyłącznie Cloud Function `refreshTenders`.
+    // Klient może jedynie zmienić pola wspólnego statusu istniejącego przetargu.
     match /tenders/{tenderId} {
       allow read: if hasRole();
-      allow write: if false;
+      allow create, delete: if false;
+      allow update: if hasRole()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'statusBy', 'statusByEmail', 'statusAt'])
+        && (statusFieldsAreSet() || statusFieldsAreCleared());
     }
 
     // Dzienniki odświeżeń (które dni zostały już pobrane): odczyt dla członków, zapis tylko z Cloud Function.
@@ -31,7 +57,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Pozostałe kolekcje (m.in. blokada odświeżania `meta`, a w kolejnych etapach ulubione) są zamknięte.
+    // Pozostałe kolekcje (m.in. blokada odświeżania `meta`) są zamknięte.
     match /{document=**} {
       allow read, write: if false;
     }
