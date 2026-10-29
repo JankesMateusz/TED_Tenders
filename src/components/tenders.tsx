@@ -256,19 +256,21 @@ const Tenders: React.FC = () => {
         [favorites, liveTendersById]
     );
     const unsavedTenders = useMemo(() => tenders.filter((tender) => !isFavorite(tender.id)), [tenders, isFavorite]);
-    const listedTenders = activeTab === 'saved' ? savedTenders : unsavedTenders;
 
-    const displayedTenders = useMemo(() => {
-        return filterAndSortTenders(listedTenders, {
-            selectedSources,
-            selectedOrderTypes,
-            selectedBuyer,
-            selectedCity,
-            isFiltered,
-            searchQuery,
-            statusFilters
-        });
-    }, [listedTenders, selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters]);
+    const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, {
+        selectedSources,
+        selectedOrderTypes,
+        selectedBuyer,
+        selectedCity,
+        isFiltered,
+        searchQuery,
+        statusFilters
+    }), [selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters]);
+
+    // Obie listy są filtrowane osobno, by licznik "Przetargi" nie zależał od aktywnej zakładki
+    const filteredTenders = useMemo(() => applyFilters(unsavedTenders), [applyFilters, unsavedTenders]);
+    const filteredSavedTenders = useMemo(() => applyFilters(savedTenders), [applyFilters, savedTenders]);
+    const displayedTenders = activeTab === 'saved' ? filteredSavedTenders : filteredTenders;
 
     // Obsługa skrótów klawiszowych
     useEffect(() => {
@@ -354,7 +356,7 @@ const Tenders: React.FC = () => {
                                     className={`${styles.tab} ${activeTab === 'tenders' ? styles.tabActive : ''}`}
                                     onClick={() => setActiveTab('tenders')}
                                 >
-                                    Przetargi ({activeTab === 'tenders' ? displayedTenders.length : unsavedTenders.length})
+                                    Przetargi ({filteredTenders.length})
                                 </button>
                             </li>
                             <li>
