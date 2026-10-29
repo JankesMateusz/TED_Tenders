@@ -26,7 +26,8 @@
     "test": "react-scripts test",
     "emulators": "firebase emulators:start --project demo-tenders",
     "test:rules": "firebase emulators:exec --only firestore --project demo-rules-test \"node --test tests/firestore.rules.test.mjs\"",
-    "test:functions": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-tenders \"node --test tests/invite.integration.test.mjs\"",
+    "test:unit": "npm --prefix functions run build && node --test tests/mappers.test.mjs",
+    "test:functions": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-tenders \"node --test --test-concurrency=1 tests/invite.integration.test.mjs tests/refresh.integration.test.mjs\"",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
