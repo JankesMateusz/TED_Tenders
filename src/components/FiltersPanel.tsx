@@ -97,7 +97,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     })}
                 </div>
                 
-                {selectedSources.includes(TenderSource.E_ZAMOWIENIA) && (
+                {(selectedSources.includes(TenderSource.E_ZAMOWIENIA) || selectedSources.includes(TenderSource.TED)) && (
                     <div className={styles.sourceFilters}>
                         <span className={styles.sourceFiltersLabel}>Typy:</span>
                         {DEFAULT_ORDER_TYPES.map((orderType) => {

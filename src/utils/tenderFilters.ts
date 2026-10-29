@@ -31,14 +31,8 @@ export const filterAndSortTenders = (
     // Filtrowanie po źródle
     result = result.filter(tender => options.selectedSources.includes(tender.source));
     
-    // Filtrowanie po typie zamówienia (tylko dla eZamówienia)
-    result = result.filter(tender => {
-        if (tender.source === TenderSource.E_ZAMOWIENIA && tender.orderType) {
-            return options.selectedOrderTypes.includes(tender.orderType);
-        }
-        // Dla innych źródeł (TED, Baza Konkurencyjności) nie filtrujemy po typie zamówienia
-        return true;
-    });
+    // Filtrowanie po typie zamówienia; przetargi bez znanego typu (np. starsze zapisy z TED) zostają widoczne
+    result = result.filter(tender => !tender.orderType || options.selectedOrderTypes.includes(tender.orderType));
     
     // Filtrowanie po zamawiającym z użyciem znormalizowanej nazwy
     if (options.selectedBuyer) {

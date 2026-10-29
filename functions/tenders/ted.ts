@@ -1,6 +1,6 @@
 import { dayFromTedDate } from './dates';
 import { requestWithRetry } from './http';
-import { SourceResult, TenderRecord } from './model';
+import { OrderType, SourceResult, TenderRecord } from './model';
 
 // Adres można podmienić w testach (functions/.env.demo-tenders). Wyszukiwanie ogłoszeń jest w TED publiczne, bez klucza API.
 const TED_API_URL = process.env.TED_API_URL ?? 'https://api.ted.europa.eu/v3/notices/search';
@@ -16,6 +16,7 @@ const FIELDS = [
   'buyer-city',
   'organisation-name-buyer',
   'authority-main-activity',
+  'contract-nature',
   'change-notice-version-identifier',
   'deadline-receipt-tender-date-lot',
 ];
@@ -30,6 +31,24 @@ const extractCountry = (title: string | undefined): string =>
 const extractActivity = (field: unknown): string | null => {
   const value = Array.isArray(field) ? field[0] : field;
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+};
+
+const ORDER_TYPE_BY_NATURE: Record<string, OrderType> = {
+  supplies: 'Delivery',
+  services: 'Services',
+  works: 'Works',
+};
+// Kolejność = pierwszeństwo: aplikacja dotyczy sprzętu IT, więc dostawa wygrywa z usługą i robotami
+const ORDER_TYPE_PRECEDENCE: OrderType[] = ['Delivery', 'Services', 'Works'];
+
+/**
+ * `contract-nature` to tablica z rodzajem zamówienia każdego lotu, a jedno ogłoszenie może mieć loty
+ * różnych rodzajów. Zwraca rodzaj o najwyższym pierwszeństwie albo null, gdy pole jest puste lub nieznane.
+ */
+const extractOrderType = (field: unknown): OrderType | null => {
+  const natures: unknown[] = Array.isArray(field) ? field : [field];
+  const found = new Set(natures.map((nature) => (typeof nature === 'string' ? ORDER_TYPE_BY_NATURE[nature] : undefined)));
+  return ORDER_TYPE_PRECEDENCE.find((orderType) => found.has(orderType)) ?? null;
 };
 
 /**
@@ -54,7 +73,7 @@ export const mapTedNotice = (raw: any, fallbackDay: string): TenderRecord | null
     deadlineDate: dayFromTedDate(raw['deadline-receipt-tender-date-lot']),
     cpvCodes: raw['classification-cpv'] || [],
     link: `https://ted.europa.eu/udl?uri=TED:NOTICE:${publicationNumber}:TEXT:PL:HTML`,
-    orderType: null,
+    orderType: extractOrderType(raw['contract-nature']),
     buyerMainActivity: extractActivity(raw['authority-main-activity']),
   };
 };

@@ -62,6 +62,7 @@ describe('mapTedNotice', () => {
         'organisation-name-buyer': { pol: ['Gmina Przykład'] },
         'buyer-city': { mul: ['Przykład'] },
         'authority-main-activity': ['gen-pub'],
+        'contract-nature': ['supplies', 'supplies'],
     };
 
     it('mapuje pola ogłoszenia', () => {
@@ -77,9 +78,20 @@ describe('mapTedNotice', () => {
             deadlineDate: '2026-11-20',
             cpvCodes: ['30213300', '48000000'],
             link: 'https://ted.europa.eu/udl?uri=TED:NOTICE:745242-2026:TEXT:PL:HTML',
-            orderType: null,
+            orderType: 'Delivery',
             buyerMainActivity: 'gen-pub',
         });
+    });
+
+    it('ustala rodzaj zamówienia z lotów, a dostawa ma pierwszeństwo', () => {
+        const orderType = (nature) => mapTedNotice({ ...raw, 'contract-nature': nature }, '2026-10-28').orderType;
+        assert.equal(orderType(['services', 'services']), 'Services');
+        assert.equal(orderType(['works']), 'Works');
+        assert.equal(orderType(['works', 'services']), 'Services');
+        assert.equal(orderType(['works', 'services', 'supplies']), 'Delivery');
+        assert.equal(orderType([]), null);
+        assert.equal(orderType(['nieznany']), null);
+        assert.equal(orderType(undefined), null);
     });
 
     it('pomija ogłoszenia zmieniające i bez numeru', () => {
@@ -96,6 +108,7 @@ describe('mapTedNotice', () => {
         assert.equal(record.publicationDate, '2026-10-28');
         assert.equal(record.deadlineDate, null);
         assert.deepEqual(record.cpvCodes, []);
+        assert.equal(record.orderType, null);
     });
 });
 

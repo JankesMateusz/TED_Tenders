@@ -54,3 +54,29 @@ describe('statystyki statusów', () => {
         });
     });
 });
+
+describe('filtr po typie zamówienia', () => {
+    const typed: Tender[] = [
+        { ...tender('dostawa'), orderType: 'Delivery' },
+        { ...tender('usluga'), orderType: 'Services' },
+        { ...tender('nieznany') }
+    ];
+    const byType = (selectedOrderTypes: ('Delivery' | 'Services' | 'Works')[]) =>
+        filterAndSortTenders(typed, {
+            selectedSources: [TenderSource.TED],
+            selectedOrderTypes,
+            selectedBuyer: null,
+            selectedCity: null,
+            isFiltered: false,
+            searchQuery: '',
+            statusFilters: noFilters
+        }).map((t) => t.id).sort();
+
+    it('działa także dla przetargów z TED', () => {
+        expect(byType(['Delivery'])).toEqual(['dostawa', 'nieznany']);
+    });
+
+    it('nie ukrywa przetargów bez znanego typu', () => {
+        expect(byType([])).toEqual(['nieznany']);
+    });
+});
