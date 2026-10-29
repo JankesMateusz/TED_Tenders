@@ -59,9 +59,33 @@ describe('users', () => {
     });
 });
 
+describe('tenders', () => {
+    beforeEach(async () => {
+        await env.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'tenders/TED_1'), { title: 'Przetarg' });
+        });
+    });
+
+    it('członek i admin czytają przetargi', async () => {
+        await assertSucceeds(getDoc(doc(dbFor('member1', { role: 'member' }), 'tenders/TED_1')));
+        await assertSucceeds(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'tenders/TED_1')));
+    });
+
+    it('niezalogowany i konto bez roli nie czytają przetargów', async () => {
+        await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'tenders/TED_1')));
+        await assertFails(getDoc(doc(dbFor('plain1', {}), 'tenders/TED_1')));
+    });
+
+    it('nikt nie zapisuje przetargów z klienta', async () => {
+        await assertFails(setDoc(doc(dbFor('member1', { role: 'member' }), 'tenders/TED_2'), { title: 'x' }));
+        await assertFails(setDoc(doc(dbFor('admin1', { role: 'admin' }), 'tenders/TED_1'), { title: 'x' }));
+    });
+});
+
 describe('pozostałe kolekcje', () => {
-    it('są zablokowane dla każdej roli', async () => {
-        await assertFails(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'tenders/x')));
-        await assertFails(setDoc(doc(dbFor('member1', { role: 'member' }), 'tenders/x'), { a: 1 }));
+    it('są zablokowane dla każdej roli, także blokada odświeżania', async () => {
+        await assertFails(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'meta/refreshLock')));
+        await assertFails(setDoc(doc(dbFor('member1', { role: 'member' }), 'meta/refreshLock'), { a: 1 }));
+        await assertFails(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'inne/x')));
     });
 });

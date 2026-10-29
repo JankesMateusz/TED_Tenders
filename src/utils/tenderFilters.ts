@@ -105,11 +105,14 @@ export const filterAndSortTenders = (
         });
     }
     
-    // Sortowanie po dacie publikacji (najnowsze na górze)
+    // Sortowanie po dacie publikacji (najnowsze na górze), w obrębie dnia po godzinie (jeśli źródło ją podaje)
     result.sort((a, b) => {
         const dateA = parseDate(a.publicationDate);
         const dateB = parseDate(b.publicationDate);
-        return dateB.getTime() - dateA.getTime();
+        if (dateA.getTime() !== dateB.getTime()) {
+            return dateB.getTime() - dateA.getTime();
+        }
+        return (b.publicationTime ?? '').localeCompare(a.publicationTime ?? '');
     });
     
     return result;

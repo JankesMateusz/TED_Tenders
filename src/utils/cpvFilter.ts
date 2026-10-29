@@ -75,11 +75,6 @@ export const isItRelatedCpv = (code: string): boolean => {
     });
 };
 
-// Function to filter out change notices
-export const removeChangeNotices = <T extends { changeNoticeVersionIdentifier?: string | null }>(tenders: T[]): T[] => {
-    return tenders.filter(tender => !tender.changeNoticeVersionIdentifier);
-};
-
 // Function to filter tenders by CPV codes
 export const filterTendersByCpvCodes = <T extends { cpvCodes: string[] }>(tenders: T[]): T[] => {
     return tenders.filter(tender => {

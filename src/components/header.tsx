@@ -21,6 +21,10 @@ interface HeaderProps {
     isFiltered: boolean;
     selectedSources: TenderSource[];
     isLoading: boolean;
+    /** Trwa pobieranie nowych przetargów ze źródeł (nie blokuje przeglądania listy). */
+    isRefreshing: boolean;
+    /** Odświeżanie ze źródeł jest możliwe tylko dla pojedynczego dnia z ostatniego miesiąca. */
+    canRefresh: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -36,7 +40,9 @@ const Header: React.FC<HeaderProps> = ({
     onRefresh,
     isFiltered,
     selectedSources,
-    isLoading
+    isLoading,
+    isRefreshing,
+    canRefresh
 }) => {
     const { theme, toggleTheme } = useTheme();
 
@@ -133,11 +139,11 @@ const Header: React.FC<HeaderProps> = ({
                     <button
                         className={`${styles.button} ${styles.refreshButton}`}
                         onClick={onRefresh}
-                        disabled={isLoading}
+                        disabled={isRefreshing || !canRefresh}
                         aria-label="Odśwież przetargi"
-                        title="Odśwież przetargi"
+                        title={canRefresh ? "Pobierz nowe przetargi" : "Odświeżanie dostępne dla pojedynczego dnia z ostatniego miesiąca"}
                     >
-                        {isLoading ? '⟳' : '↻'}
+                        {isRefreshing ? '⟳' : '↻'}
                     </button>
                     <button
                         className={`${styles.button} ${styles.themeToggle}`}

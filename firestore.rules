@@ -19,7 +19,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Pozostałe kolekcje (przetargi, ulubione) dojdą w kolejnych etapach planu.
+    // Przetargi: odczyt dla członków; dokumenty zakłada wyłącznie Cloud Function `refreshTenders`.
+    match /tenders/{tenderId} {
+      allow read: if hasRole();
+      allow write: if false;
+    }
+
+    // Pozostałe kolekcje (m.in. blokada odświeżania `meta`, a w kolejnych etapach ulubione) są zamknięte.
     match /{document=**} {
       allow read, write: if false;
     }

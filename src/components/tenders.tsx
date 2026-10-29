@@ -1,21 +1,31 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { fetchTenders } from "../utils/fetchTenders";
-import { fetchEzamowienia } from "../utils/fetchEzamowienia";
-import { isItRelatedCpv, removeChangeNotices } from "../utils/cpvFilter";
+import { isItRelatedCpv } from "../utils/cpvFilter";
 import { useUserPreferences } from "../context/UserPreferencesContext";
 import { OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
 import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
-import { saveTendersToCache, getTendersFromCache } from "../utils/tendersCache";
+import { toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
 import { filterAndSortTenders } from "../utils/tenderFilters";
+import { canRefreshDay, refreshTendersForDay, subscribeToTenders } from "../utils/tendersApi";
 import { StatisticsTab } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import TenderCard from "./TenderCard";
 import styles from "./Tenders.module.css";
+
+const REFRESH_ERROR_MESSAGES: Record<string, string> = {
+    "functions/unavailable": "Nie udało się pobrać nowych przetargów ze źródeł. Spróbuj ponownie za chwilę.",
+    "functions/permission-denied": "Brak uprawnień do odświeżania przetargów.",
+    "functions/unauthenticated": "Sesja wygasła. Zaloguj się ponownie."
+};
+const REFRESH_IN_PROGRESS_CODE = "functions/resource-exhausted";
+const PARTIAL_FAILURE_MESSAGE = "Nie wszystkie źródła odpowiedziały. Spróbuj odświeżyć ponownie za chwilę.";
+const GENERIC_REFRESH_ERROR = "Nie udało się odświeżyć przetargów.";
+const LOAD_ERROR_MESSAGE = "Nie udało się wczytać przetargów z bazy.";
+const REFRESHING_MESSAGE = "Pobieranie nowych przetargów...";
 
 const Tenders: React.FC = () => {
     const [tenders, setTenders] = useState<Tender[]>([]);
@@ -24,8 +34,12 @@ const Tenders: React.FC = () => {
     const [endDate, setEndDate] = useState<Date | null>(today);
     const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
     const [searchQuery, setSearchQuery] = useState<string>("");
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [loadingProgress, setLoadingProgress] = useState<number>(0);
+    // True do czasu pierwszej odpowiedzi bazy dla wybranego zakresu dat
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    // True, gdy serwer pobiera nowe przetargi ze źródeł (lista pokazuje w tym czasie to, co już jest w bazie)
+    const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [refreshError, setRefreshError] = useState<string | null>(null);
     const [isFiltered, setIsFiltered] = useState<boolean>(false);
     const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
         [TenderSource.TED]: 0,
@@ -40,7 +54,7 @@ const Tenders: React.FC = () => {
     const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>([...DEFAULT_ORDER_TYPES]);
     const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
     const [selectedCity, setSelectedCity] = useState<string | null>(null);
-    const { 
+    const {
         isFavorite,
         toggleToBeEntered,
         toggleNotToBeEntered,
@@ -62,148 +76,74 @@ const Tenders: React.FC = () => {
         unmarked: false
     });
     const [activeTab, setActiveTab] = useState<'tenders' | 'statistics'>('tenders');
-    const prevValuesRef = useRef<{ startDate: Date | null; endDate: Date | null; useDateRange: boolean } | null>(null);
-    const isInitialMount = useRef(true);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
+    // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
+    const startDay = startDate ? toDayString(startDate) : null;
+    const endDay = useDateRange ? (endDate ? toDayString(endDate) : null) : startDay;
+    // Odświeżanie ze źródeł dotyczy tylko pojedynczego dnia, który serwer przyjmie
+    const dayToRefresh = !useDateRange && startDay && canRefreshDay(startDay) ? startDay : null;
 
-    // Funkcja do pobierania przetargów z API
-    const fetchTendersFromAPI = useCallback(async (formattedStartDate: string, formattedEndDate: string): Promise<Tender[]> => {
-        const results = await Promise.allSettled([
-            fetchTenders(formattedStartDate, formattedEndDate),
-            fetchEzamowienia(formattedStartDate, formattedEndDate)
-        ]);
-        
-        let allTenders: Tender[] = [];
-        
-        // Przetwarzanie wyników z TED
-        if (results[0].status === 'fulfilled') {
-            allTenders = [...allTenders, ...results[0].value];
-        } else {
-            console.error("Błąd pobierania przetargów z TED:", results[0].reason);
-        }
-        
-        // Przetwarzanie wyników z eZamówienia
-        if (results[1].status === 'fulfilled') {
-            allTenders = [...allTenders, ...results[1].value];
-        } else {
-            console.error("Błąd pobierania przetargów z eZamówienia:", results[1].reason);
-        }
-        
-        return removeChangeNotices(allTenders);
-    }, []);
-
-    // Funkcja do odświeżania przetargów w tle (stale-while-revalidate)
-    const refreshTendersInBackground = useCallback(async (formattedStartDate: string, formattedEndDate: string) => {
-        try {
-            const originalTenders = await fetchTendersFromAPI(formattedStartDate, formattedEndDate);
-            
-            // Zaktualizuj cache i state
-            saveTendersToCache(formattedStartDate, formattedEndDate, originalTenders);
-            setTenders(originalTenders);
-        } catch (error) {
-            console.error('Background refresh failed:', error);
-        }
-    }, [fetchTendersFromAPI]);
-
-    // Funkcja do pobierania przetargów
-    const loadTenders = useCallback(async (forceRefresh: boolean = false) => {
-        if (!startDate) return;
-        // Gdy pojedynczy dzień, używamy tej samej daty dla start i end
-        const effectiveEndDate = useDateRange ? endDate : startDate;
-        if (!effectiveEndDate) return;
-        
-        const formattedStartDate = startDate.toISOString().slice(0, 10);
-        const formattedEndDate = effectiveEndDate.toISOString().slice(0, 10);
-        
-        // 1. Sprawdź cache (tylko jeśli nie wymuszamy odświeżenia)
-        if (!forceRefresh) {
-            const cachedTenders = getTendersFromCache(formattedStartDate, formattedEndDate);
-            if (cachedTenders) {
-                // Cache istnieje i jest świeży - użyj go natychmiast
-                setTenders(cachedTenders);
-                setIsLoading(false);
-                
-                // Odśwież w tle (stale-while-revalidate)
-                refreshTendersInBackground(formattedStartDate, formattedEndDate);
-                return;
-            }
-        }
-        
-        // 2. Brak cache, stary cache lub wymuszone odświeżenie - pobierz z API
-        setIsLoading(true);
-        setLoadingProgress(0);
-        
-        // Symulacja postępu
-        const progressInterval = setInterval(() => {
-            setLoadingProgress(prev => {
-                if (prev >= 90) {
-                    return prev;
-                }
-                return Math.min(prev + 10, 90);
-            });
-        }, 200);
-        
-        try {
-            const originalTenders = await fetchTendersFromAPI(formattedStartDate, formattedEndDate);
-            
-            clearInterval(progressInterval);
-            setLoadingProgress(100);
-            
-            setTenders(originalTenders);
-            
-            // 3. Zapisz do cache
-            saveTendersToCache(formattedStartDate, formattedEndDate, originalTenders);
-        } catch (error) {
-            clearInterval(progressInterval);
-            console.error("Błąd podczas pobierania przetargów:", error);
-        } finally {
-            setIsLoading(false);
-            setTimeout(() => setLoadingProgress(0), 300);
-        }
-    }, [startDate, endDate, useDateRange, fetchTendersFromAPI, refreshTendersInBackground]);
-
-    // Pobieranie przetargów tylko gdy zmienia się startDate lub endDate (nie useDateRange)
+    // Nasłuch przetargów z bazy dla wybranego zakresu dat (zmiany od innych użytkowników widać na bieżąco)
     useEffect(() => {
-        // Przy pierwszym renderze załaduj przetargi automatycznie
-        if (isInitialMount.current) {
-            isInitialMount.current = false;
-            loadTenders();
-            prevValuesRef.current = { startDate, endDate, useDateRange };
+        if (!startDay || !endDay) {
+            setTenders([]);
+            setIsLoading(false);
             return;
         }
-        
-        const prev = prevValuesRef.current;
-        if (!prev) {
-            prevValuesRef.current = { startDate, endDate, useDateRange };
-            return;
+
+        setIsLoading(true);
+        setLoadError(null);
+        return subscribeToTenders(
+            startDay,
+            endDay,
+            (loadedTenders) => {
+                setTenders(loadedTenders);
+                setIsLoading(false);
+            },
+            (error) => {
+                console.error("Błąd wczytywania przetargów z bazy:", error);
+                setLoadError(LOAD_ERROR_MESSAGE);
+                setIsLoading(false);
+            }
+        );
+    }, [startDay, endDay]);
+
+    // Prosi serwer o pobranie nowych przetargów wybranego dnia; wyniki pojawią się przez nasłuch bazy
+    const refresh = useCallback(async () => {
+        if (!dayToRefresh) return;
+
+        setIsRefreshing(true);
+        setRefreshError(null);
+        try {
+            const result = await refreshTendersForDay(dayToRefresh);
+            if (result.errors.length > 0) {
+                setRefreshError(PARTIAL_FAILURE_MESSAGE);
+            }
+        } catch (error) {
+            const code = (error as { code?: string })?.code ?? "";
+            // Inne odświeżenie już trwa: jego wyniki dotrą przez nasłuch, więc to nie jest błąd
+            if (code !== REFRESH_IN_PROGRESS_CODE) {
+                console.error("Błąd odświeżania przetargów:", error);
+                setRefreshError(REFRESH_ERROR_MESSAGES[code] ?? GENERIC_REFRESH_ERROR);
+            }
+        } finally {
+            setIsRefreshing(false);
         }
-        
-        const startDateChanged = prev.startDate?.getTime() !== startDate?.getTime();
-        const endDateChanged = prev.endDate?.getTime() !== endDate?.getTime();
-        const onlyDateRangeChanged = !startDateChanged && !endDateChanged && prev.useDateRange !== useDateRange;
-        
-        // Aktualizuj ref
-        prevValuesRef.current = { startDate, endDate, useDateRange };
-        
-        // Jeśli zmieniło się tylko useDateRange (bez zmiany dat), nie pobieraj przetargów
-        if (onlyDateRangeChanged) {
-            return;
-        }
-        
-        // W przeciwnym razie pobierz przetargi (zmiana dat)
-        if (startDateChanged || endDateChanged) {
-            loadTenders();
-        }
-    }, [startDate, endDate, useDateRange, loadTenders]);
-    
-    // Gdy przełączamy na pojedynczy dzień, ustaw endDate na startDate (bez pobierania)
+    }, [dayToRefresh]);
+
+    // Odświeżenie przy wejściu do aplikacji i po zmianie dnia
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    // Gdy przełączamy na pojedynczy dzień, ustaw endDate na startDate
     useEffect(() => {
         if (!useDateRange && startDate) {
             setEndDate(startDate);
         }
     }, [useDateRange, startDate]);
-    
+
     // Gdy zmieniamy startDate w trybie pojedynczego dnia, aktualizuj endDate
     const handleStartDateChange = (date: Date | null) => {
         setStartDate(date);
@@ -230,7 +170,7 @@ const Tenders: React.FC = () => {
     const handleAllTendersClick = () => {
         // Jeśli już jesteśmy w trybie "All tenders", odśwież dane
         if (!isFiltered) {
-            loadTenders();
+            refresh();
         } else {
             setIsFiltered(false);
         }
@@ -242,11 +182,11 @@ const Tenders: React.FC = () => {
     };
 
     const handleRefresh = () => {
-        loadTenders(true); // Wymuś odświeżenie, ignoruj cache
+        refresh();
     };
 
     const handleSourceToggle = (source: TenderSource) => {
-        setSelectedSources(prev => 
+        setSelectedSources(prev =>
             prev.includes(source)
                 ? prev.filter(s => s !== source)
                 : [...prev, source]
@@ -254,7 +194,7 @@ const Tenders: React.FC = () => {
     };
 
     const handleOrderTypeToggle = (orderType: OrderType) => {
-        setSelectedOrderTypes(prev => 
+        setSelectedOrderTypes(prev =>
             prev.includes(orderType)
                 ? prev.filter(t => t !== orderType)
                 : [...prev, orderType]
@@ -262,7 +202,7 @@ const Tenders: React.FC = () => {
     };
 
     const getDisplayedCpvCodes = (tender: Tender): string[] => {
-        const cpvCodes = isFiltered 
+        const cpvCodes = isFiltered
             ? tender.cpvCodes.filter((cpv: string) => isItRelatedCpv(cpv))
             : tender.cpvCodes;
         return Array.from(new Set(cpvCodes));
@@ -308,13 +248,13 @@ const Tenders: React.FC = () => {
             [TenderSource.E_ZAMOWIENIA]: 0,
             [TenderSource.BAZA_KONKURENCYJNOSCI]: 0
         };
-        
+
         displayedTenders.forEach(tender => {
             if (tender.source in counts) {
                 counts[tender.source as TenderSource]++;
             }
         });
-        
+
         setTendersCountBySource(counts);
     }, [displayedTenders]);
 
@@ -353,6 +293,8 @@ const Tenders: React.FC = () => {
                 isFiltered={isFiltered}
                 selectedSources={selectedSources}
                 isLoading={isLoading}
+                isRefreshing={isRefreshing}
+                canRefresh={dayToRefresh !== null}
             />
             <div className={styles.mainContent}>
                 {activeTab === 'tenders' && (
@@ -397,40 +339,35 @@ const Tenders: React.FC = () => {
                                     selectedOrderTypes={selectedOrderTypes}
                                     onOrderTypeToggle={handleOrderTypeToggle}
                                     statusFilters={statusFilters}
-                                    onStatusFilterChange={(filter) => 
+                                    onStatusFilterChange={(filter) =>
                                         setStatusFilters(prev => ({...prev, [filter]: !prev[filter as keyof typeof prev]}))
                                     }
                                     toBeEnteredCount={toBeEnteredCount}
                                     notToBeEnteredCount={notToBeEnteredCount}
                                 />
                 {isLoading && (
-                    <>
-                        <div className={styles.progressBarContainer}>
-                            <div 
-                                className={styles.progressBar}
-                                style={{ width: `${loadingProgress}%` }}
-                            />
-                        </div>
-                        <div className={styles.skeletonContainer}>
-                            {[...Array(3)].map((_, index) => (
-                                <div key={index} className={styles.skeletonCard}>
-                                    <div className={styles.skeletonHeader}>
-                                        <div className={styles.skeletonLine} style={{ width: '40%' }} />
-                                        <div className={styles.skeletonLine} style={{ width: '20%' }} />
-                                    </div>
-                                    <div className={styles.skeletonBadge} />
-                                    <div className={styles.skeletonTitle} />
-                                    <div className={styles.skeletonInfo}>
-                                        <div className={styles.skeletonLine} style={{ width: '30%' }} />
-                                        <div className={styles.skeletonLine} style={{ width: '30%' }} />
-                                        <div className={styles.skeletonLine} style={{ width: '30%' }} />
-                                    </div>
+                    <div className={styles.skeletonContainer}>
+                        {[...Array(3)].map((_, index) => (
+                            <div key={index} className={styles.skeletonCard}>
+                                <div className={styles.skeletonHeader}>
+                                    <div className={styles.skeletonLine} style={{ width: '40%' }} />
+                                    <div className={styles.skeletonLine} style={{ width: '20%' }} />
                                 </div>
-                            ))}
-                        </div>
-                    </>
+                                <div className={styles.skeletonBadge} />
+                                <div className={styles.skeletonTitle} />
+                                <div className={styles.skeletonInfo}>
+                                    <div className={styles.skeletonLine} style={{ width: '30%' }} />
+                                    <div className={styles.skeletonLine} style={{ width: '30%' }} />
+                                    <div className={styles.skeletonLine} style={{ width: '30%' }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 )}
-                {displayedTenders.length === 0 && !isLoading && (
+                {loadError && <p className={styles.message} role="alert">{loadError}</p>}
+                {refreshError && <p className={styles.message} role="alert">{refreshError}</p>}
+                {isRefreshing && !isLoading && <p className={styles.message}>{REFRESHING_MESSAGE}</p>}
+                {displayedTenders.length === 0 && !isLoading && !isRefreshing && !loadError && (
                     <p className={styles.message}>
                         {isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}
                     </p>
@@ -455,8 +392,8 @@ const Tenders: React.FC = () => {
                 )}
                             </div>
                         ) : (
-                            <StatisticsTab 
-                                statistics={statistics} 
+                            <StatisticsTab
+                                statistics={statistics}
                                 isDateRange={useDateRange}
                             />
                         )}
