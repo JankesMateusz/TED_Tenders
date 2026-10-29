@@ -36,3 +36,13 @@ export const addDays = (day: string, offset: number): string => {
     const [year, month, date] = day.split('-').map(Number);
     return toDayString(new Date(year, month - 1, date + offset));
 };
+
+/** Opis czasu ostatniego odświeżenia: "dziś 14:32", "wczoraj 14:32" lub "27.10 14:32". */
+export const formatLastRefresh = (refreshedAt: Date, now: Date = new Date()): string => {
+    const time = `${String(refreshedAt.getHours()).padStart(2, '0')}:${String(refreshedAt.getMinutes()).padStart(2, '0')}`;
+    const refreshedDay = toDayString(refreshedAt);
+    const today = toDayString(now);
+    if (refreshedDay === today) return `dziś ${time}`;
+    if (refreshedDay === addDays(today, -1)) return `wczoraj ${time}`;
+    return `${String(refreshedAt.getDate()).padStart(2, '0')}.${String(refreshedAt.getMonth() + 1).padStart(2, '0')} ${time}`;
+};

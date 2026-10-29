@@ -9,7 +9,7 @@ import { toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
 import { StatusFilters, filterAndSortTenders } from "../utils/tenderFilters";
 import { TenderStatus } from "../types/TenderStatus";
-import { fetchRefreshLog, refreshTendersForDay, subscribeToTenders } from "../utils/tendersApi";
+import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { StatisticsTab } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
@@ -75,6 +75,8 @@ const Tenders: React.FC = () => {
     // Postęp odświeżania wielu dni (tryb zakresu); null, gdy odświeżany jest jeden dzień lub nic
     const [refreshProgress, setRefreshProgress] = useState<{ done: number; total: number } | null>(null);
     const refreshRunId = useRef(0);
+    // Czas ostatniego udanego odświeżenia przez kogokolwiek; null, gdy nieznany
+    const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
     const [isFiltered, setIsFiltered] = useState<boolean>(false);
     const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
         [TenderSource.TED]: 0,
@@ -101,6 +103,14 @@ const Tenders: React.FC = () => {
     const todayDay = toDayString(new Date());
     // Czy w wybranym zakresie jest choć jeden dzień, który serwer przyjmie do odświeżenia
     const canRefreshAny = Boolean(startDay && endDay && listDays(startDay, endDay).some((day) => canRefreshDay(day, todayDay)));
+
+    useEffect(
+        () =>
+            subscribeToLastRefresh(setLastRefreshAt, (error) =>
+                console.error("Błąd wczytywania czasu ostatniego odświeżenia:", error)
+            ),
+        []
+    );
 
     // Nasłuch przetargów z bazy dla wybranego zakresu dat (zmiany od innych użytkowników widać na bieżąco)
     useEffect(() => {
@@ -337,6 +347,7 @@ const Tenders: React.FC = () => {
                 isLoading={isLoading}
                 isRefreshing={isRefreshing}
                 canRefresh={canRefreshAny}
+                lastRefreshAt={lastRefreshAt}
             />
             <div className={styles.mainContent}>
                 {activeTab !== 'statistics' && (

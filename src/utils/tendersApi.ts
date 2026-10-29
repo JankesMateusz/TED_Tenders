@@ -5,7 +5,9 @@ import {
     deleteField,
     doc,
     getDocs,
+    limit,
     onSnapshot,
+    orderBy,
     query,
     serverTimestamp,
     setDoc,
@@ -45,6 +47,20 @@ export const fetchRefreshLog = async (startDay: string, endDay: string): Promise
     });
     return log;
 };
+
+/**
+ * Nasłuchuje czasu ostatniego udanego odświeżenia (przez kogokolwiek). `null`, gdy w dzienniku nie ma
+ * jeszcze wpisów (wpisy wygasają po miesiącu).
+ */
+export const subscribeToLastRefresh = (
+    onData: (refreshedAt: Date | null) => void,
+    onError: (error: Error) => void
+): Unsubscribe =>
+    onSnapshot(
+        query(collection(db, 'refreshLog'), orderBy('refreshedAt', 'desc'), limit(1)),
+        (snapshot) => onData(snapshot.empty ? null : snapshot.docs[0].data().refreshedAt.toDate()),
+        onError
+    );
 
 /**
  * Nasłuchuje przetargów opublikowanych w podanym zakresie dni (włącznie). Zmiany, także od innych

@@ -73,6 +73,12 @@
     font-style: italic;
 }
 
+.lastRefresh {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: nowrap;
+}
+
 .controls {
     margin-left: auto;
     display: flex;
@@ -462,7 +468,8 @@
         font-size: 13px;
     }
     
-    .filterStatus {
+    .filterStatus,
+    .lastRefresh {
         font-size: 12px;
     }
     
@@ -575,7 +582,8 @@
         font-size: 12px;
     }
     
-    .filterStatus {
+    .filterStatus,
+    .lastRefresh {
         font-size: 11px;
     }
     
