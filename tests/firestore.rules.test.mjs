@@ -2,7 +2,9 @@
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import {
+    Timestamp, collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where
+} from 'firebase/firestore';
 
 let env;
 
@@ -191,6 +193,103 @@ describe('ulubione (gwiazdki)', () => {
     it('konto bez roli i niezalogowany nie mają dostępu nawet do własnych gwiazdek', async () => {
         await assertFails(setDoc(doc(dbFor('member1', {}), 'users/member1/favorites/TED_1'), favorite));
         await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'users/member1/favorites/TED_1')));
+    });
+});
+
+describe('komentarze', () => {
+    const member = { role: 'member', email: 'member@example.com' };
+    const other = { role: 'member', email: 'other@example.com' };
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const comment = (overrides = {}) => ({
+        tenderId: 'TED_1',
+        publicationDate: '2026-10-28',
+        text: 'Czy to obejmuje serwis?',
+        authorUid: 'member1',
+        authorEmail: 'member@example.com',
+        createdAt: serverTimestamp(),
+        expireAt: Timestamp.fromMillis(Date.now() + 30 * DAY_MS),
+        ...overrides
+    });
+
+    beforeEach(async () => {
+        await env.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            await setDoc(doc(db, 'tenders/TED_1'), { title: 'Przetarg', publicationDate: '2026-10-28' });
+            await setDoc(doc(db, 'comments/c1'), {
+                ...comment(),
+                createdAt: Timestamp.now()
+            });
+        });
+    });
+
+    it('członek dodaje komentarz do istniejącego przetargu', async () => {
+        await assertSucceeds(setDoc(doc(dbFor('member1', member), 'comments/new1'), comment()));
+        await assertSucceeds(setDoc(doc(dbFor('member2', other), 'comments/new2'), comment({ authorUid: 'member2', authorEmail: 'other@example.com' })));
+    });
+
+    it('członkowie czytają komentarze i zapytanie po zakresie dat', async () => {
+        await assertSucceeds(getDoc(doc(dbFor('member2', other), 'comments/c1')));
+        await assertSucceeds(getDocs(query(
+            collection(dbFor('member2', other), 'comments'),
+            where('publicationDate', '>=', '2026-10-01'),
+            where('publicationDate', '<=', '2026-10-31')
+        )));
+    });
+
+    it('konto bez roli i niezalogowany nie czytają ani nie dodają komentarzy', async () => {
+        await assertFails(getDoc(doc(dbFor('plain1', {}), 'comments/c1')));
+        await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'comments/c1')));
+        await assertFails(setDoc(doc(dbFor('plain1', { email: 'member@example.com' }), 'comments/x'), comment({ authorUid: 'plain1' })));
+        await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'comments/x'), comment()));
+    });
+
+    it('zablokowane jest podszywanie się pod innego autora lub adres e-mail', async () => {
+        const db = dbFor('member1', member);
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ authorUid: 'member2' })));
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ authorEmail: 'other@example.com' })));
+    });
+
+    it('zablokowany jest komentarz do nieistniejącego przetargu lub z inną datą publikacji', async () => {
+        const db = dbFor('member1', member);
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ tenderId: 'TED_404' })));
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ publicationDate: '2026-10-01' })));
+    });
+
+    it('zablokowany jest pusty, zbyt długi lub nietekstowy komentarz', async () => {
+        const db = dbFor('member1', member);
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ text: '' })));
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ text: 'a'.repeat(1001) })));
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ text: 42 })));
+        await assertSucceeds(setDoc(doc(db, 'comments/ok'), comment({ text: 'a'.repeat(1000) })));
+    });
+
+    it('zablokowany jest czas utworzenia inny niż czas serwera', async () => {
+        await assertFails(setDoc(doc(dbFor('member1', member), 'comments/x'), comment({ createdAt: Timestamp.fromMillis(0) })));
+    });
+
+    it('wygaśnięcie musi być w przyszłości i nie dalej niż za 31 dni', async () => {
+        const db = dbFor('member1', member);
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ expireAt: Timestamp.fromMillis(Date.now() - DAY_MS) })));
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ expireAt: Timestamp.fromMillis(Date.now() + 40 * DAY_MS) })));
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ expireAt: '2026-11-30' })));
+    });
+
+    it('zablokowane są brakujące i dodatkowe pola', async () => {
+        const db = dbFor('member1', member);
+        const { expireAt, ...withoutExpire } = comment();
+        await assertFails(setDoc(doc(db, 'comments/x'), withoutExpire));
+        await assertFails(setDoc(doc(db, 'comments/x'), comment({ pinned: true })));
+    });
+
+    it('komentarza nie można edytować, nawet własnego', async () => {
+        await assertFails(updateDoc(doc(dbFor('member1', member), 'comments/c1'), { text: 'Zmiana' }));
+        await assertFails(updateDoc(doc(dbFor('admin1', { role: 'admin' }), 'comments/c1'), { text: 'Zmiana' }));
+    });
+
+    it('autor usuwa własny komentarz, inni (także admin) cudzego nie', async () => {
+        await assertFails(deleteDoc(doc(dbFor('member2', other), 'comments/c1')));
+        await assertFails(deleteDoc(doc(dbFor('admin1', { role: 'admin', email: 'admin@example.com' }), 'comments/c1')));
+        await assertSucceeds(deleteDoc(doc(dbFor('member1', member), 'comments/c1')));
     });
 });
 

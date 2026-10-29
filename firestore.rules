@@ -51,6 +51,31 @@ service cloud.firestore {
         && (statusFieldsAreSet() || statusFieldsAreCleared());
     }
 
+    // Komentarze do przetargów: wspólne dla członków, tylko do dodawania i usuwania (bez edycji).
+    // Komentarz wygasa po miesiącu (TTL na `expireAt`), razem z przetargiem, którego dotyczy.
+    // Autora i e-mail bierzemy z tokenu, a `publicationDate` musi zgadzać się z przetargiem,
+    // bo po tej dacie aplikacja nasłuchuje komentarzy całego zakresu dni.
+    match /comments/{commentId} {
+      allow read: if hasRole();
+      allow create: if hasRole()
+        && request.resource.data.keys().hasOnly(['tenderId', 'publicationDate', 'text', 'authorUid', 'authorEmail', 'createdAt', 'expireAt'])
+        && request.resource.data.keys().hasAll(['tenderId', 'publicationDate', 'text', 'authorUid', 'authorEmail', 'createdAt', 'expireAt'])
+        && request.resource.data.tenderId is string
+        && exists(/databases/$(database)/documents/tenders/$(request.resource.data.tenderId))
+        && get(/databases/$(database)/documents/tenders/$(request.resource.data.tenderId)).data.publicationDate
+            == request.resource.data.publicationDate
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 1000
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorEmail == request.auth.token.get('email', null)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt > request.time
+        && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
+      allow update: if false;
+      allow delete: if hasRole() && resource.data.authorUid == request.auth.uid;
+    }
+
     // Dzienniki odświeżeń (które dni zostały już pobrane): odczyt dla członków, zapis tylko z Cloud Function.
     match /refreshLog/{day} {
       allow read: if hasRole();
