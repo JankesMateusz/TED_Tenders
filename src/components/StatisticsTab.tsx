@@ -7,6 +7,7 @@ import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { buildStatusFunnel } from '../utils/statusFunnel';
+import { formatDelta } from '../utils/comparison';
 import styles from './StatisticsTab.module.css';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -56,15 +57,40 @@ export type StatisticsDrillDown =
     | { kind: 'buyer'; buyer: string }
     | { kind: 'cpv'; code: string };
 
+/** Stan porównania wybranego okresu z poprzednim (poprzedni dzień roboczy lub okres tej samej długości). */
+export type StatisticsComparison =
+    | { status: 'unavailable'; reason: string }
+    | { status: 'loading' }
+    | { status: 'missing'; label: string; isFetching: boolean; error: string | null; onFetch: () => void }
+    | { status: 'ready'; label: string; statistics: Statistics; isCurrentPeriodOngoing: boolean };
+
 interface StatisticsTabProps {
     statistics: Statistics;
     isDateRange: boolean;
     /** Liczba gwiazdek zalogowanego użytkownika (niezależnie od wybranego zakresu dat). */
     savedCount: number;
     onDrillDown: (target: StatisticsDrillDown) => void;
+    /** Czy lista, z której liczone są statystyki, jest zawężona filtrami. */
+    hasActiveFilters: boolean;
+    onClearFilters: () => void;
+    /** `null`, gdy nie ma wybranego zakresu dat. */
+    comparison: StatisticsComparison | null;
 }
 
-export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDateRange, savedCount, onDrillDown }) => {
+export const StatisticsTab: React.FC<StatisticsTabProps> = ({
+    statistics,
+    isDateRange,
+    savedCount,
+    onDrillDown,
+    hasActiveFilters,
+    onClearFilters,
+    comparison
+}) => {
+    const previous = comparison?.status === 'ready' ? comparison.statistics : null;
+    const renderDelta = (current: number, previousValue: number | undefined) =>
+        previousValue === undefined ? null : (
+            <span className={styles.delta} title={`Poprzednio: ${previousValue}`}>{formatDelta(current, previousValue)}</span>
+        );
     const funnelRows = useMemo(
         () => buildStatusFunnel(statistics.total, statistics.byStatus),
         [statistics.total, statistics.byStatus]
@@ -114,9 +140,41 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
 
     return (
         <div className={styles.statisticsContainer}>
+            {hasActiveFilters && (
+                <div className={styles.filterNotice} role="status">
+                    <span>Statystyki dotyczą przefiltrowanej listy (aktywne są filtry).</span>
+                    <button type="button" onClick={onClearFilters}>Wyczyść filtry</button>
+                </div>
+            )}
+            {comparison && (
+                <div className={styles.comparisonNotice} role="status">
+                    {comparison.status === 'unavailable' && <span>Porównanie niedostępne: {comparison.reason}</span>}
+                    {comparison.status === 'loading' && <span>Wczytywanie danych do porównania...</span>}
+                    {comparison.status === 'missing' && (
+                        <>
+                            <span>
+                                Porównanie z: <strong>{comparison.label}</strong>. Brakuje kompletnych danych z tego okresu,
+                                więc liczby byłyby zaniżone.
+                                {comparison.error && <> {comparison.error}</>}
+                            </span>
+                            <button type="button" onClick={comparison.onFetch} disabled={comparison.isFetching}>
+                                {comparison.isFetching ? 'Pobieranie...' : 'Pobierz dane z tego okresu'}
+                            </button>
+                        </>
+                    )}
+                    {comparison.status === 'ready' && (
+                        <span>
+                            Zmiana względem: <strong>{comparison.label}</strong>
+                            {comparison.isCurrentPeriodOngoing && ' (bieżący okres jeszcze trwa, więc liczby mogą jeszcze rosnąć)'}
+                        </span>
+                    )}
+                </div>
+            )}
+
             <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
                     <div className={styles.statValue}>{statistics.total}</div>
+                    {renderDelta(statistics.total, previous?.total)}
                     <div className={styles.statLabel}>Wszystkich przetargów</div>
                 </div>
                 
@@ -135,6 +193,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         <div className={styles.statValue} style={{ color: STATUS_CONFIG[status].color }}>
                             {statistics.byStatus[status]}
                         </div>
+                        {renderDelta(statistics.byStatus[status], previous?.byStatus[status])}
                         <div className={styles.statLabel}>{STATUS_CONFIG[status].label}</div>
                     </button>
                 ))}
@@ -219,7 +278,9 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                                     >
                                         {config.label}
                                     </span>
-                                    <span className={styles.sourceCount}>{count}</span>
+                                    <span className={styles.sourceCount}>
+                                        {count} {renderDelta(count, previous?.bySource[source as TenderSource])}
+                                    </span>
                                 </button>
                             );
                         })}

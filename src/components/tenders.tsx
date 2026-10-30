@@ -13,7 +13,9 @@ import { TenderStatus } from "../types/TenderStatus";
 import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { useComments } from "../hooks/useComments";
-import { StatisticsTab, StatisticsDrillDown } from "./StatisticsTab";
+import { usePreviousPeriod } from "../hooks/usePreviousPeriod";
+import { describePeriod, getComparisonPeriod } from "../utils/comparison";
+import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
@@ -382,6 +384,47 @@ const Tenders: React.FC = () => {
     // Statystyki dotyczą przetargów z wybranego zakresu dat, bez własnych gwiazdek (te są w "Zapisane")
     const statistics = useMemo(() => calculateStatistics(displayedTenders), [displayedTenders]);
 
+    // Porównanie z poprzednim okresem: dane wczytujemy tylko, gdy otwarta jest zakładka statystyk
+    const comparisonPeriod = useMemo(
+        () => (startDay && endDay ? getComparisonPeriod(startDay, endDay, todayDay) : null),
+        [startDay, endDay, todayDay]
+    );
+    const previousPeriod = usePreviousPeriod(
+        activeTab === 'statistics' && comparisonPeriod?.ok ? comparisonPeriod : null,
+        refreshDayWithRetry
+    );
+    // Te same filtry i wyłączenie własnych gwiazdek co w bieżących statystykach, żeby liczby były porównywalne
+    const previousStatistics = useMemo(
+        () => calculateStatistics(applyFilters(previousPeriod.tenders.filter((tender) => !isFavorite(tender.id)))),
+        [applyFilters, previousPeriod.tenders, isFavorite]
+    );
+    let comparison: StatisticsComparison | null = null;
+    if (comparisonPeriod && endDay) {
+        if (!comparisonPeriod.ok) {
+            comparison = { status: 'unavailable', reason: comparisonPeriod.reason };
+        } else if (previousPeriod.missingDays === null) {
+            comparison = previousPeriod.error
+                ? { status: 'unavailable', reason: previousPeriod.error }
+                : { status: 'loading' };
+        } else {
+            const label = describePeriod(comparisonPeriod.startDay, comparisonPeriod.endDay);
+            comparison = previousPeriod.missingDays.length > 0
+                ? {
+                    status: 'missing',
+                    label,
+                    isFetching: previousPeriod.isFetching,
+                    error: previousPeriod.error,
+                    onFetch: previousPeriod.fetchMissing
+                }
+                : {
+                    status: 'ready',
+                    label,
+                    statistics: previousStatistics,
+                    isCurrentPeriodOngoing: endDay >= todayDay
+                };
+        }
+    }
+
     return (
         <div className={styles.app}>
             <Header
@@ -527,6 +570,9 @@ const Tenders: React.FC = () => {
                                 isDateRange={useDateRange}
                                 savedCount={favorites.length}
                                 onDrillDown={handleStatisticsDrillDown}
+                                hasActiveFilters={hasActiveFilters}
+                                onClearFilters={handleClearFilters}
+                                comparison={comparison}
                             />
                         )}
                     </div>
