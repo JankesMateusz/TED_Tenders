@@ -108,11 +108,14 @@
 }
 
 .listItem {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.listButton {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 8px 0;
-    border-bottom: 1px solid var(--border-color);
 }
 
 .listItem:last-child {
@@ -610,3 +613,32 @@
     background: linear-gradient(135deg, rgba(155, 89, 182, 1) 0%, rgba(155, 89, 182, 0.7) 100%);
 }
 
+
+/* Elementy, które po kliknięciu pokazują odpowiadające im przetargi na liście */
+.clickable {
+    appearance: none;
+    border: none;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+}
+
+.sourceItem.clickable,
+.orderTypeItem.clickable,
+.listButton.clickable {
+    width: 100%;
+    background: none;
+    border-radius: 6px;
+}
+
+.sourceItem.clickable:hover,
+.orderTypeItem.clickable:hover,
+.listButton.clickable:hover {
+    background: rgba(52, 152, 219, 0.08);
+}
+
+.clickable:focus-visible {
+    outline: 2px solid var(--button-primary);
+    outline-offset: 2px;
+}

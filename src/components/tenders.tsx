@@ -13,7 +13,7 @@ import { TenderStatus } from "../types/TenderStatus";
 import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { useComments } from "../hooks/useComments";
-import { StatisticsTab } from "./StatisticsTab";
+import { StatisticsTab, StatisticsDrillDown } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
@@ -289,6 +289,29 @@ const Tenders: React.FC = () => {
     const filteredSavedTenders = useMemo(() => applyFilters(savedTenders), [applyFilters, savedTenders]);
     const displayedTenders = activeTab === 'saved' ? filteredSavedTenders : filteredTenders;
 
+    // Kliknięcie elementu statystyk: ustawia odpowiadający mu filtr (zastępując poprzedni wybór tego samego
+    // rodzaju) i przechodzi do listy, żeby od razu pokazać pasujące przetargi.
+    const handleStatisticsDrillDown = (target: StatisticsDrillDown) => {
+        switch (target.kind) {
+            case 'source':
+                setSelectedSources([target.source]);
+                break;
+            case 'orderType':
+                setSelectedOrderTypes([target.orderType]);
+                break;
+            case 'status':
+                setStatusFilters({ ...NO_STATUS_FILTERS, [target.status]: true });
+                break;
+            case 'city':
+                setSelectedCity(target.city);
+                break;
+            case 'buyer':
+                setSelectedBuyer(target.buyer);
+                break;
+        }
+        setActiveTab('tenders');
+    };
+
     // Obsługa skrótów klawiszowych
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -476,6 +499,7 @@ const Tenders: React.FC = () => {
                                 statistics={statistics}
                                 isDateRange={useDateRange}
                                 savedCount={favorites.length}
+                                onDrillDown={handleStatisticsDrillDown}
                             />
                         )}
                     </div>

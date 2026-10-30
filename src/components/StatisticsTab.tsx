@@ -3,6 +3,8 @@ import { Statistics } from '../utils/calculateStatistics';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig } from '../utils/tenderSources';
 import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
+import { TenderStatus } from '../types/TenderStatus';
+import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import styles from './StatisticsTab.module.css';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -43,14 +45,23 @@ const parseStatisticDate = (dateStr: string): number => {
     return parsed.getTime();
 };
 
+/** Element statystyk, w który kliknięto, żeby zobaczyć odpowiadające mu przetargi na liście. */
+export type StatisticsDrillDown =
+    | { kind: 'source'; source: TenderSource }
+    | { kind: 'orderType'; orderType: OrderType }
+    | { kind: 'status'; status: TenderStatus }
+    | { kind: 'city'; city: string }
+    | { kind: 'buyer'; buyer: string };
+
 interface StatisticsTabProps {
     statistics: Statistics;
     isDateRange: boolean;
     /** Liczba gwiazdek zalogowanego użytkownika (niezależnie od wybranego zakresu dat). */
     savedCount: number;
+    onDrillDown: (target: StatisticsDrillDown) => void;
 }
 
-export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDateRange, savedCount }) => {
+export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDateRange, savedCount, onDrillDown }) => {
     const buyerActivityEntries = Object.entries(statistics.byBuyerActivity);
     const hasBuyerActivity = buyerActivityEntries.length > 0;
     const hourlyEntries = useMemo(
@@ -108,12 +119,17 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                 </div>
 
                 {TENDER_STATUSES.map((status) => (
-                    <div key={status} className={styles.statCard}>
+                    <button
+                        key={status}
+                        type="button"
+                        className={`${styles.statCard} ${styles.clickable}`}
+                        onClick={() => onDrillDown({ kind: 'status', status })}
+                    >
                         <div className={styles.statValue} style={{ color: STATUS_CONFIG[status].color }}>
                             {statistics.byStatus[status]}
                         </div>
                         <div className={styles.statLabel}>{STATUS_CONFIG[status].label}</div>
-                    </div>
+                    </button>
                 ))}
 
                 <div className={styles.statCard}>
@@ -141,7 +157,12 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         {Object.entries(statistics.bySource).map(([source, count]) => {
                             const config = getSourceConfig(source as TenderSource);
                             return (
-                                <div key={source} className={styles.sourceItem}>
+                                <button
+                                    key={source}
+                                    type="button"
+                                    className={`${styles.sourceItem} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'source', source: source as TenderSource })}
+                                >
                                     <span 
                                         className={styles.sourceBadge}
                                         style={{
@@ -152,7 +173,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                                         {config.label}
                                     </span>
                                     <span className={styles.sourceCount}>{count}</span>
-                                </div>
+                                </button>
                             );
                         })}
                     </div>
@@ -163,10 +184,15 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         <h3 className={styles.sectionTitle}>Według typu zamówienia</h3>
                         <div className={styles.orderTypeStats}>
                             {Object.entries(statistics.byOrderType).map(([type, count]) => (
-                                <div key={type} className={styles.orderTypeItem}>
-                                    <span className={styles.orderTypeLabel}>{type}</span>
+                                <button
+                                    key={type}
+                                    type="button"
+                                    className={`${styles.orderTypeItem} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'orderType', orderType: type as OrderType })}
+                                >
+                                    <span className={styles.orderTypeLabel}>{getOrderTypeConfig(type as OrderType).label}</span>
                                     <span className={styles.orderTypeCount}>{count}</span>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     </div>
@@ -383,9 +409,15 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         <ul className={styles.list}>
                             {statistics.topCities.map(({ city, count }, index) => (
                                 <li key={city} className={styles.listItem}>
-                                    <span className={styles.listRank}>{index + 1}.</span>
-                                    <span className={styles.listName}>{city}</span>
-                                    <span className={styles.listCount}>{count}</span>
+                                    <button
+                                        type="button"
+                                        className={`${styles.listButton} ${styles.clickable}`}
+                                        onClick={() => onDrillDown({ kind: 'city', city })}
+                                    >
+                                        <span className={styles.listRank}>{index + 1}.</span>
+                                        <span className={styles.listName}>{city}</span>
+                                        <span className={styles.listCount}>{count}</span>
+                                    </button>
                                 </li>
                             ))}
                         </ul>
@@ -398,9 +430,15 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         <ul className={styles.list}>
                             {statistics.topBuyers.map(({ buyer, count }, index) => (
                                 <li key={buyer} className={styles.listItem}>
-                                    <span className={styles.listRank}>{index + 1}.</span>
-                                    <span className={styles.listName}>{buyer}</span>
-                                    <span className={styles.listCount}>{count}</span>
+                                    <button
+                                        type="button"
+                                        className={`${styles.listButton} ${styles.clickable}`}
+                                        onClick={() => onDrillDown({ kind: 'buyer', buyer })}
+                                    >
+                                        <span className={styles.listRank}>{index + 1}.</span>
+                                        <span className={styles.listName}>{buyer}</span>
+                                        <span className={styles.listCount}>{count}</span>
+                                    </button>
                                 </li>
                             ))}
                         </ul>
