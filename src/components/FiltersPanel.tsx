@@ -23,6 +23,8 @@ interface FiltersPanelProps {
     statusFilters: StatusFilters;
     onStatusFilterChange: (filter: keyof StatusFilters) => void;
     statusCounts: Record<TenderStatus, number>;
+    hasActiveFilters: boolean;
+    onClearFilters: () => void;
 }
 
 export const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -35,7 +37,9 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onOrderTypeToggle,
     statusFilters,
     onStatusFilterChange,
-    statusCounts
+    statusCounts,
+    hasActiveFilters,
+    onClearFilters
 }) => {
     return (
         <>
@@ -162,6 +166,14 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                             </span>
                         </label>
                     ))}
+                    <button
+                        type="button"
+                        className={styles.clearFiltersButton}
+                        onClick={onClearFilters}
+                        disabled={!hasActiveFilters}
+                    >
+                        Wyczyść filtry
+                    </button>
                 </div>
             </div>
         </>

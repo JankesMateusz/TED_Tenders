@@ -1184,3 +1184,25 @@
         opacity: 0.8;
     }
 } 
+.clearFiltersButton {
+    margin-left: auto;
+    padding: 6px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.clearFiltersButton:hover:not(:disabled) {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+.clearFiltersButton:disabled {
+    opacity: 0.4;
+    cursor: default;
+}

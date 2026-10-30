@@ -36,6 +36,7 @@ const LOAD_ERROR_MESSAGE = "Nie udało się wczytać przetargów z bazy.";
 const REFRESHING_MESSAGE = "Pobieranie nowych przetargów";
 
 const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznacz przetarg gwiazdką, aby trafił do tej zakładki.";
+const ALL_SOURCES = [TenderSource.TED, TenderSource.E_ZAMOWIENIA, TenderSource.BAZA_KONKURENCYJNOSCI];
 const NO_STATUS_FILTERS: StatusFilters = {
     toEnter: false,
     entered: false,
@@ -88,11 +89,7 @@ const Tenders: React.FC = () => {
         [TenderSource.E_ZAMOWIENIA]: 0,
         [TenderSource.BAZA_KONKURENCYJNOSCI]: 0
     });
-    const [selectedSources, setSelectedSources] = useState<TenderSource[]>([
-        TenderSource.TED,
-        TenderSource.E_ZAMOWIENIA,
-        TenderSource.BAZA_KONKURENCYJNOSCI
-    ]);
+    const [selectedSources, setSelectedSources] = useState<TenderSource[]>([...ALL_SOURCES]);
     const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>([...DEFAULT_ORDER_TYPES]);
     const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
     const [selectedCity, setSelectedCity] = useState<string | null>(null);
@@ -289,6 +286,25 @@ const Tenders: React.FC = () => {
     const filteredSavedTenders = useMemo(() => applyFilters(savedTenders), [applyFilters, savedTenders]);
     const displayedTenders = activeTab === 'saved' ? filteredSavedTenders : filteredTenders;
 
+    // Filtry z panelu, paska bocznego i statystyk; przełącznik "Wszystkie / IT" w nagłówku to tryb widoku,
+    // więc nie jest tu liczony ani czyszczony.
+    const hasActiveFilters =
+        searchQuery.trim() !== "" ||
+        selectedBuyer !== null ||
+        selectedCity !== null ||
+        selectedSources.length !== ALL_SOURCES.length ||
+        selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length ||
+        Object.values(statusFilters).some(Boolean);
+
+    const handleClearFilters = () => {
+        setSearchQuery("");
+        setSelectedSources([...ALL_SOURCES]);
+        setSelectedOrderTypes([...DEFAULT_ORDER_TYPES]);
+        setSelectedBuyer(null);
+        setSelectedCity(null);
+        setStatusFilters(NO_STATUS_FILTERS);
+    };
+
     // Kliknięcie elementu statystyk: ustawia odpowiadający mu filtr (zastępując poprzedni wybór tego samego
     // rodzaju) i przechodzi do listy, żeby od razu pokazać pasujące przetargi.
     const handleStatisticsDrillDown = (target: StatisticsDrillDown) => {
@@ -434,6 +450,8 @@ const Tenders: React.FC = () => {
                                         setStatusFilters(prev => ({...prev, [filter]: !prev[filter]}))
                                     }
                                     statusCounts={statusCounts}
+                                    hasActiveFilters={hasActiveFilters}
+                                    onClearFilters={handleClearFilters}
                                 />
                 {activeTab === 'tenders' && isLoading && (
                     <div className={styles.skeletonContainer}>
