@@ -93,6 +93,7 @@ const Tenders: React.FC = () => {
     const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>([...DEFAULT_ORDER_TYPES]);
     const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
     const [selectedCity, setSelectedCity] = useState<string | null>(null);
+    const [selectedCpv, setSelectedCpv] = useState<string | null>(null);
     const { favorites, isFavorite, actionError } = useUserPreferences();
     // expanded state for CPV cards is now managed inside TenderCard
     const [statusFilters, setStatusFilters] = useState<StatusFilters>(NO_STATUS_FILTERS);
@@ -276,10 +277,11 @@ const Tenders: React.FC = () => {
         selectedOrderTypes,
         selectedBuyer,
         selectedCity,
+        selectedCpv,
         isFiltered,
         searchQuery,
         statusFilters
-    }), [selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, isFiltered, searchQuery, statusFilters]);
+    }), [selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, selectedCpv, isFiltered, searchQuery, statusFilters]);
 
     // Obie listy są filtrowane osobno, by licznik "Przetargi" nie zależał od aktywnej zakładki
     const filteredTenders = useMemo(() => applyFilters(unsavedTenders), [applyFilters, unsavedTenders]);
@@ -292,6 +294,7 @@ const Tenders: React.FC = () => {
         searchQuery.trim() !== "" ||
         selectedBuyer !== null ||
         selectedCity !== null ||
+        selectedCpv !== null ||
         selectedSources.length !== ALL_SOURCES.length ||
         selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length ||
         Object.values(statusFilters).some(Boolean);
@@ -302,6 +305,7 @@ const Tenders: React.FC = () => {
         setSelectedOrderTypes([...DEFAULT_ORDER_TYPES]);
         setSelectedBuyer(null);
         setSelectedCity(null);
+        setSelectedCpv(null);
         setStatusFilters(NO_STATUS_FILTERS);
     };
 
@@ -323,6 +327,9 @@ const Tenders: React.FC = () => {
                 break;
             case 'buyer':
                 setSelectedBuyer(target.buyer);
+                break;
+            case 'cpv':
+                setSelectedCpv(target.code);
                 break;
         }
         setActiveTab('tenders');
@@ -450,6 +457,8 @@ const Tenders: React.FC = () => {
                                         setStatusFilters(prev => ({...prev, [filter]: !prev[filter]}))
                                     }
                                     statusCounts={statusCounts}
+                                    selectedCpv={selectedCpv}
+                                    onClearCpv={() => setSelectedCpv(null)}
                                     hasActiveFilters={hasActiveFilters}
                                     onClearFilters={handleClearFilters}
                                 />

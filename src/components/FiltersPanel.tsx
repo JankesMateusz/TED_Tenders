@@ -5,6 +5,7 @@ import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS } from '../constants';
 import { TenderStatus } from '../types/TenderStatus';
 import { StatusFilters } from '../utils/tenderFilters';
 import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
+import { getCpvName } from '../utils/cpvMapping';
 import styles from './Tenders.module.css';
 
 const STATUS_FILTER_OPTIONS: Array<{ key: keyof StatusFilters; label: string; color: string }> = [
@@ -23,6 +24,8 @@ interface FiltersPanelProps {
     statusFilters: StatusFilters;
     onStatusFilterChange: (filter: keyof StatusFilters) => void;
     statusCounts: Record<TenderStatus, number>;
+    selectedCpv: string | null;
+    onClearCpv: () => void;
     hasActiveFilters: boolean;
     onClearFilters: () => void;
 }
@@ -38,6 +41,8 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     statusFilters,
     onStatusFilterChange,
     statusCounts,
+    selectedCpv,
+    onClearCpv,
     hasActiveFilters,
     onClearFilters
 }) => {
@@ -72,6 +77,20 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 </div>
             </div>
             
+            {selectedCpv && (
+                <div className={styles.activeCpvFilter}>
+                    <span>CPV: {getCpvName(selectedCpv)} ({selectedCpv})</span>
+                    <button
+                        type="button"
+                        onClick={onClearCpv}
+                        aria-label="Usuń filtr kodu CPV"
+                        title="Usuń filtr kodu CPV"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
             <div className={styles.filtersSection}>
                 <div className={styles.sourceFilters}>
                     <span className={styles.sourceFiltersLabel}>Źródła:</span>

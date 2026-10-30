@@ -1206,3 +1206,24 @@
     opacity: 0.4;
     cursor: default;
 }
+
+.activeCpvFilter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    background: rgba(52, 152, 219, 0.12);
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.activeCpvFilter button {
+    background: transparent;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+    padding: 0 2px;
+    font: inherit;
+}

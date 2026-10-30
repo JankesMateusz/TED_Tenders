@@ -28,6 +28,7 @@ const filter = (statusFilters: StatusFilters) =>
         selectedOrderTypes: [...DEFAULT_ORDER_TYPES],
         selectedBuyer: null,
         selectedCity: null,
+        selectedCpv: null,
         isFiltered: false,
         searchQuery: '',
         statusFilters
@@ -67,6 +68,7 @@ describe('filtr po typie zamówienia', () => {
             selectedOrderTypes,
             selectedBuyer: null,
             selectedCity: null,
+            selectedCpv: null,
             isFiltered: false,
             searchQuery: '',
             statusFilters: noFilters
@@ -78,5 +80,48 @@ describe('filtr po typie zamówienia', () => {
 
     it('nie ukrywa przetargów bez znanego typu', () => {
         expect(byType([])).toEqual(['nieznany']);
+    });
+});
+
+describe('filtr po kodzie CPV', () => {
+    const withCpv: Tender[] = [
+        { ...tender('laptopy'), cpvCodes: ['30213100-6', '30213000-5'] },
+        { ...tender('serwery'), cpvCodes: ['48820000-2'] },
+        { ...tender('bez-kodow') }
+    ];
+    const byCpv = (selectedCpv: string | null) =>
+        filterAndSortTenders(withCpv, {
+            selectedSources: [TenderSource.TED],
+            selectedOrderTypes: [...DEFAULT_ORDER_TYPES],
+            selectedBuyer: null,
+            selectedCity: null,
+            selectedCpv,
+            isFiltered: false,
+            searchQuery: '',
+            statusFilters: noFilters
+        }).map((t) => t.id).sort();
+
+    it('bez wybranego kodu pokazuje wszystko', () => {
+        expect(byCpv(null)).toEqual(['bez-kodow', 'laptopy', 'serwery']);
+    });
+
+    it('pokazuje przetargi zawierające kod, także z cyfrą kontrolną', () => {
+        expect(byCpv('30213100')).toEqual(['laptopy']);
+        expect(byCpv('30213100-6')).toEqual(['laptopy']);
+    });
+});
+
+describe('statystyki kodów CPV', () => {
+    it('liczą przetargi z danym kodem IT, pomijają inne kody i nie liczą powtórzeń w jednym przetargu', () => {
+        const stats = calculateStatistics([
+            { ...tender('a'), cpvCodes: ['30213100-6', '30213100-6', '45000000-7'] },
+            { ...tender('b'), cpvCodes: ['30213100-6', '30213000-5'] },
+            { ...tender('c'), cpvCodes: ['30213000-5'] },
+            { ...tender('d'), cpvCodes: ['30213000-5'] }
+        ]);
+        expect(stats.topCpvCodes).toEqual([
+            { code: '30213000', count: 3 },
+            { code: '30213100', count: 2 }
+        ]);
     });
 });

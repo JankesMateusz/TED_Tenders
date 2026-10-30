@@ -2,6 +2,7 @@ import { Tender } from '../types/Tender';
 import { TenderSource } from '../types/TenderSource';
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType } from '../utils/tenderSources';
+import { isItRelatedCpv, normalizeCpv } from './cpvFilter';
 
 export interface Statistics {
     total: number;
@@ -9,6 +10,8 @@ export interface Statistics {
     byOrderType: Partial<Record<OrderType, number>>;
     topCities: Array<{ city: string; count: number }>;
     topBuyers: Array<{ buyer: string; count: number }>;
+    /** Kody CPV związane z IT; liczba przetargów, które zawierają dany kod (jeden przetarg może mieć kilka kodów). */
+    topCpvCodes: Array<{ code: string; count: number }>;
     byBuyerActivity: Record<string, number>;
     ezamowieniaHourlyDistribution: Record<string, number[]>;
     dailyDistributionBySource: Record<string, Record<TenderSource, number>>;
@@ -62,6 +65,7 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         byOrderType: {},
         topCities: [],
         topBuyers: [],
+        topCpvCodes: [],
         byBuyerActivity: {},
         ezamowieniaHourlyDistribution: {},
         dailyDistributionBySource: {},
@@ -86,6 +90,7 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
     
     const cityMap = new Map<string, number>();
     const buyerMap = new Map<string, number>();
+    const cpvMap = new Map<string, number>();
     const activityMap = new Map<string, number>();
     const ezamowieniaHourlyMap = new Map<string, number[]>();
     const dailySourceMap = new Map<string, Record<TenderSource, number>>();
@@ -109,6 +114,11 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         if (tender.buyerName && tender.buyerName !== 'Brak danych') {
             buyerMap.set(tender.buyerName, (buyerMap.get(tender.buyerName) || 0) + 1);
         }
+
+        // Top CPV: tylko kody IT (mają oficjalne nazwy); kod powtórzony w jednym przetargu liczy się raz
+        new Set(tender.cpvCodes.filter(isItRelatedCpv).map(normalizeCpv)).forEach(code => {
+            cpvMap.set(code, (cpvMap.get(code) || 0) + 1);
+        });
 
         // Buyer activity
         if (tender.buyerMainActivity) {
@@ -189,6 +199,12 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
     stats.topBuyers = Array.from(buyerMap.entries())
         .map(([buyer, count]) => ({ buyer, count }))
         .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+    // Top CPV (top 10)
+    stats.topCpvCodes = Array.from(cpvMap.entries())
+        .map(([code, count]) => ({ code, count }))
+        .sort((a, b) => b.count - a.count || a.code.localeCompare(b.code))
         .slice(0, 10);
 
     stats.byBuyerActivity = Array.from(activityMap.entries())

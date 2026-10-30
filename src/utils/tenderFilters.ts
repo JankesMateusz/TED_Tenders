@@ -2,7 +2,7 @@ import { Tender } from '../types/Tender';
 import { TenderSource } from '../types/TenderSource';
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType } from './tenderSources';
-import { filterTendersByCpvCodes } from './cpvFilter';
+import { filterTendersByCpvCodes, normalizeCpv } from './cpvFilter';
 import { normalizeName } from './stringUtils';
 import { parseDate } from './dateUtils';
 
@@ -11,6 +11,8 @@ interface FilterOptions {
     selectedOrderTypes: OrderType[];
     selectedBuyer: string | null;
     selectedCity: string | null;
+    /** Pojedynczy kod CPV wybrany w statystykach; przetarg musi go zawierać. */
+    selectedCpv: string | null;
     isFiltered: boolean;
     searchQuery: string;
     statusFilters: StatusFilters;
@@ -52,6 +54,12 @@ export const filterAndSortTenders = (
         });
     }
     
+    // Filtrowanie po wybranym kodzie CPV
+    if (options.selectedCpv) {
+        const selected = normalizeCpv(options.selectedCpv);
+        result = result.filter(tender => tender.cpvCodes.some(cpv => normalizeCpv(cpv) === selected));
+    }
+
     // Filtrowanie po CPV jeśli włączone
     if (options.isFiltered) {
         result = filterTendersByCpvCodes(result);

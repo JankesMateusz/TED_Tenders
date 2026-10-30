@@ -5,6 +5,7 @@ import { getSourceConfig } from '../utils/tenderSources';
 import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
+import { getCpvName } from '../utils/cpvMapping';
 import styles from './StatisticsTab.module.css';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -51,7 +52,8 @@ export type StatisticsDrillDown =
     | { kind: 'orderType'; orderType: OrderType }
     | { kind: 'status'; status: TenderStatus }
     | { kind: 'city'; city: string }
-    | { kind: 'buyer'; buyer: string };
+    | { kind: 'buyer'; buyer: string }
+    | { kind: 'cpv'; code: string };
 
 interface StatisticsTabProps {
     statistics: Statistics;
@@ -402,6 +404,30 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                 </div>
             )}
             
+            {statistics.topCpvCodes.length > 0 && (
+                <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                    <h3 className={styles.sectionTitle}>Top 10 kodów CPV (IT)</h3>
+                    <p className={styles.chartSubtitle}>
+                        Liczba przetargów zawierających dany kod. Przetarg może mieć kilka kodów, więc sumy się nie dodają.
+                    </p>
+                    <ul className={styles.list}>
+                        {statistics.topCpvCodes.map(({ code, count }, index) => (
+                            <li key={code} className={styles.listItem}>
+                                <button
+                                    type="button"
+                                    className={`${styles.listButton} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'cpv', code })}
+                                >
+                                    <span className={styles.listRank}>{index + 1}.</span>
+                                    <span className={styles.listName}>{getCpvName(code)} ({code})</span>
+                                    <span className={styles.listCount}>{count}</span>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
             <div className={styles.sectionsGrid}>
                 {statistics.topCities.length > 0 && (
                     <div className={styles.section}>
