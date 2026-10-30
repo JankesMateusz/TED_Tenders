@@ -50,6 +50,7 @@ export const mapEzamowieniaNotice = (raw: EzamowieniaNotice, orderType: OrderTyp
     deadlineDate: toWarsaw(raw.submittingOffersDate)?.date ?? null,
     cpvCodes: extractCpvCodes(raw.cpvCode),
     link: `https://ezamowienia.gov.pl/mo-client-board/bzp/notice-details/id/${raw.objectId}`,
+    documentsUrl: null,
     orderType,
     buyerMainActivity: null,
   };

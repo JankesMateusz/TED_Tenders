@@ -814,9 +814,15 @@
     background: #c0392b;
 }
 
+.links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
 .link {
     display: inline-block;
-    margin-top: 16px;
     padding: 8px 16px;
     background: var(--button-primary);
     color: white;

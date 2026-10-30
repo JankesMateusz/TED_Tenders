@@ -150,9 +150,16 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                 </div>
             )}
 
-            <a href={tender.link} target="_blank" rel="noopener noreferrer" className={styles.link}>
-                Zobacz ogłoszenie
-            </a>
+            <div className={styles.links}>
+                <a href={tender.link} target="_blank" rel="noopener noreferrer" className={styles.link}>
+                    Zobacz ogłoszenie
+                </a>
+                {tender.documentsUrl && (
+                    <a href={tender.documentsUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>
+                        Dokumentacja
+                    </a>
+                )}
+            </div>
         </li>
     );
 };

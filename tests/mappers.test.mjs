@@ -78,6 +78,7 @@ describe('mapTedNotice', () => {
             deadlineDate: '2026-11-20',
             cpvCodes: ['30213300', '48000000'],
             link: 'https://ted.europa.eu/udl?uri=TED:NOTICE:745242-2026:TEXT:PL:HTML',
+            documentsUrl: null,
             orderType: 'Delivery',
             buyerMainActivity: 'gen-pub',
         });
@@ -92,6 +93,15 @@ describe('mapTedNotice', () => {
         assert.equal(orderType([]), null);
         assert.equal(orderType(['nieznany']), null);
         assert.equal(orderType(undefined), null);
+    });
+
+    it('bierze pierwszy poprawny adres dokumentacji i odrzuca niebezpieczne schematy', () => {
+        const url = (field) => mapTedNotice({ ...raw, 'document-url-lot': field }, '2026-10-28').documentsUrl;
+        assert.equal(url(['https://platformazakupowa.pl/pn/x', 'https://platformazakupowa.pl/pn/x']), 'https://platformazakupowa.pl/pn/x');
+        assert.equal(url(['', 'javascript:alert(1)', ' http://e-propublico.pl ']), 'http://e-propublico.pl');
+        assert.equal(url(['javascript:alert(1)']), null);
+        assert.equal(url([]), null);
+        assert.equal(url(undefined), null);
     });
 
     it('pomija ogłoszenia zmieniające i bez numeru', () => {
@@ -109,6 +119,7 @@ describe('mapTedNotice', () => {
         assert.equal(record.deadlineDate, null);
         assert.deepEqual(record.cpvCodes, []);
         assert.equal(record.orderType, null);
+        assert.equal(record.documentsUrl, null);
     });
 });
 
@@ -137,6 +148,7 @@ describe('eZamówienia', () => {
             deadlineDate: '2026-11-06',
             cpvCodes: ['34144210-3'],
             link: 'https://ezamowienia.gov.pl/mo-client-board/bzp/notice-details/id/08df35f1-ed3f-ef38-cfcf-e60001f8c1d8',
+            documentsUrl: null,
             orderType: 'Delivery',
             buyerMainActivity: null,
         });

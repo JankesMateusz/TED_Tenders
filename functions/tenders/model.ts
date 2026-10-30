@@ -18,6 +18,8 @@ export interface TenderRecord {
   deadlineDate: string | null;
   cpvCodes: string[];
   link: string;
+  /** Adres dokumentacji zamówienia podany przez zamawiającego (często zewnętrzna platforma zakupowa); null, gdy brak. */
+  documentsUrl: string | null;
   orderType: OrderType | null;
   buyerMainActivity: string | null;
 }

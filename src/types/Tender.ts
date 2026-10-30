@@ -13,6 +13,8 @@ export interface Tender {
     deadlineDate: string;
     cpvCodes: string[];
     link: string;
+    /** Adres dokumentacji podany przez zamawiającego (tylko TED, jeśli go podał). */
+    documentsUrl?: string;
     source: TenderSource;
     orderType?: "Delivery" | "Services" | "Works";
     changeNoticeVersionIdentifier?: string | null;

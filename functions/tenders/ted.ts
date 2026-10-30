@@ -19,6 +19,7 @@ const FIELDS = [
   'contract-nature',
   'change-notice-version-identifier',
   'deadline-receipt-tender-date-lot',
+  'document-url-lot',
 ];
 
 /** Zapytanie o ogłoszenia o udzielenie zamówienia z Polski opublikowane danego dnia (YYYY-MM-DD). */
@@ -52,6 +53,20 @@ const extractOrderType = (field: unknown): OrderType | null => {
 };
 
 /**
+ * `document-url-lot` to tablica adresów dokumentacji, po jednym na lot (często powtórzonych). Zwraca pierwszy
+ * poprawny adres http(s) albo null; inne schematy (np. `javascript:`) są odrzucane, bo trafiają do linku w interfejsie.
+ */
+export const extractDocumentsUrl = (field: unknown): string | null => {
+  const values: unknown[] = Array.isArray(field) ? field : [field];
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const url = value.trim();
+    if (/^https?:\/\/\S+$/i.test(url)) return url;
+  }
+  return null;
+};
+
+/**
  * Mapuje ogłoszenie TED na przetarg. Zwraca null dla ogłoszeń bez numeru oraz dla ogłoszeń zmieniających
  * (z identyfikatorem wersji zmiany), których aplikacja nie pokazuje.
  */
@@ -73,6 +88,7 @@ export const mapTedNotice = (raw: any, fallbackDay: string): TenderRecord | null
     deadlineDate: dayFromTedDate(raw['deadline-receipt-tender-date-lot']),
     cpvCodes: raw['classification-cpv'] || [],
     link: `https://ted.europa.eu/udl?uri=TED:NOTICE:${publicationNumber}:TEXT:PL:HTML`,
+    documentsUrl: extractDocumentsUrl(raw['document-url-lot']),
     orderType: extractOrderType(raw['contract-nature']),
     buyerMainActivity: extractActivity(raw['authority-main-activity']),
   };
