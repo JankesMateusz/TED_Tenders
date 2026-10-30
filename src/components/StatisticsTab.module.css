@@ -679,6 +679,36 @@
     outline-offset: 2px;
 }
 
+.collapsibleHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.collapsibleHeader .sectionTitle {
+    flex: 1;
+}
+
+.collapseButton {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.collapseButton:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
 .funnel {
     display: flex;
     flex-direction: column;

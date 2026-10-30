@@ -75,6 +75,17 @@ interface StatisticsTabProps {
     comparison: StatisticsComparison | null;
 }
 
+const FUNNEL_COLLAPSED_KEY = 'statistics.funnelCollapsed';
+
+const readFunnelCollapsed = (): boolean => {
+    try {
+        return window.localStorage.getItem(FUNNEL_COLLAPSED_KEY) === 'true';
+    } catch {
+        // localStorage bywa zablokowany (tryb prywatny); sekcja jest wtedy po prostu rozwinięta
+        return false;
+    }
+};
+
 export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     statistics,
     isDateRange,
@@ -88,6 +99,16 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
         previousValue === undefined ? null : (
             <span className={styles.delta} title={`Poprzednio: ${previousValue}`}>{formatDelta(current, previousValue)}</span>
         );
+    const [funnelCollapsed, setFunnelCollapsed] = useState<boolean>(readFunnelCollapsed);
+    const toggleFunnel = () => {
+        const next = !funnelCollapsed;
+        setFunnelCollapsed(next);
+        try {
+            window.localStorage.setItem(FUNNEL_COLLAPSED_KEY, String(next));
+        } catch {
+            // brak możliwości zapisu: zwinięcie działa tylko do odświeżenia strony
+        }
+    };
     const funnelRows = useMemo(
         () => buildStatusFunnel(statistics.total, statistics.byStatus),
         [statistics.total, statistics.byStatus]
@@ -192,7 +213,21 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
             </div>
             
             <div className={`${styles.section} ${styles.fullWidthSection} ${styles.desktopOnly}`}>
-                <h3 className={styles.sectionTitle}>Postęp przeglądania</h3>
+                <div className={styles.collapsibleHeader}>
+                    <h3 className={styles.sectionTitle}>Postęp przeglądania</h3>
+                    <button
+                        type="button"
+                        className={styles.collapseButton}
+                        onClick={toggleFunnel}
+                        aria-expanded={!funnelCollapsed}
+                        aria-label={funnelCollapsed ? 'Rozwiń sekcję Postęp przeglądania' : 'Zwiń sekcję Postęp przeglądania'}
+                        title={funnelCollapsed ? 'Rozwiń' : 'Zwiń'}
+                    >
+                        {funnelCollapsed ? '+' : '−'}
+                    </button>
+                </div>
+                {!funnelCollapsed && (
+                <>
                 <p className={styles.chartSubtitle}>
                     Ile przetargów z listy ma już status, a ile czeka na przejrzenie. Udziały liczone względem wszystkich przetargów.
                 </p>
@@ -229,6 +264,8 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         );
                     })}
                 </div>
+                </>
+                )}
             </div>
 
             <div className={styles.sectionsGrid}>
