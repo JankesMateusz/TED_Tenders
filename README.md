@@ -8,8 +8,9 @@ Aplikacja dla małego, zaproszonego zespołu do przeglądania zamówień publicz
 - **Wspólna lista**: przetargi z wybranego dnia lub zakresu dat. Przy wejściu, zmianie dnia i po kliknięciu „Odśwież" serwer dopisuje brakujące przetargi (dla zakresu pobiera po kolei dni, których jeszcze nie było).
 - **Wspólne statusy**: do wpisania ✎ (niebieski), wpisany ✓ (zielony), do wyjaśnienia ? (bursztynowy), nie do wpisania ✕ (czerwony). Widoczne dla wszystkich; po najechaniu na kartę podpowiedź pokazuje, kto i kiedy ustawił status.
 - **Zapisane (gwiazdka)**: indywidualne. Zagwiazdkowany przetarg trafia do zakładki „Zapisane" (niezależnie od zakresu dat) i nie wygasa.
-- **Filtry**: źródło, typ zamówienia, zamawiający, miasto, kody CPV związane z IT, wyszukiwanie tekstowe, status.
-- **Statystyki** wybranego zakresu, motyw jasny/ciemny, układ responsywny.
+- **Filtry**: źródło, typ zamówienia, zamawiający, miasto, kody CPV związane z IT, wyszukiwanie tekstowe, status. Przycisk „Wyczyść filtry” zeruje je jednym kliknięciem.
+- **Statystyki** wybranego zakresu: liczniki statusów, postęp przeglądania (ile przetargów czeka bez statusu), top 10 miast, zamawiających i kodów CPV, podział na źródła i typy, wykresy. Elementy statystyk są klikalne i ustawiają odpowiedni filtr na liście. Liczniki pokazują zmianę względem poprzedniego dnia roboczego (dla zakresu dat: względem poprzedzającego okresu tej samej długości, do 30 dni wstecz).
+- Motyw jasny/ciemny, układ responsywny.
 
 Przetargi w bazie wygasają po 30 dniach od pierwszego zapisu (TTL). Zapisane kopie i konta zostają.
 
