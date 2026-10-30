@@ -1,6 +1,6 @@
 # Research: Baza Konkurencyjności jako źródło przetargów
 
-Stan na 2026-10-30. **To jest research, nie implementacja: w kodzie nie ma jeszcze nic dotyczącego Bazy Konkurencyjności po stronie serwera.** Ten plik zbiera wszystko, co ustalono, żeby agent dostający zadanie „dodaj Bazę Konkurencyjności" nie musiał odkrywać tego od nowa. Czytaj go razem z `docs/handoff.md` (stan projektu i zasady pracy) i `docs/CLAUDE.md`.
+Stan na 2026-10-30 (test z sekcji 6 wykonany, patrz 6a). **To jest research, nie implementacja: w kodzie nie ma jeszcze nic dotyczącego Bazy Konkurencyjności po stronie serwera.** Ten plik zbiera wszystko, co ustalono, żeby agent dostający zadanie „dodaj Bazę Konkurencyjności" nie musiał odkrywać tego od nowa. Czytaj go razem z `docs/handoff.md` (stan projektu i zasady pracy) i `docs/CLAUDE.md`.
 
 ## 1. Kontekst i decyzje użytkownika
 
@@ -36,7 +36,7 @@ Sprawdzono na 47 ogłoszeniach z 2026-10-29 (wszystkie `status.label == "PUBLISH
 
 ### Propozycja mapowania na `TenderRecord` (`functions/tenders/model.ts`) — NIEZWERYFIKOWANA w kodzie
 - `source`: nowa wartość `'BAZA_KONKURENCYJNOSCI'` (typ `TenderSource` w `model.ts` ma dziś tylko `TED` i `E_ZAMOWIENIA`; frontend ma już enum `BAZA_KONKURENCYJNOSCI`).
-- `publicationNumber`: `String(id)` (numery są kolejne; `tenderId()` da `BAZA_KONKURENCYJNOSCI_296563`).
+- `publicationNumber`: **do ustalenia** (patrz sekcja 6a): numer z URL-a (`/api/announcements/{numer}`) nie jest równy polu `id` w odpowiedzi (np. `296509` → `id` 393223). Roboczo kluczem powinien być numer z URL-a, bo to po nim iterujemy, ale nie sprawdzono, który z nich jest w linku do ogłoszenia (`tenderId()` da np. `BAZA_KONKURENCYJNOSCI_296563`).
 - `title`: `title`; `buyerName`: `advertiser_address_details.name`; `buyerCity`: `address.locality`; `country`: `address.country` (np. „Polska").
 - `publicationDate`: `publication_date`; `publicationTime`: `null`; `deadlineDate`: data z `submission_deadline` (część przed spacją; sprawdzić strefę czasową).
 - `cpvCodes`: spłaszczone `cpv_items[].code` ze wszystkich pozycji wszystkich zamówień.
@@ -55,15 +55,24 @@ Sprawdzono na 47 ogłoszeniach z 2026-10-29 (wszystkie `status.label == "PUBLISH
 
 18 numerów dających 404 mogło być szkicami, ogłoszeniami usuniętymi lub wycofanymi albo jeszcze nieopublikowanymi. Jeśli któryś z nich **pojawia się później** pod tym samym (starszym) numerem, to pobieranie „tylko numerów wyższych od ostatniego" je zgubi. Poszlaka: numer 270 000 miał `created_at` 2026-03-19, a `publication_date` 2026-03-22.
 
-**Test do wykonania:** 18 numerów, które 2026-10-30 (ok. 23:50) zwróciły 404 w oknie 296 499–296 568, to:
+**Test (wykonany, wynik w sekcji 6a):** 18 numerów, które 2026-10-29 wieczorem (w pierwotnej notatce błędnie: 2026-10-30 ok. 23:50) zwróciły 404 w oknie 296 499–296 568, to:
 `296508, 296509, 296512, 296513, 296514, 296515, 296517, 296519, 296521, 296531, 296534, 296535, 296553, 296555, 296564, 296566, 296567, 296568`.
 Należy pobrać je ponownie (np. po dobie lub dłużej) i sprawdzić, czy któreś już istnieją, oraz czy zmieniła się ich liczba w całym oknie.
 - Jeśli **tak**: kursor musi ponawiać brakujące numery z ostatnich kilku–kilkunastu dni (np. lista „oczekujących" w dokumencie `meta`).
 - Jeśli **nie**: wystarczy prosty kursor „ostatni sprawdzony numer".
 
+### 6a. Wynik testu (2026-10-30, ok. 13:20): luki się wypełniają
+
+Ponowne pobranie 18 numerów: **9 istnieje, 9 nadal zwraca 404.**
+- Istnieją: 296509, 296512, 296517, 296519, 296521, 296534, 296535 (siedem poniżej dawnego maksimum 296563, czyli zwykły kursor „tylko wyższe" by je pominął) oraz 296567, 296568 (zwykłe nowe ogłoszenia powyżej maksimum).
+- Nadal 404: 296508, 296513, 296514, 296515, 296531, 296553, 296555, 296564, 296566 (nieznane: szkice jeszcze nieopublikowane albo skasowane).
+- Wszystkie nowo widoczne mają `status` `PUBLISHED`. Siedem z nich miało `created_at` 2026-10-29 (14:53–16:53), `publication_date` 2026-10-30 i `modified_at` rano 2026-10-30. Numer jest więc nadawany przy utworzeniu szkicu, a ogłoszenie staje się widoczne dopiero po publikacji, zwykle z opóźnieniem ok. doby.
+- **Wniosek:** kursor musi trzymać listę „oczekujących" numerów (luk) z ostatnich kilku–kilkunastu dni i ponawiać je przy każdym pobraniu. Okno trzeba dobrać do opóźnienia publikacji; zmierzono tylko ok. 1 dnia, najdłuższego nie znamy (do sprawdzenia dla dziewięciu numerów, które nadal dają 404, po kilku dniach).
+- **Numer z URL-a ≠ pole `id`:** `/api/announcements/296509` zwraca `id` 393223, `296512` → 393226, `296517` → 393232, `296519` → 393237, `296521` → 393240, `296534` → 393257, `296535` → 393258, `296567` → 393297, `296568` → 393377. Sekcje 4–5 zakładały, że `id` to numer; trzeba rozstrzygnąć, który jest w linku do strony ogłoszenia (`/ogloszenia/{...}`) i który jest stabilny.
+
 ## 7. Proponowany plan (niezaczęty)
 
-1. Wykonać test z sekcji 6 (wynik rozstrzyga o kursorze).
+1. ~~Wykonać test z sekcji 6~~ (zrobione, sekcja 6a: kursor z listą oczekujących). Wyjaśnić numer z URL-a a `id` i link do ogłoszenia.
 2. Napisać `functions/tenders/bazakonkurencyjnosci.ts` w stylu `ted.ts`: mapper (`mapBazaNotice`) i `fetchBaza(...)` z `requestWithRetry` z `http.ts`; testy mappera w `tests/mappers.test.mjs` na zapisanych przykładach prawdziwych odpowiedzi (utworzyć fixture z 2–3 rekordów, bez danych osobowych kontaktów). Rozszerzyć typ `TenderSource` w `model.ts`.
 3. Kursor w dokumencie `meta/` (np. `meta/bazaCursor`: ostatni sprawdzony numer, ewentualnie lista oczekujących). Dopiero potem włączyć do `refreshTenders` (obecnie odświeżanie jest po dniu, a źródło jest po numerach, więc trzeba zdecydować, jak to połączyć: np. pobrać wszystko od kursora i zapisać pod właściwymi `publicationDate`) oraz rozważyć zaplanowane uruchomienie raz dziennie.
 4. Frontend ma już `TenderSource.BAZA_KONKURENCYJNOSCI`, konfigurację i filtry; sprawdzić `tenderMapping.ts` (mapowanie źródła) i `tenderFilters.ts`.
