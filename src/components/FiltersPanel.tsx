@@ -2,8 +2,7 @@ import React from 'react';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
 import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS } from '../constants';
-import { TenderStatus } from '../types/TenderStatus';
-import { StatusFilters } from '../utils/tenderFilters';
+import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
 import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
 import { getCpvName } from '../utils/cpvMapping';
 import styles from './Tenders.module.css';
@@ -11,6 +10,12 @@ import styles from './Tenders.module.css';
 const STATUS_FILTER_OPTIONS: Array<{ key: keyof StatusFilters; label: string; color: string }> = [
     ...TENDER_STATUSES.map((status) => ({ key: status, ...STATUS_CONFIG[status] })),
     { key: 'unmarked', label: 'Nieoznaczone', color: '#95a5a6' }
+];
+
+const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
+    { value: 'publication', label: 'Data publikacji (najnowsze)' },
+    { value: 'deadline', label: 'Termin składania (najbliższy)' },
+    { value: 'buyer', label: 'Zamawiający (A–Z)' }
 ];
 
 interface FiltersPanelProps {
@@ -23,9 +28,11 @@ interface FiltersPanelProps {
     onOrderTypeToggle: (orderType: OrderType) => void;
     statusFilters: StatusFilters;
     onStatusFilterChange: (filter: keyof StatusFilters) => void;
-    statusCounts: Record<TenderStatus, number>;
-    selectedCpv: string | null;
-    onClearCpv: () => void;
+    facetCounts: FacetCounts;
+    sortOrder: SortOrder;
+    onSortOrderChange: (order: SortOrder) => void;
+    selectedCpvs: string[];
+    onRemoveCpv: (code: string) => void;
     hasActiveFilters: boolean;
     onClearFilters: () => void;
 }
@@ -40,9 +47,11 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onOrderTypeToggle,
     statusFilters,
     onStatusFilterChange,
-    statusCounts,
-    selectedCpv,
-    onClearCpv,
+    facetCounts,
+    sortOrder,
+    onSortOrderChange,
+    selectedCpvs,
+    onRemoveCpv,
     hasActiveFilters,
     onClearFilters
 }) => {
@@ -77,19 +86,33 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 </div>
             </div>
             
-            {selectedCpv && (
-                <div className={styles.activeCpvFilter}>
-                    <span>CPV: {getCpvName(selectedCpv)} ({selectedCpv})</span>
+            {selectedCpvs.map((code) => (
+                <div key={code} className={styles.activeCpvFilter}>
+                    <span>CPV: {getCpvName(code)} ({code})</span>
                     <button
                         type="button"
-                        onClick={onClearCpv}
-                        aria-label="Usuń filtr kodu CPV"
+                        onClick={() => onRemoveCpv(code)}
+                        aria-label={`Usuń filtr kodu CPV ${code}`}
                         title="Usuń filtr kodu CPV"
                     >
                         ✕
                     </button>
                 </div>
-            )}
+            ))}
+
+            <div className={styles.sortSection}>
+                <label className={styles.sortLabel} htmlFor="sort-order">Sortuj:</label>
+                <select
+                    id="sort-order"
+                    className={styles.sortSelect}
+                    value={sortOrder}
+                    onChange={(e) => onSortOrderChange(e.target.value as SortOrder)}
+                >
+                    {SORT_OPTIONS.map(({ value, label }) => (
+                        <option key={value} value={value}>{label}</option>
+                    ))}
+                </select>
+            </div>
 
             <div className={styles.filtersSection}>
                 <div className={styles.sourceFilters}>
@@ -113,7 +136,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                         border: `1px solid ${isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.2)'}`
                                     }}
                                 >
-                                    {config.label}
+                                    {config.label} ({facetCounts.sources[source] ?? 0})
                                 </span>
                             </label>
                         );
@@ -142,24 +165,13 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                             border: `1px solid ${isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.2)'}`
                                         }}
                                     >
-                                        {config.label}
+                                        {config.label} ({facetCounts.orderTypes[orderType] ?? 0})
                                     </span>
                                 </label>
                             );
                         })}
                     </div>
                 )}
-                
-                <div className={styles.statusCounts}>
-                    {TENDER_STATUSES.map((status) => (
-                        <span key={status} className={styles.statusCountItem}>
-                            <span className={styles.statusCountLabel}>{STATUS_CONFIG[status].label}:</span>
-                            <span className={styles.statusCountValue} style={{ color: STATUS_CONFIG[status].color }}>
-                                {statusCounts[status]}
-                            </span>
-                        </span>
-                    ))}
-                </div>
             </div>
             
             <div className={styles.statusFiltersSection}>
@@ -181,7 +193,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                     border: `1px solid ${statusFilters[key] ? color : 'rgba(0, 0, 0, 0.2)'}`
                                 }}
                             >
-                                {label}
+                                {label} ({facetCounts.statuses[key] ?? 0})
                             </span>
                         </label>
                     ))}

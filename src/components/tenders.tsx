@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { isItRelatedCpv } from "../utils/cpvFilter";
 import { useUserPreferences } from "../context/UserPreferencesContext";
+import { useAuth } from "../context/AuthContext";
 import { OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
@@ -8,8 +9,8 @@ import { TenderComment } from "../types/TenderComment";
 import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
 import { toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
-import { StatusFilters, filterAndSortTenders } from "../utils/tenderFilters";
-import { TenderStatus } from "../types/TenderStatus";
+import { SortOrder, countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
+import { ALL_SOURCES, NO_STATUS_FILTERS, loadFilters, saveFilters } from "../utils/persistedFilters";
 import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { useComments } from "../hooks/useComments";
@@ -38,14 +39,6 @@ const LOAD_ERROR_MESSAGE = "Nie udało się wczytać przetargów z bazy.";
 const REFRESHING_MESSAGE = "Pobieranie nowych przetargów";
 
 const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznacz przetarg gwiazdką, aby trafił do tej zakładki.";
-const ALL_SOURCES = [TenderSource.TED, TenderSource.E_ZAMOWIENIA, TenderSource.BAZA_KONKURENCYJNOSCI];
-const NO_STATUS_FILTERS: StatusFilters = {
-    toEnter: false,
-    entered: false,
-    toClarify: false,
-    notToEnter: false,
-    unmarked: false
-};
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -85,20 +78,26 @@ const Tenders: React.FC = () => {
     const refreshRunId = useRef(0);
     // Czas ostatniego udanego odświeżenia przez kogokolwiek; null, gdy nieznany
     const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
-    const [isFiltered, setIsFiltered] = useState<boolean>(false);
+    // Domyślnie tylko przetargi z kodami CPV związanymi z IT; przycisk „All tenders” pokazuje wszystkie branże
+    const [isFiltered, setIsFiltered] = useState<boolean>(true);
     const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
         [TenderSource.TED]: 0,
         [TenderSource.E_ZAMOWIENIA]: 0,
         [TenderSource.BAZA_KONKURENCYJNOSCI]: 0
     });
-    const [selectedSources, setSelectedSources] = useState<TenderSource[]>([...ALL_SOURCES]);
-    const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>([...DEFAULT_ORDER_TYPES]);
-    const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
-    const [selectedCity, setSelectedCity] = useState<string | null>(null);
-    const [selectedCpv, setSelectedCpv] = useState<string | null>(null);
+    const { user } = useAuth();
+    const uid = user?.uid ?? null;
+    // Filtry (poza frazą wyszukiwania) są zapamiętywane w przeglądarce osobno dla każdego konta
+    const [initialFilters] = useState(() => loadFilters(uid));
+    const [selectedSources, setSelectedSources] = useState<TenderSource[]>(initialFilters.selectedSources);
+    const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>(initialFilters.selectedOrderTypes);
+    const [selectedBuyers, setSelectedBuyers] = useState<string[]>(initialFilters.selectedBuyers);
+    const [selectedCities, setSelectedCities] = useState<string[]>(initialFilters.selectedCities);
+    const [selectedCpvs, setSelectedCpvs] = useState<string[]>(initialFilters.selectedCpvs);
+    const [sortOrder, setSortOrder] = useState<SortOrder>(initialFilters.sortOrder);
     const { favorites, isFavorite, actionError } = useUserPreferences();
     // expanded state for CPV cards is now managed inside TenderCard
-    const [statusFilters, setStatusFilters] = useState<StatusFilters>(NO_STATUS_FILTERS);
+    const [statusFilters, setStatusFilters] = useState(initialFilters.statusFilters);
     const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
     const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -274,29 +273,56 @@ const Tenders: React.FC = () => {
     );
     const unsavedTenders = useMemo(() => tenders.filter((tender) => !isFavorite(tender.id)), [tenders, isFavorite]);
 
-    const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, {
+    useEffect(() => {
+        saveFilters(uid, {
+            selectedSources,
+            selectedOrderTypes,
+            selectedBuyers,
+            selectedCities,
+            selectedCpvs,
+            statusFilters,
+            sortOrder
+        });
+    }, [uid, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, statusFilters, sortOrder]);
+
+    const filterOptions = useMemo(() => ({
         selectedSources,
         selectedOrderTypes,
-        selectedBuyer,
-        selectedCity,
-        selectedCpv,
+        selectedBuyers,
+        selectedCities,
+        selectedCpvs,
         isFiltered,
         searchQuery,
-        statusFilters
-    }), [selectedSources, selectedOrderTypes, selectedBuyer, selectedCity, selectedCpv, isFiltered, searchQuery, statusFilters]);
+        statusFilters,
+        sortOrder
+    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, isFiltered, searchQuery, statusFilters, sortOrder]);
+
+    const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, filterOptions), [filterOptions]);
 
     // Obie listy są filtrowane osobno, by licznik "Przetargi" nie zależał od aktywnej zakładki
     const filteredTenders = useMemo(() => applyFilters(unsavedTenders), [applyFilters, unsavedTenders]);
     const filteredSavedTenders = useMemo(() => applyFilters(savedTenders), [applyFilters, savedTenders]);
     const displayedTenders = activeTab === 'saved' ? filteredSavedTenders : filteredTenders;
 
+    // Listy w panelu bocznym pomijają własny filtr (żeby dało się dobrać kolejne pozycje), ale uwzględniają resztę
+    const activeTabTenders = activeTab === 'saved' ? savedTenders : unsavedTenders;
+    const buyerOptionTenders = useMemo(
+        () => filterTenders(activeTabTenders, filterOptions, 'buyer'),
+        [activeTabTenders, filterOptions]
+    );
+    const cityOptionTenders = useMemo(
+        () => filterTenders(activeTabTenders, filterOptions, 'city'),
+        [activeTabTenders, filterOptions]
+    );
+    const facetCounts = useMemo(() => countFacets(activeTabTenders, filterOptions), [activeTabTenders, filterOptions]);
+
     // Filtry z panelu, paska bocznego i statystyk; przełącznik "Wszystkie / IT" w nagłówku to tryb widoku,
     // więc nie jest tu liczony ani czyszczony.
     const hasActiveFilters =
         searchQuery.trim() !== "" ||
-        selectedBuyer !== null ||
-        selectedCity !== null ||
-        selectedCpv !== null ||
+        selectedBuyers.length > 0 ||
+        selectedCities.length > 0 ||
+        selectedCpvs.length > 0 ||
         selectedSources.length !== ALL_SOURCES.length ||
         selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length ||
         Object.values(statusFilters).some(Boolean);
@@ -305,9 +331,9 @@ const Tenders: React.FC = () => {
         setSearchQuery("");
         setSelectedSources([...ALL_SOURCES]);
         setSelectedOrderTypes([...DEFAULT_ORDER_TYPES]);
-        setSelectedBuyer(null);
-        setSelectedCity(null);
-        setSelectedCpv(null);
+        setSelectedBuyers([]);
+        setSelectedCities([]);
+        setSelectedCpvs([]);
         setStatusFilters(NO_STATUS_FILTERS);
     };
 
@@ -325,13 +351,13 @@ const Tenders: React.FC = () => {
                 setStatusFilters({ ...NO_STATUS_FILTERS, [target.status]: true });
                 break;
             case 'city':
-                setSelectedCity(target.city);
+                setSelectedCities([target.city]);
                 break;
             case 'buyer':
-                setSelectedBuyer(target.buyer);
+                setSelectedBuyers([target.buyer]);
                 break;
             case 'cpv':
-                setSelectedCpv(target.code);
+                setSelectedCpvs([target.code]);
                 break;
         }
         setActiveTab('tenders');
@@ -370,15 +396,6 @@ const Tenders: React.FC = () => {
         });
 
         setTendersCountBySource(counts);
-    }, [displayedTenders]);
-
-    // Liczba przetargów z każdym wspólnym statusem na wyświetlanej liście
-    const statusCounts = useMemo(() => {
-        const counts = { toEnter: 0, entered: 0, toClarify: 0, notToEnter: 0 } as Record<TenderStatus, number>;
-        displayedTenders.forEach((tender) => {
-            if (tender.status) counts[tender.status]++;
-        });
-        return counts;
     }, [displayedTenders]);
 
     // Statystyki dotyczą przetargów z wybranego zakresu dat, bez własnych gwiazdek (te są w "Zapisane")
@@ -448,11 +465,12 @@ const Tenders: React.FC = () => {
             <div className={styles.mainContent}>
                 {activeTab !== 'statistics' && (
                     <BuyersSidebar
-                        displayedTenders={displayedTenders}
-                        selectedBuyer={selectedBuyer}
-                        selectedCity={selectedCity}
-                        onBuyerSelect={setSelectedBuyer}
-                        onCitySelect={setSelectedCity}
+                        buyerOptionTenders={buyerOptionTenders}
+                        cityOptionTenders={cityOptionTenders}
+                        selectedBuyers={selectedBuyers}
+                        selectedCities={selectedCities}
+                        onBuyersChange={setSelectedBuyers}
+                        onCitiesChange={setSelectedCities}
                     />
                 )}
                 <div className={styles.contentArea}>
@@ -499,9 +517,11 @@ const Tenders: React.FC = () => {
                                     onStatusFilterChange={(filter) =>
                                         setStatusFilters(prev => ({...prev, [filter]: !prev[filter]}))
                                     }
-                                    statusCounts={statusCounts}
-                                    selectedCpv={selectedCpv}
-                                    onClearCpv={() => setSelectedCpv(null)}
+                                    facetCounts={facetCounts}
+                                    sortOrder={sortOrder}
+                                    onSortOrderChange={setSortOrder}
+                                    selectedCpvs={selectedCpvs}
+                                    onRemoveCpv={(code) => setSelectedCpvs((prev) => prev.filter((item) => item !== code))}
                                     hasActiveFilters={hasActiveFilters}
                                     onClearFilters={handleClearFilters}
                                 />
