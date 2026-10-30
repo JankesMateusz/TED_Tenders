@@ -588,7 +588,6 @@ const Tenders: React.FC = () => {
                             <StatisticsTab
                                 statistics={statistics}
                                 isDateRange={useDateRange}
-                                savedCount={favorites.length}
                                 onDrillDown={handleStatisticsDrillDown}
                                 hasActiveFilters={hasActiveFilters}
                                 onClearFilters={handleClearFilters}

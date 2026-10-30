@@ -67,8 +67,6 @@ export type StatisticsComparison =
 interface StatisticsTabProps {
     statistics: Statistics;
     isDateRange: boolean;
-    /** Liczba gwiazdek zalogowanego użytkownika (niezależnie od wybranego zakresu dat). */
-    savedCount: number;
     onDrillDown: (target: StatisticsDrillDown) => void;
     /** Czy lista, z której liczone są statystyki, jest zawężona filtrami. */
     hasActiveFilters: boolean;
@@ -80,7 +78,6 @@ interface StatisticsTabProps {
 export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     statistics,
     isDateRange,
-    savedCount,
     onDrillDown,
     hasActiveFilters,
     onClearFilters,
@@ -177,11 +174,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     {renderDelta(statistics.total, previous?.total)}
                     <div className={styles.statLabel}>Wszystkich przetargów</div>
                 </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue}>{savedCount}</div>
-                    <div className={styles.statLabel}>Zapisanych</div>
-                </div>
 
                 {TENDER_STATUSES.map((status) => (
                     <button
@@ -197,26 +189,9 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         <div className={styles.statLabel}>{STATUS_CONFIG[status].label}</div>
                     </button>
                 ))}
-
-                <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: '#e74c3c' }}>
-                        {statistics.deadlineStats.upcoming}
-                    </div>
-                    <div className={styles.statLabel}>Nadchodzących deadline</div>
-                </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue}>{statistics.dateStats.today}</div>
-                    <div className={styles.statLabel}>Opublikowanych dzisiaj</div>
-                </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue}>{statistics.dateStats.thisWeek}</div>
-                    <div className={styles.statLabel}>W tym tygodniu</div>
-                </div>
             </div>
             
-            <div className={`${styles.section} ${styles.fullWidthSection}`}>
+            <div className={`${styles.section} ${styles.fullWidthSection} ${styles.desktopOnly}`}>
                 <h3 className={styles.sectionTitle}>Postęp przeglądania</h3>
                 <p className={styles.chartSubtitle}>
                     Ile przetargów z listy ma już status, a ile czeka na przejrzenie. Udziały liczone względem wszystkich przetargów.
@@ -346,7 +321,21 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         <span>Wybrany dzień: <strong>{selectedHourlyDate}</strong></span>
                         <span>Łącznie {totalHourlyValue} ogłoszeń</span>
                     </div>
-                    <div className={styles.hourlyChartScroll}>
+                    <div className={styles.hourlyRows}>
+                        {hourlyData.map((count, hour) => (
+                            <div key={hour} className={styles.hourlyRow}>
+                                <span className={styles.hourlyRowLabel}>{hour.toString().padStart(2, '0')}:00</span>
+                                <span className={styles.hourlyRowTrack}>
+                                    <span
+                                        className={styles.hourlyRowBar}
+                                        style={{ width: maxHourlyValue > 0 ? `${(count / maxHourlyValue) * 100}%` : 0 }}
+                                    />
+                                </span>
+                                <span className={styles.hourlyRowCount}>{count > 0 ? count : ''}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className={`${styles.hourlyChartScroll} ${styles.hourlyChartVertical}`}>
                         <div className={styles.hourlyChartContainer}>
                             <div className={styles.hourlyChartGrid}>
                                 {[...Array(5)].map((_, i) => (

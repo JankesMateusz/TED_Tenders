@@ -421,20 +421,56 @@
         align-items: flex-start;
     }
 
-    .hourlyChart {
-        grid-template-columns: repeat(24, minmax(36px, 1fr));
-        padding-left: 32px;
+    /* Na mobile wykres godzinowy jest poziomy: godziny w pionie, liczba ogłoszeń w poziomie */
+    .hourlyChartVertical {
+        display: none;
     }
-    
-    .gridLabel {
-        left: -28px;
-        font-size: 10px;
+
+    .desktopOnly {
+        display: none;
     }
-    
-    .hourTooltip {
-        font-size: 11px;
-        padding: 6px 10px;
+}
+
+.hourlyRows {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+@media (min-width: 769px) {
+    .hourlyRows {
+        display: none;
     }
+}
+
+.hourlyRow {
+    display: grid;
+    grid-template-columns: 40px 1fr 28px;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.hourlyRowLabel {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.hourlyRowTrack {
+    height: 12px;
+}
+
+.hourlyRowBar {
+    display: block;
+    height: 100%;
+    min-width: 0;
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(90deg, rgba(52, 152, 219, 0.6), rgba(52, 152, 219, 1));
+}
+
+.hourlyRowCount {
+    font-weight: 700;
+    color: var(--text-primary);
 }
 
 /* Daily comparison chart styles */
