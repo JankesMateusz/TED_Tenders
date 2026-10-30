@@ -6,6 +6,7 @@ import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
+import { buildStatusFunnel } from '../utils/statusFunnel';
 import styles from './StatisticsTab.module.css';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -50,7 +51,7 @@ const parseStatisticDate = (dateStr: string): number => {
 export type StatisticsDrillDown =
     | { kind: 'source'; source: TenderSource }
     | { kind: 'orderType'; orderType: OrderType }
-    | { kind: 'status'; status: TenderStatus }
+    | { kind: 'status'; status: TenderStatus | 'unmarked' }
     | { kind: 'city'; city: string }
     | { kind: 'buyer'; buyer: string }
     | { kind: 'cpv'; code: string };
@@ -64,6 +65,10 @@ interface StatisticsTabProps {
 }
 
 export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDateRange, savedCount, onDrillDown }) => {
+    const funnelRows = useMemo(
+        () => buildStatusFunnel(statistics.total, statistics.byStatus),
+        [statistics.total, statistics.byStatus]
+    );
     const buyerActivityEntries = Object.entries(statistics.byBuyerActivity);
     const hasBuyerActivity = buyerActivityEntries.length > 0;
     const hourlyEntries = useMemo(
@@ -152,6 +157,46 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                 </div>
             </div>
             
+            <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                <h3 className={styles.sectionTitle}>Postęp przeglądania</h3>
+                <p className={styles.chartSubtitle}>
+                    Ile przetargów z listy ma już status, a ile czeka na przejrzenie. Udziały liczone względem wszystkich przetargów.
+                </p>
+                <div className={styles.funnel}>
+                    {funnelRows.map(({ key, count, percent }) => {
+                        const isStatus = key !== 'total' && key !== 'reviewed';
+                        const label = key === 'total' ? 'Wszystkie przetargi'
+                            : key === 'reviewed' ? 'Ze statusem'
+                            : key === 'unmarked' ? 'Bez statusu (do przejrzenia)'
+                            : STATUS_CONFIG[key].label;
+                        const color = key === 'total' || key === 'reviewed' ? 'var(--button-primary)'
+                            : key === 'unmarked' ? '#95a5a6'
+                            : STATUS_CONFIG[key].color;
+                        const content = (
+                            <>
+                                <span className={styles.funnelLabel}>{label}</span>
+                                <span className={styles.funnelTrack}>
+                                    <span className={styles.funnelBar} style={{ width: `${percent}%`, backgroundColor: color }} />
+                                </span>
+                                <span className={styles.funnelValue}>{count} <small>({percent}%)</small></span>
+                            </>
+                        );
+                        return isStatus ? (
+                            <button
+                                key={key}
+                                type="button"
+                                className={`${styles.funnelRow} ${styles.clickable}`}
+                                onClick={() => onDrillDown({ kind: 'status', status: key })}
+                            >
+                                {content}
+                            </button>
+                        ) : (
+                            <div key={key} className={styles.funnelRow}>{content}</div>
+                        );
+                    })}
+                </div>
+            </div>
+
             <div className={styles.sectionsGrid}>
                 <div className={styles.section}>
                     <h3 className={styles.sectionTitle}>Według źródła</h3>
