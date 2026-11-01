@@ -21,6 +21,7 @@ connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
 const functions = getFunctions(app, 'europe-central2');
 connectFunctionsEmulator(functions, '127.0.0.1', 5001);
 const inviteUser = httpsCallable(functions, 'inviteUser');
+const listUsersStatus = httpsCallable(functions, 'listUsersStatus');
 
 const expectCode = async (promise, code) => {
     await assert.rejects(promise, (error) => {
@@ -71,5 +72,27 @@ describe('inviteUser', () => {
     it('odrzuca nieprawidłowy adres email', async () => {
         await expectCode(inviteUser({ email: 'to-nie-jest-email' }), 'invalid-argument');
         await expectCode(inviteUser({}), 'invalid-argument');
+    });
+});
+
+describe('listUsersStatus', () => {
+    it('odrzuca zalogowanego bez roli admina', async () => {
+        await signOut(auth);
+        await signInWithEmailAndPassword(auth, 'plain@example.com', 'secret123');
+        await auth.currentUser.getIdToken(true);
+        await expectCode(listUsersStatus(), 'permission-denied');
+    });
+
+    it('admin widzi statusy aktywacji tylko użytkowników z rolą', async () => {
+        await signOut(auth);
+        await signInWithEmailAndPassword(auth, ADMIN.email, ADMIN.password);
+        await auth.currentUser.getIdToken(true);
+
+        const { data } = await listUsersStatus();
+        const byEmail = Object.fromEntries(data.users.map((u) => [u.email, u]));
+        assert.equal(byEmail['plain@example.com'], undefined);
+        assert.equal(byEmail['new.person@example.com'].status, 'invited');
+        assert.equal(byEmail['new.person@example.com'].lastSignInAt, null);
+        assert.equal(byEmail[ADMIN.email].status, 'active');
     });
 });

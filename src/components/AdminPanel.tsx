@@ -1,14 +1,27 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '../firebase';
+import { functions } from '../firebase';
 import styles from './Auth.module.css';
+
+type ActivationStatus = 'invited' | 'password-set' | 'active';
 
 interface UserProfile {
     uid: string;
     email: string;
     role: string;
+    status: ActivationStatus;
+    createdAt: string | null;
+    lastSignInAt: string | null;
 }
+
+const STATUS_LABELS: Record<ActivationStatus, string> = {
+    invited: 'zaproszony – nie ustawił hasła',
+    'password-set': 'hasło ustawione – brak logowania',
+    active: 'aktywny'
+};
+
+const formatDate = (value: string | null): string =>
+    value ? new Date(value).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
 interface InviteResult {
     email: string;
@@ -17,6 +30,7 @@ interface InviteResult {
 }
 
 const inviteUser = httpsCallable<{ email: string }, InviteResult>(functions, 'inviteUser');
+const listUsersStatus = httpsCallable<void, { users: UserProfile[] }>(functions, 'listUsersStatus');
 
 const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -29,12 +43,13 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     const loadUsers = useCallback(async () => {
         try {
-            const snapshot = await getDocs(query(collection(db, 'users'), orderBy('email')));
-            setUsers(snapshot.docs.map((d) => ({ uid: d.id, email: d.data().email, role: d.data().role })));
+            const result = await listUsersStatus();
+            setUsers(result.data.users);
             setListError(null);
         } catch (error) {
             console.error('Nie udało się pobrać listy użytkowników:', error);
-            setListError('Nie udało się pobrać listy użytkowników.');
+            const { code, message } = error as { code?: string; message?: string };
+            setListError(`Nie udało się pobrać listy użytkowników.${code ? ` (${code}${message ? `: ${message}` : ''})` : ''}`);
         }
     }, []);
 
@@ -42,16 +57,15 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         loadUsers();
     }, [loadUsers]);
 
-    const handleInvite = async (event: React.FormEvent) => {
-        event.preventDefault();
+    const sendInvite = async (address: string, clearInput: boolean) => {
         setInviteError(null);
         setInvite(null);
         setCopied(false);
         setIsInviting(true);
         try {
-            const result = await inviteUser({ email: email.trim() });
+            const result = await inviteUser({ email: address.trim() });
             setInvite(result.data);
-            setEmail('');
+            if (clearInput) setEmail('');
             await loadUsers();
         } catch (error) {
             console.error('Zaproszenie nie powiodło się:', error);
@@ -59,6 +73,11 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         } finally {
             setIsInviting(false);
         }
+    };
+
+    const handleInvite = (event: React.FormEvent) => {
+        event.preventDefault();
+        sendInvite(email, true);
     };
 
     const handleCopy = async () => {
@@ -109,8 +128,28 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <ul className={styles.userList}>
                     {users.map((u) => (
                         <li key={u.uid} className={styles.userItem}>
-                            <span>{u.email}</span>
-                            <span className={styles.role}>{u.role === 'admin' ? 'administrator' : 'członek'}</span>
+                            <span>
+                                {u.email}
+                                <br />
+                                <small className={styles.role}>
+                                    {STATUS_LABELS[u.status]}
+                                    {u.lastSignInAt && ` (ostatnie logowanie: ${formatDate(u.lastSignInAt)})`}
+                                </small>
+                            </span>
+                            <span className={styles.role}>
+                                {u.role === 'admin' ? 'administrator' : 'członek'}
+                                {u.status !== 'active' && (
+                                    <button
+                                        className={styles.userBarButton}
+                                        style={{ marginLeft: 8 }}
+                                        type="button"
+                                        disabled={isInviting}
+                                        onClick={() => sendInvite(u.email, false)}
+                                    >
+                                        Nowy link
+                                    </button>
+                                )}
+                            </span>
                         </li>
                     ))}
                 </ul>

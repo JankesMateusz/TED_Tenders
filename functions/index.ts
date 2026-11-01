@@ -2,5 +2,5 @@ import { initializeApp } from 'firebase-admin/app';
 
 initializeApp();
 
-export { inviteUser } from './users';
+export { inviteUser, listUsersStatus } from './users';
 export { refreshTenders } from './tenders/refresh';

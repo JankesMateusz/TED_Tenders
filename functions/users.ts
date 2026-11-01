@@ -16,6 +16,59 @@ const findOrCreateUser = async (email: string): Promise<{ user: UserRecord; isNe
   }
 };
 
+export type ActivationStatus = 'invited' | 'password-set' | 'active';
+
+export interface UserStatus {
+  uid: string;
+  email: string;
+  role: Role;
+  status: ActivationStatus;
+  createdAt: string | null;
+  lastSignInAt: string | null;
+}
+
+const toStatus = (user: UserRecord): UserStatus | null => {
+  const role = user.customClaims?.role as Role | undefined;
+  if (!role || !user.email) {
+    return null;
+  }
+  const hasPassword = Boolean(user.passwordHash) || user.providerData.some((p) => p.providerId === 'password');
+  // Konto bez logowania może mieć lastSignInTime równe czasowi utworzenia (tak robi emulator),
+  // więc za faktyczne logowanie uznajemy tylko czas różny od utworzenia.
+  const { lastSignInTime, creationTime } = user.metadata;
+  const lastSignIn = lastSignInTime && lastSignInTime !== creationTime ? lastSignInTime : null;
+  const status: ActivationStatus = lastSignIn ? 'active' : hasPassword ? 'password-set' : 'invited';
+  return {
+    uid: user.uid,
+    email: user.email,
+    role,
+    status,
+    createdAt: user.metadata.creationTime || null,
+    lastSignInAt: lastSignIn,
+  };
+};
+
+/** Lista użytkowników z rolą wraz ze statusem aktywacji konta (tylko dla admina). */
+export const listUsersStatus = onCall({ region: REGION }, async (request) => {
+  requireAdmin(request);
+
+  const users: UserStatus[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await getAuth().listUsers(1000, pageToken);
+    for (const user of page.users) {
+      const entry = toStatus(user);
+      if (entry) {
+        users.push(entry);
+      }
+    }
+    pageToken = page.pageToken;
+  } while (pageToken);
+
+  users.sort((a, b) => a.email.localeCompare(b.email));
+  return { users };
+});
+
 /**
  * Zaprasza użytkownika: zakłada konto (jeśli go nie ma), nadaje rolę `member`
  * (istniejącej roli nie zmienia) i zwraca link do ustawienia hasła.
