@@ -38,8 +38,8 @@ Użytkownik komunikuje się po polsku. Odpowiadaj po polsku, zwięźle, z uzasad
 
 | Projekt | Rola | Stan |
 |---|---|---|
-| `tenders-test-b5bb3` | testowy | Authentication (email i hasło) włączone, Firestore `(default)` w `europe-central2`, wdrożone funkcje `inviteUser` i `refreshTenders` (Node 22, `europe-central2`; `refreshTenders` zaktualizowany 2026-10-29 o `contract-nature`, a 2026-10-30 o `document-url-lot`), reguły (aktualne, w tym statusy, gwiazdki i komentarze) i indeksy z TTL (`tenders`, `refreshLog`, `comments`), polityka czyszczenia obrazów 1 dzień. Jest tu konto admina użytkownika (rola `admin`). Dane testowe (kilka tysięcy dokumentów `tenders`) wygasają same po 30 dniach. **Hosting testowy jest wyłączony** (2026-10-30, `firebase hosting:disable`; zbędny, bo aplikację testujemy lokalnie przez `npm start`, a `.env.local` wskazuje na ten projekt). Workflow GitHub Actions wdraża wyłącznie produkcję, test nie ma automatycznych wdrożeń. |
-| `tendersted` | **produkcja** (wdrożona 2026-11-01) | Authentication (email i hasło) włączone, Firestore `(default)`, reguły i indeksy z TTL wdrożone, funkcje `inviteUser` i `refreshTenders` (Node 22, `europe-central2`), hosting wdrażany przez GitHub Actions po merge do `main`. Admin założony skryptem `setAdmin.js`. Stare funkcje `api` i `getApiKey` oraz sekret `API_KEY` usunięte. Polityka czyszczenia obrazów: 1 dzień. Użytkownik sprawdził w przeglądarce, że aplikacja działa. |
+| `tenders-test-b5bb3` | testowy | Authentication (email i hasło) włączone, Firestore `(default)` w `europe-central2`, wdrożone funkcje `inviteUser`, `refreshTenders` i `listUsersStatus` (Node 22, `europe-central2`; `refreshTenders` zaktualizowany 2026-10-29 o `contract-nature`, a 2026-10-30 o `document-url-lot`), reguły (aktualne, w tym statusy, gwiazdki i komentarze) i indeksy z TTL (`tenders`, `refreshLog`, `comments`), polityka czyszczenia obrazów 1 dzień. Jest tu konto admina użytkownika (rola `admin`). Dane testowe (kilka tysięcy dokumentów `tenders`) wygasają same po 30 dniach. **Hosting testowy jest wyłączony** (2026-10-30, `firebase hosting:disable`; zbędny, bo aplikację testujemy lokalnie przez `npm start`, a `.env.local` wskazuje na ten projekt). Workflow GitHub Actions wdraża wyłącznie produkcję, test nie ma automatycznych wdrożeń. |
+| `tendersted` | **produkcja** (wdrożona 2026-11-01) | Authentication (email i hasło) włączone, Firestore `(default)`, reguły i indeksy z TTL wdrożone, funkcje `inviteUser`, `refreshTenders` i `listUsersStatus` (Node 22, `europe-central2`), hosting wdrażany przez GitHub Actions po merge do `main`. Admin założony skryptem `setAdmin.js`. Stare funkcje `api` i `getApiKey` oraz sekret `API_KEY` usunięte. Polityka czyszczenia obrazów: 1 dzień. Użytkownik sprawdził w przeglądarce, że aplikacja działa. |
 
 Pozostałe projekty na koncie (`tenders-app-32189`, `tendersapptests`) nie są częścią tych prac.
 
@@ -50,9 +50,10 @@ Konfiguracja webowa testowego projektu jest w `.env.local` (poza Gitem; wzór w 
 **Przepływ:** przeglądarka czyta przetargi z Firestore (nasłuch na żywo). Przy wejściu, zmianie dnia i po kliknięciu „Odśwież" woła funkcję `refreshTenders`, która pobiera dane ze źródeł po stronie serwera i dopisuje tylko brakujące przetargi.
 
 ### Functions (`functions/`, TypeScript, Node 22, firebase-functions v6, firebase-admin v13)
-- `index.ts`: `initializeApp()` i eksporty `inviteUser`, `refreshTenders`.
+- `index.ts`: `initializeApp()` i eksporty `inviteUser`, `listUsersStatus`, `refreshTenders`.
 - `access.ts`: `REGION = 'europe-central2'`, `requireMember`, `requireAdmin` (rola z custom claim `role`).
 - `users.ts`: `inviteUser` (tylko admin): zakłada konto, nadaje rolę `member` (istniejącej nie zmienia), zapisuje `users/{uid}`, zwraca link do ustawienia hasła, który admin przekazuje osobie ręcznie.
+  - `listUsersStatus` (tylko admin): zwraca użytkowników z rolą (`customClaims.role`) i status aktywacji: `invited` (brak hasła), `password-set` (hasło jest, brak logowania), `active` (było logowanie), plus daty utworzenia i ostatniego logowania. Dane z Firebase Auth przez `listUsers`, nie z Firestore. Za logowanie uznaje tylko `lastSignInTime` różny od `creationTime`, bo emulator ustawia je równe dla kont, które nigdy się nie logowały (zachowania produkcji dla takich kont nie zweryfikowano). Panel admina (`AdminPanel.tsx`) bierze listę stąd i pokazuje przy kontach bez logowania przycisk „Nowy link” (ponowne wywołanie `inviteUser`, nie zmienia roli).
 - `tenders/`:
   - `refresh.ts`: `refreshTenders({date?})` (rola admin lub member): dzień domyślnie dzisiejszy w `Europe/Warsaw`, dopuszczalne ostatnie 31 dni, bez przyszłości. Blokada `meta/refreshLock` (6 min, zwalniana w `finally`). Po w pełni udanym odświeżeniu zapis `refreshLog/{dzień}`.
   - `ted.ts` (czyta też `contract-nature` i wylicza `orderType`, `extractOrderType`; czyta `document-url-lot` i wylicza `documentsUrl`, `extractDocumentsUrl`), `ezamowienia.ts`: pobieranie i mapowanie do wspólnego modelu; `model.ts` (typ `TenderRecord`, `tenderId`); `dates.ts` (strefa Warsaw); `store.ts` (`saveNewTenders`); `http.ts` (ponawianie po 429/502/503/504).
@@ -113,7 +114,7 @@ Dostęp daje wyłącznie custom claim `role` ∈ {`admin`, `member`} (samo zalog
 |---|---|---|
 | `npm run test:unit` | mappery, daty (po zbudowaniu funkcji) | 17/17 |
 | `npm run test:rules` | reguły Firestore na emulatorze (w tym statusy, gwiazdki i komentarze) | 37/37 |
-| `npm run test:functions` | `inviteUser` + `refreshTenders` na emulatorach, z lokalnym serwerem udającym TED i eZamówienia | 20/20 |
+| `npm run test:functions` | `inviteUser` + `listUsersStatus` + `refreshTenders` na emulatorach, z lokalnym serwerem udającym TED i eZamówienia | 22/22 (2026-11-01) |
 | `$env:CI='true'; npx react-scripts test --watchAll=false` | testy frontendu (Jest): mapowanie, statusy, kopia gwiazdki, filtry (w tym typ zamówienia), statystyki, plan odświeżania, komentarze, formatowanie czasu | 69/69 |
 | `npx tsc --noEmit -p tsconfig.json` | typy frontendu | bez błędów |
 | `npx eslint src --ext ts,tsx` | lint | bez ostrzeżeń |
@@ -169,6 +170,12 @@ Projekt produkcyjny to `tendersted`. Zrobione, w tej kolejności:
 - **Do zrobienia przez użytkownika:** unieważnić klucz TED w portalu TED (był publicznie dostępny przez `getApiKey`; nowa wersja go nie używa). Nie wiadomo, czy zrobione. Alert budżetowy: nie potwierdzono.
 - **Sprawdzone przez użytkownika na produkcji:** logowanie admina, odświeżanie przetargów oraz zapraszanie innych osób przez `inviteUser` działają.
 - Każdy push do `main` (także zmiana samej dokumentacji) wdraża hosting na produkcję. Reguły i funkcje nadal wdraża się ręcznie, z jawnym `--project`, po wyraźnej zgodzie użytkownika.
+
+### Status aktywacji kont w panelu admina (ZROBIONE 2026-11-01)
+- Dodano funkcję `listUsersStatus` i przycisk „Nowy link” w `AdminPanel.tsx` (commit `a9e2a71` w `main`). Użytkownik sprawdził na produkcji, że lista ze statusami działa.
+- **Kolejność wdrożenia ma znaczenie:** workflow wdraża tylko hosting, więc funkcję trzeba wdrożyć ręcznie: `npx firebase deploy --only functions:listUsersStatus --project tendersted` (i `--project tenders-test-b5bb3` dla testu). Frontend bez wdrożonej funkcji pokazuje w oknie „Użytkownicy” błąd `functions/internal` (wywołanie nieistniejącej funkcji). Funkcja jest wdrożona na obu projektach.
+- Uwaga: aktywny projekt CLI w tym katalogu to `test`, więc `firebase functions:list` i `functions:log` bez `--project` dotyczą testu, nie produkcji.
+- Przy wdrożeniu na `tendersted` CLI zgłosiło „No cleanup policy detected for repositories in europe-central2” i zakończyło się błędem przy ustawianiu polityki (funkcja została wdrożona). Polityka dla `europe-central2` prawdopodobnie nie jest ustawiona (wcześniejsza notatka o polityce 1 dzień mogła dotyczyć innego regionu). Do ustawienia: `npx firebase functions:artifacts:setpolicy --project tendersted` (opcjonalne, chodzi o niewielki koszt obrazów).
 
 ### Znane drobiazgi (poza zakresem, do decyzji użytkownika)
 - `axios` jest w `dependencies`, ale nic w `src/` go nie używa; `puppeteer` (devDependency) służy tylko skryptowi `scripts/generate-favicon.js`.
