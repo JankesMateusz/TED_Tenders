@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tender } from '../types/Tender';
 import { TenderComment } from '../types/TenderComment';
-import { useAuth } from '../context/AuthContext';
+import { GUEST_LABEL, useAuth } from '../context/AuthContext';
 import { groupCommentsByTender, normalizeCommentText } from '../utils/comments';
 import { addComment, deleteComment, subscribeToComments } from '../utils/tendersApi';
 
@@ -16,7 +16,7 @@ const DELETE_ERROR = 'Nie udało się usunąć komentarza. Spróbuj ponownie.';
 export const useComments = (startDay: string | null, endDay: string | null) => {
     const { user } = useAuth();
     const uid = user?.uid ?? null;
-    const email = user?.email ?? null;
+    const email = user ? user.email ?? GUEST_LABEL : null;
     const [comments, setComments] = useState<TenderComment[]>([]);
     const [commentsError, setCommentsError] = useState<string | null>(null);
 

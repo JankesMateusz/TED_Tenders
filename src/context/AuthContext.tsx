@@ -3,12 +3,16 @@ import {
     User,
     onAuthStateChanged,
     sendPasswordResetEmail,
+    signInAnonymously,
     signInWithEmailAndPassword,
     signOut
 } from 'firebase/auth';
 import { auth } from '../firebase';
 
 export type Role = 'admin' | 'member';
+
+/** Podpis w statusach i komentarzach osób bez adresu e-mail (logowanie anonimowe). */
+export const GUEST_LABEL = 'Gość';
 
 interface AuthContextType {
     user: User | null;
@@ -26,6 +30,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const readRole = async (user: User, forceRefresh: boolean): Promise<Role | null> => {
+    // TYMCZASOWO (otwarty dostęp): odwiedzający zalogowany anonimowo jest członkiem
+    if (user.isAnonymous) return 'member';
     const { claims } = await user.getIdTokenResult(forceRefresh);
     return claims.role === 'admin' || claims.role === 'member' ? claims.role : null;
 };
@@ -37,6 +43,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         return onAuthStateChanged(auth, async (nextUser) => {
+            if (!nextUser) {
+                // TYMCZASOWO (otwarty dostęp): bez ekranu logowania; po udanym logowaniu anonimowym
+                // listener odpali się ponownie z użytkownikiem. Gdy się nie uda (np. wyłączone
+                // logowanie anonimowe w Firebase), zostaje zwykły ekran logowania.
+                try {
+                    await signInAnonymously(auth);
+                    return;
+                } catch (error) {
+                    console.error('Logowanie anonimowe nie powiodło się:', error);
+                }
+            }
             setUser(nextUser);
             try {
                 setRole(nextUser ? await readRole(nextUser, false) : null);

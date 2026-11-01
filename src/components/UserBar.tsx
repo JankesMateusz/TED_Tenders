@@ -9,15 +9,17 @@ const UserBar: React.FC = () => {
 
     return (
         <div className={styles.userBar}>
-            <span>{user?.email}</span>
+            {user && !user.isAnonymous && <span>{user.email}</span>}
             {role === 'admin' && (
                 <button className={styles.userBarButton} type="button" onClick={() => setIsAdminPanelOpen(true)}>
                     Użytkownicy
                 </button>
             )}
-            <button className={styles.userBarButton} type="button" onClick={logout}>
-                Wyloguj
-            </button>
+            {user && !user.isAnonymous && (
+                <button className={styles.userBarButton} type="button" onClick={logout}>
+                    Wyloguj
+                </button>
+            )}
             {isAdminPanelOpen && <AdminPanel onClose={() => setIsAdminPanelOpen(false)} />}
         </div>
     );

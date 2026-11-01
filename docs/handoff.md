@@ -177,6 +177,12 @@ Projekt produkcyjny to `tendersted`. Zrobione, w tej kolejności:
 - Uwaga: aktywny projekt CLI w tym katalogu to `test`, więc `firebase functions:list` i `functions:log` bez `--project` dotyczą testu, nie produkcji.
 - Przy wdrożeniu na `tendersted` CLI zgłosiło „No cleanup policy detected for repositories in europe-central2” i zakończyło się błędem przy ustawianiu polityki (funkcja została wdrożona). Polityka dla `europe-central2` prawdopodobnie nie jest ustawiona (wcześniejsza notatka o polityce 1 dzień mogła dotyczyć innego regionu). Do ustawienia: `npx firebase functions:artifacts:setpolicy --project tendersted` (opcjonalne, chodzi o niewielki koszt obrazów).
 
+### TYMCZASOWO: otwarty dostęp bez logowania (gałąź `temp/open-access`)
+- Na prośbę użytkownika logowanie jest na kilka dni wyłączone. Aplikacja loguje odwiedzających **anonimowo** (Firebase Anonymous Auth), bez ekranu logowania; anonimowy ma rolę `member` po stronie UI. Reguły Firestore (`hasRole()` = `request.auth != null`) i `requireMember` w funkcjach wpuszczają każdego zalogowanego, także anonimowo. W statusach i komentarzach anonimowy podpisuje się jako „Gość”. Gwiazdki są per przeglądarka (uid anonimowy), a po wyczyszczeniu danych strony znikają.
+- **Wymaga ręcznie:** włączenia Anonymous w Firebase Console (Authentication → Sign-in method) oraz wdrożenia reguł i funkcji (`firestore:rules`, `functions:refreshTenders`) na właściwy projekt. Bez włączonego Anonymous aplikacja pokaże zwykły ekran logowania.
+- **Skutki:** każdy, kto zna adres, czyta przetargi i komentarze, zapisuje statusy i komentarze oraz może uruchomić pobieranie z TED. Panel „Użytkownicy” widać tylko po zalogowaniu kontem admina (sesja admina zalogowanego wcześniej zostaje, wylogowany nie ma jak się zalogować).
+- **Powrót do logowania:** `git revert` commita „Temporarily open access” i ponowne wdrożenie reguł oraz funkcji (`npx firebase deploy --only firestore:rules,functions:refreshTenders --project tendersted`) i hostingu (push do `main`). Opcjonalnie wyłączyć Anonymous w konsoli i usunąć konta anonimowe.
+
 ### Znane drobiazgi (poza zakresem, do decyzji użytkownika)
 - `axios` jest w `dependencies`, ale nic w `src/` go nie używa; `puppeteer` (devDependency) służy tylko skryptowi `scripts/generate-favicon.js`.
 - Zakładka „Zapisane (n)" pokazuje liczbę wszystkich gwiazdek, a „Przetargi (n)" liczbę po filtrach.

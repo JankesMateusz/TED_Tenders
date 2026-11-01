@@ -35,8 +35,8 @@ describe('users', () => {
         await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'users/member1')));
     });
 
-    it('zalogowany bez roli nie czyta nawet własnego profilu', async () => {
-        await assertFails(getDoc(doc(dbFor('member1', {}), 'users/member1')));
+    it('zalogowany bez roli (tryb otwarty) czyta własny profil', async () => {
+        await assertSucceeds(getDoc(doc(dbFor('member1', {}), 'users/member1')));
     });
 
     it('członek czyta własny profil', async () => {
@@ -56,8 +56,8 @@ describe('users', () => {
         await assertFails(setDoc(doc(dbFor('member1', { role: 'member' }), 'users/member1'), { role: 'admin' }));
     });
 
-    it('nieznana rola nie daje dostępu', async () => {
-        await assertFails(getDoc(doc(dbFor('member1', { role: 'guest' }), 'users/member1')));
+    it('nieznana rola nie daje uprawnień admina', async () => {
+        await assertFails(getDoc(doc(dbFor('member1', { role: 'guest' }), 'users/member2')));
     });
 });
 
@@ -73,9 +73,9 @@ describe('tenders', () => {
         await assertSucceeds(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'tenders/TED_1')));
     });
 
-    it('niezalogowany i konto bez roli nie czytają przetargów', async () => {
+    it('niezalogowany nie czyta przetargów, konto bez roli (tryb otwarty) czyta', async () => {
         await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'tenders/TED_1')));
-        await assertFails(getDoc(doc(dbFor('plain1', {}), 'tenders/TED_1')));
+        await assertSucceeds(getDoc(doc(dbFor('plain1', {}), 'tenders/TED_1')));
     });
 
     it('nikt nie zapisuje przetargów z klienta', async () => {
@@ -156,9 +156,9 @@ describe('wspólny status przetargu', () => {
         await assertFails(updateDoc(tenderRef(dbFor('member1', member)), { title: 'Podmieniony' }));
     });
 
-    it('konto bez roli i niezalogowany nie ustawiają statusu', async () => {
-        await assertFails(updateDoc(tenderRef(dbFor('plain1', { email: 'plain@example.com' })), statusFields({
-            statusBy: 'plain1', statusByEmail: 'plain@example.com'
+    it('niezalogowany nie ustawia statusu, a anonimowy ustawia go jako Gość', async () => {
+        await assertSucceeds(updateDoc(tenderRef(dbFor('plain1', {})), statusFields({
+            statusBy: 'plain1', statusByEmail: 'Gość'
         })));
         await assertFails(updateDoc(tenderRef(env.unauthenticatedContext().firestore()), statusFields()));
     });
@@ -190,8 +190,8 @@ describe('ulubione (gwiazdki)', () => {
         await assertFails(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'users/member1/favorites/TED_1')));
     });
 
-    it('konto bez roli i niezalogowany nie mają dostępu nawet do własnych gwiazdek', async () => {
-        await assertFails(setDoc(doc(dbFor('member1', {}), 'users/member1/favorites/TED_1'), favorite));
+    it('niezalogowany nie ma dostępu do gwiazdek, a konto bez roli ma do własnych', async () => {
+        await assertSucceeds(setDoc(doc(dbFor('member1', {}), 'users/member1/favorites/TED_1'), favorite));
         await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'users/member1/favorites/TED_1')));
     });
 });
@@ -236,10 +236,10 @@ describe('komentarze', () => {
         )));
     });
 
-    it('konto bez roli i niezalogowany nie czytają ani nie dodają komentarzy', async () => {
-        await assertFails(getDoc(doc(dbFor('plain1', {}), 'comments/c1')));
+    it('niezalogowany nie czyta ani nie dodaje komentarzy, a anonimowy podpisuje się jako Gość', async () => {
+        await assertSucceeds(getDoc(doc(dbFor('plain1', {}), 'comments/c1')));
         await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'comments/c1')));
-        await assertFails(setDoc(doc(dbFor('plain1', { email: 'member@example.com' }), 'comments/x'), comment({ authorUid: 'plain1' })));
+        await assertSucceeds(setDoc(doc(dbFor('plain1', {}), 'comments/x'), comment({ authorUid: 'plain1', authorEmail: 'Gość' })));
         await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'comments/x'), comment()));
     });
 
@@ -300,9 +300,10 @@ describe('refreshLog', () => {
         });
     });
 
-    it('członek czyta dziennik, konto bez roli nie', async () => {
+    it('członek i konto bez roli (tryb otwarty) czytają dziennik, niezalogowany nie', async () => {
         await assertSucceeds(getDoc(doc(dbFor('member1', { role: 'member' }), 'refreshLog/2026-10-28')));
-        await assertFails(getDoc(doc(dbFor('plain1', {}), 'refreshLog/2026-10-28')));
+        await assertSucceeds(getDoc(doc(dbFor('plain1', {}), 'refreshLog/2026-10-28')));
+        await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'refreshLog/2026-10-28')));
     });
 
     it('nikt nie zapisuje dziennika z klienta', async () => {

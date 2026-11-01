@@ -5,14 +5,13 @@ export const REGION = 'europe-central2';
 
 export type Role = 'admin' | 'member';
 
-/** Wymaga zalogowanego użytkownika z rolą admina lub członka; zwraca jego uid. */
+/**
+ * TYMCZASOWO (otwarty dostęp): wymaga tylko zalogowania, także anonimowego; zwraca uid.
+ * Docelowo wraca wymóg roli admina lub członka (git revert commita „Temporarily open access”).
+ */
 export const requireMember = (request: CallableRequest): string => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Wymagane zalogowanie.');
-  }
-  const role = request.auth.token.role;
-  if (role !== 'admin' && role !== 'member') {
-    throw new HttpsError('permission-denied', 'Brak uprawnień do tej operacji.');
   }
   return request.auth.uid;
 };

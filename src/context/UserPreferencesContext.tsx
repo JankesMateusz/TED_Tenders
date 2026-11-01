@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { Tender } from '../types/Tender';
 import { TenderStatus } from '../types/TenderStatus';
 import { addFavorite, removeFavorite, setTenderStatus, subscribeToFavorites } from '../utils/tendersApi';
-import { useAuth } from './AuthContext';
+import { GUEST_LABEL, useAuth } from './AuthContext';
 
 const FAVORITES_LOAD_ERROR = 'Nie udało się wczytać zapisanych przetargów.';
 const SAVE_ERROR = 'Nie udało się zapisać zmiany. Spróbuj ponownie.';
@@ -24,7 +24,7 @@ const UserPreferencesContext = createContext<UserPreferencesContextType | undefi
 export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user } = useAuth();
     const uid = user?.uid ?? null;
-    const email = user?.email ?? null;
+    const email = user ? user.email ?? GUEST_LABEL : null;
     const [favorites, setFavorites] = useState<Tender[]>([]);
     const [actionError, setActionError] = useState<string | null>(null);
 

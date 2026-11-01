@@ -8,7 +8,6 @@ import { after, before, describe, it } from 'node:test';
 import { initializeApp } from 'firebase/app';
 import {
     connectAuthEmulator,
-    createUserWithEmailAndPassword,
     getAuth,
     signInWithEmailAndPassword,
     signOut
@@ -142,12 +141,9 @@ after(async () => {
 });
 
 describe('refreshTenders', () => {
-    it('odrzuca niezalogowanego i konto bez roli', async () => {
+    it('odrzuca niezalogowanego (tryb otwarty: konto bez roli jest dopuszczone)', async () => {
         await signOut(auth);
         await expectCode(refreshTenders({}), 'unauthenticated');
-
-        await createUserWithEmailAndPassword(auth, 'plain-refresh@example.com', 'secret123');
-        await expectCode(refreshTenders({}), 'permission-denied');
     });
 
     it('odrzuca nieprawidłowe daty', async () => {
