@@ -77,6 +77,22 @@ service cloud.firestore {
       allow delete: if hasRole() && resource.data.authorUid == request.auth.uid;
     }
 
+    // Obecność: każdy zalogowany zapisuje tylko własny dokument (puls `lastSeen` co ok. minutę),
+    // odczyt ma wyłącznie admin. Dokument wygasa przez TTL na `expireAt`.
+    match /presence/{uid} {
+      allow read: if isAdmin();
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastSeen', 'expireAt', 'isAnonymous', 'email'])
+        && request.resource.data.keys().hasAll(['lastSeen', 'expireAt', 'isAnonymous'])
+        && request.resource.data.lastSeen == request.time
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt > request.time
+        && request.resource.data.expireAt <= request.time + duration.value(2, 'h')
+        && request.resource.data.isAnonymous == (request.auth.token.firebase.sign_in_provider == 'anonymous')
+        && (request.resource.data.isAnonymous || request.resource.data.email == request.auth.token.get('email', null));
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Dzienniki odświeżeń (które dni zostały już pobrane): odczyt dla członków, zapis tylko z Cloud Function.
     match /refreshLog/{day} {
       allow read: if hasRole();

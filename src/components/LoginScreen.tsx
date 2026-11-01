@@ -15,7 +15,8 @@ const getErrorMessage = (error: unknown): string => {
     return LOGIN_ERROR_MESSAGES[code] ?? 'Nie udało się zalogować. Spróbuj ponownie.';
 };
 
-const LoginScreen: React.FC = () => {
+/** Bez `onClose` pełny ekran logowania; z `onClose` okno nad aplikacją (logowanie gościa). */
+const LoginScreen: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
     const { login, resetPassword } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -30,6 +31,7 @@ const LoginScreen: React.FC = () => {
         setIsSubmitting(true);
         try {
             await login(email.trim(), password);
+            onClose?.();
         } catch (err) {
             setError(getErrorMessage(err));
         } finally {
@@ -54,8 +56,8 @@ const LoginScreen: React.FC = () => {
     };
 
     return (
-        <div className={styles.screen}>
-            <form className={styles.card} onSubmit={handleSubmit}>
+        <div className={onClose ? styles.overlay : styles.screen} onClick={onClose}>
+            <form className={styles.card} onSubmit={handleSubmit} onClick={(event) => event.stopPropagation()}>
                 <h1 className={styles.title}>Zamówienia TED</h1>
                 <p className={styles.subtitle}>Zaloguj się, aby zobaczyć przetargi.</p>
 
@@ -90,6 +92,11 @@ const LoginScreen: React.FC = () => {
                 <button className={styles.linkButton} type="button" onClick={handleResetPassword}>
                     Nie pamiętam hasła
                 </button>
+                {onClose && (
+                    <button className={styles.linkButton} type="button" onClick={onClose}>
+                        Anuluj
+                    </button>
+                )}
             </form>
         </div>
     );

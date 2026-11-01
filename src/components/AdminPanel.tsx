@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
+import type { OnlineEntry } from '../hooks/usePresence';
 import styles from './Auth.module.css';
 
 type ActivationStatus = 'invited' | 'password-set' | 'active';
@@ -32,7 +33,7 @@ interface InviteResult {
 const inviteUser = httpsCallable<{ email: string }, InviteResult>(functions, 'inviteUser');
 const listUsersStatus = httpsCallable<void, { users: UserProfile[] }>(functions, 'listUsersStatus');
 
-const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ online, onClose }) => {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [listError, setListError] = useState<string | null>(null);
     const [email, setEmail] = useState('');
@@ -97,6 +98,20 @@ const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <h2 style={{ margin: 0 }}>Użytkownicy</h2>
                     <button className={styles.userBarButton} type="button" onClick={onClose}>Zamknij</button>
                 </div>
+
+                <h3 style={{ margin: '0 0 8px' }}>
+                    Teraz na stronie ({online.length}: {online.filter((o) => o.isAnonymous).length} gości,{' '}
+                    {online.filter((o) => !o.isAnonymous).length} zalogowanych)
+                </h3>
+                <ul className={styles.userList} style={{ margin: '0 0 20px' }}>
+                    {online.length === 0 && <li className={styles.userItem}><small className={styles.role}>Nikt.</small></li>}
+                    {online.map((o) => (
+                        <li key={o.uid} className={styles.userItem}>
+                            <span>{o.isAnonymous ? `Gość (${o.uid.slice(0, 6)})` : o.email}</span>
+                            <small className={styles.role}>aktywność: {formatDate(o.lastSeen.toISOString())}</small>
+                        </li>
+                    ))}
+                </ul>
 
                 <form className={styles.inviteRow} onSubmit={handleInvite}>
                     <input

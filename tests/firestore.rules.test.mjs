@@ -319,3 +319,45 @@ describe('pozostałe kolekcje', () => {
         await assertFails(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'inne/x')));
     });
 });
+
+describe('presence', () => {
+    const beat = (extra = {}) => ({
+        lastSeen: serverTimestamp(),
+        expireAt: Timestamp.fromMillis(Date.now() + 60 * 60 * 1000),
+        isAnonymous: true,
+        ...extra
+    });
+    const anon = (uid) => dbFor(uid, { firebase: { sign_in_provider: 'anonymous' } });
+
+    it('gość zapisuje własny puls', async () => {
+        await assertSucceeds(setDoc(doc(anon('g1'), 'presence/g1'), beat()));
+    });
+
+    it('nie zapisuje cudzego pulsu', async () => {
+        await assertFails(setDoc(doc(anon('g1'), 'presence/g2'), beat()));
+    });
+
+    it('nie podszywa się pod zalogowanego (isAnonymous musi zgadzać się z tokenem)', async () => {
+        await assertFails(setDoc(doc(anon('g1'), 'presence/g1'), beat({ isAnonymous: false, email: 'a@example.com' })));
+    });
+
+    it('zalogowany zapisuje puls z własnym e-mailem, nie cudzym', async () => {
+        const db = dbFor('m1', { role: 'member', email: 'm@example.com', firebase: { sign_in_provider: 'password' } });
+        await assertSucceeds(setDoc(doc(db, 'presence/m1'), beat({ isAnonymous: false, email: 'm@example.com' })));
+        await assertFails(setDoc(doc(db, 'presence/m1'), beat({ isAnonymous: false, email: 'x@example.com' })));
+    });
+
+    it('czas pulsu musi być czasem serwera, a wygaśnięcie najwyżej za 2 godziny', async () => {
+        await assertFails(setDoc(doc(anon('g1'), 'presence/g1'), beat({ lastSeen: Timestamp.fromMillis(1) })));
+        await assertFails(setDoc(doc(anon('g1'), 'presence/g1'), beat({ expireAt: Timestamp.fromMillis(Date.now() + 5 * 3600 * 1000) })));
+    });
+
+    it('odczyt tylko dla admina', async () => {
+        await env.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'presence/g1'), beat());
+        });
+        await assertSucceeds(getDoc(doc(dbFor('admin1', { role: 'admin' }), 'presence/g1')));
+        await assertFails(getDoc(doc(dbFor('m1', { role: 'member' }), 'presence/g1')));
+        await assertFails(getDoc(doc(anon('g1'), 'presence/g1')));
+    });
+});
