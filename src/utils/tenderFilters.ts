@@ -1,72 +1,86 @@
 import { Tender } from '../types/Tender';
 import { TenderSource } from '../types/TenderSource';
+import { TenderStatus } from '../types/TenderStatus';
 import { OrderType } from './tenderSources';
-import { filterTendersByCpvCodes } from './cpvFilter';
+import { filterTendersByCpvCodes, normalizeCpv } from './cpvFilter';
 import { normalizeName } from './stringUtils';
 import { parseDate } from './dateUtils';
+
+export type SortOrder = 'publication' | 'deadline' | 'buyer';
+
+export const DEFAULT_SORT_ORDER: SortOrder = 'publication';
+
+export const isSortOrder = (value: unknown): value is SortOrder =>
+    value === 'publication' || value === 'deadline' || value === 'buyer';
 
 interface FilterOptions {
     selectedSources: TenderSource[];
     selectedOrderTypes: OrderType[];
-    selectedBuyer: string | null;
-    selectedCity: string | null;
+    /** Wybrani zamawiający; pusta lista oznacza brak filtra, a przetarg musi pasować do któregokolwiek z nich. */
+    selectedBuyers: string[];
+    /** Wybrane miasta; pusta lista oznacza brak filtra. */
+    selectedCities: string[];
+    /** Kody CPV wybrane w statystykach; pusta lista oznacza brak filtra, a przetarg musi zawierać któryś z nich. */
+    selectedCpvs: string[];
     isFiltered: boolean;
     searchQuery: string;
-    statusFilters: {
-        favorites: boolean;
-        toBeEntered: boolean;
-        notToBeEntered: boolean;
-        unmarked: boolean;
-    };
-    isFavorite: (id: string) => boolean;
-    isToBeEntered: (id: string) => boolean;
-    isNotToBeEntered: (id: string) => boolean;
+    statusFilters: StatusFilters;
+    sortOrder?: SortOrder;
 }
 
+/** Które statusy (lub brak statusu) mają być widoczne; gdy żaden nie jest wybrany, filtr jest wyłączony. */
+export type StatusFilters = Record<TenderStatus | 'unmarked', boolean>;
+
+/** Wymiary filtrów, które mają własne liczniki ("ile wyników dałoby wybranie tej opcji"). */
+export type FilterDimension = 'source' | 'orderType' | 'buyer' | 'city' | 'status';
+
+const matchesAny = (value: string, selected: string[]): boolean => {
+    const normalizedValue = normalizeName(value);
+    return selected.some((item) => normalizeName(item) === normalizedValue);
+};
+
 /**
- * Filtruje i sortuje przetargi według podanych kryteriów
+ * Filtruje przetargi według kryteriów, bez sortowania. Wymiar podany w `skip` jest pomijany, co pozwala
+ * policzyć, ile przetargów pasowałoby do każdej opcji tego filtra przy pozostałych filtrach bez zmian.
  */
-export const filterAndSortTenders = (
+export const filterTenders = (
     tenders: Tender[],
-    options: FilterOptions
+    options: FilterOptions,
+    skip?: FilterDimension
 ): Tender[] => {
     let result = [...tenders];
-    
+
     // Filtrowanie po źródle
-    result = result.filter(tender => options.selectedSources.includes(tender.source));
-    
-    // Filtrowanie po typie zamówienia (tylko dla eZamówienia)
-    result = result.filter(tender => {
-        if (tender.source === TenderSource.E_ZAMOWIENIA && tender.orderType) {
-            return options.selectedOrderTypes.includes(tender.orderType);
-        }
-        // Dla innych źródeł (TED, Baza Konkurencyjności) nie filtrujemy po typie zamówienia
-        return true;
-    });
-    
-    // Filtrowanie po zamawiającym z użyciem znormalizowanej nazwy
-    if (options.selectedBuyer) {
-        const normalizedSelected = normalizeName(options.selectedBuyer);
-        result = result.filter(tender => {
-            const normalizedTenderName = normalizeName(tender.buyerName);
-            return normalizedTenderName === normalizedSelected;
-        });
+    if (skip !== 'source') {
+        result = result.filter(tender => options.selectedSources.includes(tender.source));
     }
-    
-    // Filtrowanie po mieście z użyciem znormalizowanej nazwy
-    if (options.selectedCity) {
-        const normalizedSelected = normalizeName(options.selectedCity);
-        result = result.filter(tender => {
-            const normalizedTenderCity = normalizeName(tender.buyerCity);
-            return normalizedTenderCity === normalizedSelected;
-        });
+
+    // Filtrowanie po typie zamówienia; przetargi bez znanego typu (np. starsze zapisy z TED) zostają widoczne
+    if (skip !== 'orderType') {
+        result = result.filter(tender => !tender.orderType || options.selectedOrderTypes.includes(tender.orderType));
     }
-    
+
+    // Filtrowanie po zamawiających z użyciem znormalizowanej nazwy
+    if (skip !== 'buyer' && options.selectedBuyers.length > 0) {
+        result = result.filter(tender => matchesAny(tender.buyerName, options.selectedBuyers));
+    }
+
+    // Filtrowanie po miastach z użyciem znormalizowanej nazwy
+    if (skip !== 'city' && options.selectedCities.length > 0) {
+        result = result.filter(tender => matchesAny(tender.buyerCity, options.selectedCities));
+    }
+
+    // Filtrowanie po wybranych kodach CPV
+    if (options.selectedCpvs.length > 0) {
+        const selected = options.selectedCpvs.map(normalizeCpv);
+        result = result.filter(tender => tender.cpvCodes.some(cpv => selected.includes(normalizeCpv(cpv))));
+    }
+
     // Filtrowanie po CPV jeśli włączone
     if (options.isFiltered) {
         result = filterTendersByCpvCodes(result);
     }
-    
+
     // Filtrowanie po wyszukiwaniu
     if (options.searchQuery.trim()) {
         const query = options.searchQuery.trim().toLowerCase();
@@ -84,33 +98,92 @@ export const filterAndSortTenders = (
             return false;
         });
     }
-    
+
     // Filtrowanie po statusach (OR - wystarczy jeden wybrany status)
-    const hasAnyStatusFilter = options.statusFilters.favorites || 
-                               options.statusFilters.toBeEntered || 
-                               options.statusFilters.notToBeEntered || 
-                               options.statusFilters.unmarked;
-    if (hasAnyStatusFilter) {
-        result = result.filter(tender => {
-            const isFav = options.isFavorite(tender.publicationNumber);
-            const isToBe = options.isToBeEntered(tender.publicationNumber);
-            const isNotToBe = options.isNotToBeEntered(tender.publicationNumber);
-            const isUnmarked = !isFav && !isToBe && !isNotToBe;
-            
-            // OR logic - wystarczy że przetarg spełnia jeden z wybranych statusów
-            return (options.statusFilters.favorites && isFav) ||
-                   (options.statusFilters.toBeEntered && isToBe) ||
-                   (options.statusFilters.notToBeEntered && isNotToBe) ||
-                   (options.statusFilters.unmarked && isUnmarked);
-        });
+    if (skip !== 'status' && Object.values(options.statusFilters).some(Boolean)) {
+        result = result.filter(tender => options.statusFilters[tender.status ?? 'unmarked']);
     }
-    
-    // Sortowanie po dacie publikacji (najnowsze na górze)
-    result.sort((a, b) => {
-        const dateA = parseDate(a.publicationDate);
-        const dateB = parseDate(b.publicationDate);
-        return dateB.getTime() - dateA.getTime();
-    });
-    
+
     return result;
 };
+
+/** Od najnowszej publikacji; w obrębie dnia po godzinie (jeśli źródło ją podaje). */
+const comparePublication = (a: Tender, b: Tender): number => {
+    const dateA = parseDate(a.publicationDate).getTime();
+    const dateB = parseDate(b.publicationDate).getTime();
+    if (dateA !== dateB) {
+        return dateB - dateA;
+    }
+    return (b.publicationTime ?? '').localeCompare(a.publicationTime ?? '');
+};
+
+/**
+ * Najpierw terminy dzisiejsze i przyszłe (najbliższy pierwszy), potem przeterminowane (najświeższy pierwszy),
+ * na końcu przetargi bez terminu. Remisy rozstrzyga kolejność publikacji.
+ */
+const compareDeadline = (a: Tender, b: Tender, today: number): number => {
+    const rank = (tender: Tender): { group: number; time: number } => {
+        const time = parseDate(tender.deadlineDate).getTime();
+        // parseDate zwraca epokę dla braku terminu ("Brak terminu") i błędnej daty
+        if (time === 0) return { group: 2, time: 0 };
+        return time >= today ? { group: 0, time } : { group: 1, time: -time };
+    };
+    const rankA = rank(a);
+    const rankB = rank(b);
+    if (rankA.group !== rankB.group) return rankA.group - rankB.group;
+    if (rankA.time !== rankB.time) return rankA.time - rankB.time;
+    return comparePublication(a, b);
+};
+
+const compareBuyer = (a: Tender, b: Tender): number =>
+    a.buyerName.localeCompare(b.buyerName, 'pl') || comparePublication(a, b);
+
+/**
+ * Filtruje i sortuje przetargi według podanych kryteriów
+ */
+export const filterAndSortTenders = (
+    tenders: Tender[],
+    options: FilterOptions,
+    now: Date = new Date()
+): Tender[] => {
+    const result = filterTenders(tenders, options);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    switch (options.sortOrder ?? DEFAULT_SORT_ORDER) {
+        case 'deadline':
+            result.sort((a, b) => compareDeadline(a, b, today));
+            break;
+        case 'buyer':
+            result.sort(compareBuyer);
+            break;
+        default:
+            result.sort(comparePublication);
+    }
+
+    return result;
+};
+
+export interface FacetCounts {
+    sources: Partial<Record<TenderSource, number>>;
+    orderTypes: Partial<Record<OrderType, number>>;
+    statuses: Partial<Record<TenderStatus | 'unmarked', number>>;
+}
+
+const countBy = <K extends string>(
+    tenders: Tender[],
+    key: (tender: Tender) => K | undefined
+): Partial<Record<K, number>> => {
+    const counts: Partial<Record<K, number>> = {};
+    for (const tender of tenders) {
+        const value = key(tender);
+        if (value !== undefined) counts[value] = (counts[value] ?? 0) + 1;
+    }
+    return counts;
+};
+
+/** Liczniki opcji filtrów: ile przetargów zostałoby po wybraniu danej opcji przy pozostałych filtrach bez zmian. */
+export const countFacets = (tenders: Tender[], options: FilterOptions): FacetCounts => ({
+    sources: countBy(filterTenders(tenders, options, 'source'), (tender) => tender.source),
+    orderTypes: countBy(filterTenders(tenders, options, 'orderType'), (tender) => tender.orderType),
+    statuses: countBy(filterTenders(tenders, options, 'status'), (tender) => tender.status ?? 'unmarked')
+});

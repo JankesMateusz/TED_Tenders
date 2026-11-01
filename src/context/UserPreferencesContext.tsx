@@ -1,163 +1,70 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Tender } from '../types/Tender';
+import { TenderStatus } from '../types/TenderStatus';
+import { addFavorite, removeFavorite, setTenderStatus, subscribeToFavorites } from '../utils/tendersApi';
+import { useAuth } from './AuthContext';
+
+const FAVORITES_LOAD_ERROR = 'Nie udało się wczytać zapisanych przetargów.';
+const SAVE_ERROR = 'Nie udało się zapisać zmiany. Spróbuj ponownie.';
+const TENDER_EXPIRED_ERROR = 'Ten przetarg wygasł i nie można już zmienić jego statusu.';
 
 interface UserPreferencesContextType {
+    /** Gwiazdki zalogowanego użytkownika (kopie przetargów, bez ograniczenia czasowego). */
     favorites: Tender[];
-    selectedTenders: Set<string>;
-    toBeEnteredTenders: Set<string>;
-    notToBeEnteredTenders: Set<string>;
-    addToFavorites: (tender: Tender) => void;
-    removeFromFavorites: (publicationNumber: string) => void;
-    isFavorite: (publicationNumber: string) => boolean;
-    toggleToBeEntered: (publicationNumber: string) => void;
-    toggleNotToBeEntered: (publicationNumber: string) => void;
-    isToBeEntered: (publicationNumber: string) => boolean;
-    isNotToBeEntered: (publicationNumber: string) => boolean;
-    toggleTenderSelection: (publicationNumber: string) => void;
-    isTenderSelected: (publicationNumber: string) => boolean;
-    clearSelectedTenders: () => void;
-    getSelectedTenders: (tenders: Tender[]) => Tender[];
+    isFavorite: (tenderId: string) => boolean;
+    toggleFavorite: (tender: Tender) => void;
+    /** Ustawia wspólny status; ponowne wybranie tego samego statusu go zdejmuje. */
+    toggleStatus: (tender: Tender, status: TenderStatus) => void;
+    /** Komunikat o nieudanym zapisie lub wczytaniu; null, gdy wszystko działa. */
+    actionError: string | null;
 }
 
 const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
 
 export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [favorites, setFavorites] = useState<Tender[]>(() => {
-        const saved = localStorage.getItem('favorites');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    const [selectedTenders, setSelectedTenders] = useState<Set<string>>(new Set());
-
-    const [toBeEnteredTenders, setToBeEnteredTenders] = useState<Set<string>>(() => {
-        const saved = localStorage.getItem('toBeEnteredTenders');
-        return saved ? new Set<string>(JSON.parse(saved)) : new Set();
-    });
-
-    const [notToBeEnteredTenders, setNotToBeEnteredTenders] = useState<Set<string>>(() => {
-        const saved = localStorage.getItem('notToBeEnteredTenders');
-        return saved ? new Set<string>(JSON.parse(saved)) : new Set();
-    });
-
+    const { user } = useAuth();
+    const uid = user?.uid ?? null;
+    const email = user?.email ?? null;
+    const [favorites, setFavorites] = useState<Tender[]>([]);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     useEffect(() => {
-        localStorage.setItem('favorites', JSON.stringify(favorites));
-    }, [favorites]);
-
-    useEffect(() => {
-        localStorage.setItem('toBeEnteredTenders', JSON.stringify(Array.from(toBeEnteredTenders)));
-    }, [toBeEnteredTenders]);
-
-    useEffect(() => {
-        localStorage.setItem('notToBeEnteredTenders', JSON.stringify(Array.from(notToBeEnteredTenders)));
-    }, [notToBeEnteredTenders]);
-
-    // email alerts feature removed
-
-    const addToFavorites = (tender: Tender) => {
-        setFavorites(prev => {
-            if (prev.some(t => t.publicationNumber === tender.publicationNumber)) {
-                return prev;
-            }
-            return [...prev, tender];
+        if (!uid) {
+            setFavorites([]);
+            return;
+        }
+        return subscribeToFavorites(uid, setFavorites, (error) => {
+            console.error('Błąd wczytywania zapisanych przetargów:', error);
+            setActionError(FAVORITES_LOAD_ERROR);
         });
-    };
+    }, [uid]);
 
-    const toggleToBeEntered = (publicationNumber: string) => {
-        setToBeEnteredTenders(prev => {
-            const next = new Set(prev);
-            if (next.has(publicationNumber)) next.delete(publicationNumber);
-            else next.add(publicationNumber);
-            return next;
-        });
-        // ensure a tender isn't both in toBeEntered and notToBeEntered
-        setNotToBeEnteredTenders(prev => {
-            if (!prev.has(publicationNumber)) return prev;
-            const next = new Set(prev);
-            next.delete(publicationNumber);
-            return next;
-        });
-    };
+    const favoriteIds = useMemo(() => new Set(favorites.map((tender) => tender.id)), [favorites]);
 
-    const toggleNotToBeEntered = (publicationNumber: string) => {
-        setNotToBeEnteredTenders(prev => {
-            const next = new Set(prev);
-            if (next.has(publicationNumber)) next.delete(publicationNumber);
-            else next.add(publicationNumber);
-            return next;
-        });
-        // ensure a tender isn't both in notToBeEntered and toBeEntered
-        setToBeEnteredTenders(prev => {
-            if (!prev.has(publicationNumber)) return prev;
-            const next = new Set(prev);
-            next.delete(publicationNumber);
-            return next;
-        });
-    };
+    const isFavorite = useCallback((tenderId: string) => favoriteIds.has(tenderId), [favoriteIds]);
 
-    const removeFromFavorites = (publicationNumber: string) => {
-        setFavorites(prev => prev.filter(t => t.publicationNumber !== publicationNumber));
-    };
+    const reportError = useCallback((error: unknown) => {
+        console.error('Błąd zapisu:', error);
+        setActionError(
+            (error as { code?: string })?.code === 'not-found' ? TENDER_EXPIRED_ERROR : SAVE_ERROR
+        );
+    }, []);
 
-    const isFavorite = (publicationNumber: string) => {
-        return favorites.some(t => t.publicationNumber === publicationNumber);
-    };
+    const toggleFavorite = useCallback((tender: Tender) => {
+        if (!uid) return;
+        setActionError(null);
+        const action = favoriteIds.has(tender.id) ? removeFavorite(uid, tender.id) : addFavorite(uid, tender);
+        action.catch(reportError);
+    }, [uid, favoriteIds, reportError]);
 
-    const isToBeEntered = (publicationNumber: string) => {
-        return toBeEnteredTenders.has(publicationNumber);
-    };
-
-    const isNotToBeEntered = (publicationNumber: string) => {
-        return notToBeEnteredTenders.has(publicationNumber);
-    };
-
-    const toggleTenderSelection = (publicationNumber: string) => {
-        setSelectedTenders(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(publicationNumber)) {
-                newSet.delete(publicationNumber);
-            } else {
-                newSet.add(publicationNumber);
-            }
-            return newSet;
-        });
-    };
-
-    const isTenderSelected = (publicationNumber: string) => {
-        return selectedTenders.has(publicationNumber);
-    };
-
-    const clearSelectedTenders = () => {
-        setSelectedTenders(new Set());
-    };
-
-    const getSelectedTenders = (tenders: Tender[]) => {
-        return tenders.filter(tender => selectedTenders.has(tender.publicationNumber));
-    };
-
-    // addEmailAlert / removeEmailAlert removed
+    const toggleStatus = useCallback((tender: Tender, status: TenderStatus) => {
+        if (!uid) return;
+        setActionError(null);
+        setTenderStatus(tender.id, tender.status === status ? null : status, { uid, email }).catch(reportError);
+    }, [uid, email, reportError]);
 
     return (
-        <UserPreferencesContext.Provider 
-            value={{
-                favorites,
-                selectedTenders,
-                toBeEnteredTenders,
-                notToBeEnteredTenders,
-                addToFavorites,
-                removeFromFavorites,
-                isFavorite,
-                toggleToBeEntered,
-                toggleNotToBeEntered,
-                isToBeEntered,
-                isNotToBeEntered,
-                toggleTenderSelection,
-                isTenderSelected,
-                clearSelectedTenders,
-                getSelectedTenders,
-                // email alerts removed
-            }}
-        >
+        <UserPreferencesContext.Provider value={{ favorites, isFavorite, toggleFavorite, toggleStatus, actionError }}>
             {children}
         </UserPreferencesContext.Provider>
     );
@@ -169,4 +76,4 @@ export const useUserPreferences = () => {
         throw new Error('useUserPreferences must be used within a UserPreferencesProvider');
     }
     return context;
-}; 
+};

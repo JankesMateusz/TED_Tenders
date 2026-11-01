@@ -1,6 +1,8 @@
 import { Tender } from '../types/Tender';
 import { TenderSource } from '../types/TenderSource';
+import { TenderStatus } from '../types/TenderStatus';
 import { OrderType } from '../utils/tenderSources';
+import { isItRelatedCpv, normalizeCpv } from './cpvFilter';
 
 export interface Statistics {
     total: number;
@@ -8,15 +10,12 @@ export interface Statistics {
     byOrderType: Partial<Record<OrderType, number>>;
     topCities: Array<{ city: string; count: number }>;
     topBuyers: Array<{ buyer: string; count: number }>;
+    /** Kody CPV związane z IT; liczba przetargów, które zawierają dany kod (jeden przetarg może mieć kilka kodów). */
+    topCpvCodes: Array<{ code: string; count: number }>;
     byBuyerActivity: Record<string, number>;
     ezamowieniaHourlyDistribution: Record<string, number[]>;
     dailyDistributionBySource: Record<string, Record<TenderSource, number>>;
-    byStatus: {
-        favorites: number;
-        toBeEntered: number;
-        notToBeEntered: number;
-        unmarked: number;
-    };
+    byStatus: Record<TenderStatus | 'unmarked', number>;
     deadlineStats: {
         upcoming: number; // deadline w ciągu 7 dni
         overdue: number; // przeterminowane
@@ -45,12 +44,7 @@ const parseDate = (dateStr: string): Date => {
     return new Date(NaN);
 };
 
-export const calculateStatistics = (
-    tenders: Tender[],
-    isFavorite: (id: string) => boolean,
-    isToBeEntered: (id: string) => boolean,
-    isNotToBeEntered: (id: string) => boolean
-): Statistics => {
+export const calculateStatistics = (tenders: Tender[]): Statistics => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(today);
@@ -71,13 +65,15 @@ export const calculateStatistics = (
         byOrderType: {},
         topCities: [],
         topBuyers: [],
+        topCpvCodes: [],
         byBuyerActivity: {},
         ezamowieniaHourlyDistribution: {},
         dailyDistributionBySource: {},
         byStatus: {
-            favorites: 0,
-            toBeEntered: 0,
-            notToBeEntered: 0,
+            toEnter: 0,
+            entered: 0,
+            toClarify: 0,
+            notToEnter: 0,
             unmarked: 0
         },
         deadlineStats: {
@@ -94,6 +90,7 @@ export const calculateStatistics = (
     
     const cityMap = new Map<string, number>();
     const buyerMap = new Map<string, number>();
+    const cpvMap = new Map<string, number>();
     const activityMap = new Map<string, number>();
     const ezamowieniaHourlyMap = new Map<string, number[]>();
     const dailySourceMap = new Map<string, Record<TenderSource, number>>();
@@ -118,6 +115,11 @@ export const calculateStatistics = (
             buyerMap.set(tender.buyerName, (buyerMap.get(tender.buyerName) || 0) + 1);
         }
 
+        // Top CPV: tylko kody IT (mają oficjalne nazwy); kod powtórzony w jednym przetargu liczy się raz
+        new Set(tender.cpvCodes.filter(isItRelatedCpv).map(normalizeCpv)).forEach(code => {
+            cpvMap.set(code, (cpvMap.get(code) || 0) + 1);
+        });
+
         // Buyer activity
         if (tender.buyerMainActivity) {
             const activityKey = tender.buyerMainActivity.trim().toLowerCase();
@@ -127,14 +129,7 @@ export const calculateStatistics = (
         }
         
         // By status
-        const isFav = isFavorite(tender.publicationNumber);
-        const isToBe = isToBeEntered(tender.publicationNumber);
-        const isNotToBe = isNotToBeEntered(tender.publicationNumber);
-        
-        if (isFav) stats.byStatus.favorites++;
-        if (isToBe) stats.byStatus.toBeEntered++;
-        if (isNotToBe) stats.byStatus.notToBeEntered++;
-        if (!isFav && !isToBe && !isNotToBe) stats.byStatus.unmarked++;
+        stats.byStatus[tender.status ?? 'unmarked']++;
         
         // Deadline stats
         const deadlineDate = parseDate(tender.deadlineDate);
@@ -204,6 +199,12 @@ export const calculateStatistics = (
     stats.topBuyers = Array.from(buyerMap.entries())
         .map(([buyer, count]) => ({ buyer, count }))
         .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+    // Top CPV (top 10)
+    stats.topCpvCodes = Array.from(cpvMap.entries())
+        .map(([code, count]) => ({ code, count }))
+        .sort((a, b) => b.count - a.count || a.code.localeCompare(b.code))
         .slice(0, 10);
 
     stats.byBuyerActivity = Array.from(activityMap.entries())

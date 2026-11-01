@@ -5,6 +5,7 @@ import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
 import { TenderSource } from "../types/TenderSource";
 import { tenderSourceConfig } from "../utils/tenderSources";
+import { formatRelativeTime } from "../utils/dateUtils";
 import { DATE_FORMAT, PLACEHOLDER_TEXTS } from "../constants";
 
 interface HeaderProps {
@@ -21,6 +22,12 @@ interface HeaderProps {
     isFiltered: boolean;
     selectedSources: TenderSource[];
     isLoading: boolean;
+    /** Trwa pobieranie nowych przetargów ze źródeł (nie blokuje przeglądania listy). */
+    isRefreshing: boolean;
+    /** Odświeżanie ze źródeł jest możliwe tylko dla dni z ostatniego miesiąca. */
+    canRefresh: boolean;
+    /** Kiedy ktokolwiek ostatnio pobrał nowe przetargi ze źródeł; null, gdy nieznane. */
+    lastRefreshAt: Date | null;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -36,7 +43,10 @@ const Header: React.FC<HeaderProps> = ({
     onRefresh,
     isFiltered,
     selectedSources,
-    isLoading
+    isLoading,
+    isRefreshing,
+    canRefresh,
+    lastRefreshAt
 }) => {
     const { theme, toggleTheme } = useTheme();
 
@@ -63,6 +73,9 @@ const Header: React.FC<HeaderProps> = ({
                     })}
                     <span className={styles.filterStatus}>
                         ({isFiltered ? 'tylko IT' : 'wszystkie branże'})
+                    </span>
+                    <span className={styles.lastRefresh} title="Ostatnie udane pobranie nowych przetargów ze źródeł (przez dowolnego użytkownika)">
+                        Ostatnia aktualizacja: {lastRefreshAt ? formatRelativeTime(lastRefreshAt) : 'brak danych'}
                     </span>
                 </div>
             </div>
@@ -133,11 +146,11 @@ const Header: React.FC<HeaderProps> = ({
                     <button
                         className={`${styles.button} ${styles.refreshButton}`}
                         onClick={onRefresh}
-                        disabled={isLoading}
+                        disabled={isRefreshing || !canRefresh}
                         aria-label="Odśwież przetargi"
-                        title="Odśwież przetargi"
+                        title={canRefresh ? "Pobierz nowe przetargi" : "Odświeżanie dostępne dla dni z ostatniego miesiąca"}
                     >
-                        {isLoading ? '⟳' : '↻'}
+                        {isRefreshing ? '⟳' : '↻'}
                     </button>
                     <button
                         className={`${styles.button} ${styles.themeToggle}`}

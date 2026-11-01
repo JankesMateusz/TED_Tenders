@@ -2,6 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Statistics } from '../utils/calculateStatistics';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig } from '../utils/tenderSources';
+import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
+import { TenderStatus } from '../types/TenderStatus';
+import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
+import { getCpvName } from '../utils/cpvMapping';
+import { buildStatusFunnel } from '../utils/statusFunnel';
+import { formatDelta } from '../utils/comparison';
 import styles from './StatisticsTab.module.css';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -42,12 +48,71 @@ const parseStatisticDate = (dateStr: string): number => {
     return parsed.getTime();
 };
 
+/** Element statystyk, w który kliknięto, żeby zobaczyć odpowiadające mu przetargi na liście. */
+export type StatisticsDrillDown =
+    | { kind: 'source'; source: TenderSource }
+    | { kind: 'orderType'; orderType: OrderType }
+    | { kind: 'status'; status: TenderStatus | 'unmarked' }
+    | { kind: 'city'; city: string }
+    | { kind: 'buyer'; buyer: string }
+    | { kind: 'cpv'; code: string };
+
+/** Stan porównania wybranego okresu z poprzednim (poprzedni dzień roboczy lub okres tej samej długości). */
+export type StatisticsComparison =
+    | { status: 'unavailable'; reason: string }
+    | { status: 'loading' }
+    | { status: 'missing'; label: string; isFetching: boolean; error: string | null; onFetch: () => void }
+    | { status: 'ready'; label: string; statistics: Statistics; isCurrentPeriodOngoing: boolean };
+
 interface StatisticsTabProps {
     statistics: Statistics;
     isDateRange: boolean;
+    onDrillDown: (target: StatisticsDrillDown) => void;
+    /** Czy lista, z której liczone są statystyki, jest zawężona filtrami. */
+    hasActiveFilters: boolean;
+    onClearFilters: () => void;
+    /** `null`, gdy nie ma wybranego zakresu dat. */
+    comparison: StatisticsComparison | null;
 }
 
-export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDateRange }) => {
+const FUNNEL_COLLAPSED_KEY = 'statistics.funnelCollapsed';
+
+const readFunnelCollapsed = (): boolean => {
+    try {
+        return window.localStorage.getItem(FUNNEL_COLLAPSED_KEY) === 'true';
+    } catch {
+        // localStorage bywa zablokowany (tryb prywatny); sekcja jest wtedy po prostu rozwinięta
+        return false;
+    }
+};
+
+export const StatisticsTab: React.FC<StatisticsTabProps> = ({
+    statistics,
+    isDateRange,
+    onDrillDown,
+    hasActiveFilters,
+    onClearFilters,
+    comparison
+}) => {
+    const previous = comparison?.status === 'ready' ? comparison.statistics : null;
+    const renderDelta = (current: number, previousValue: number | undefined) =>
+        previousValue === undefined ? null : (
+            <span className={styles.delta} title={`Poprzednio: ${previousValue}`}>{formatDelta(current, previousValue)}</span>
+        );
+    const [funnelCollapsed, setFunnelCollapsed] = useState<boolean>(readFunnelCollapsed);
+    const toggleFunnel = () => {
+        const next = !funnelCollapsed;
+        setFunnelCollapsed(next);
+        try {
+            window.localStorage.setItem(FUNNEL_COLLAPSED_KEY, String(next));
+        } catch {
+            // brak możliwości zapisu: zwinięcie działa tylko do odświeżenia strony
+        }
+    };
+    const funnelRows = useMemo(
+        () => buildStatusFunnel(statistics.total, statistics.byStatus),
+        [statistics.total, statistics.byStatus]
+    );
     const buyerActivityEntries = Object.entries(statistics.byBuyerActivity);
     const hasBuyerActivity = buyerActivityEntries.length > 0;
     const hourlyEntries = useMemo(
@@ -93,44 +158,116 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
 
     return (
         <div className={styles.statisticsContainer}>
+            {hasActiveFilters && (
+                <div className={styles.filterNotice} role="status">
+                    <span>Statystyki dotyczą przefiltrowanej listy (aktywne są filtry).</span>
+                    <button type="button" onClick={onClearFilters}>Wyczyść filtry</button>
+                </div>
+            )}
+            {comparison && (
+                <div className={styles.comparisonNotice} role="status">
+                    {comparison.status === 'unavailable' && <span>Porównanie niedostępne: {comparison.reason}</span>}
+                    {comparison.status === 'loading' && <span>Wczytywanie danych do porównania...</span>}
+                    {comparison.status === 'missing' && (
+                        <>
+                            <span>
+                                Porównanie z: <strong>{comparison.label}</strong>. Brakuje kompletnych danych z tego okresu,
+                                więc liczby byłyby zaniżone.
+                                {comparison.error && <> {comparison.error}</>}
+                            </span>
+                            <button type="button" onClick={comparison.onFetch} disabled={comparison.isFetching}>
+                                {comparison.isFetching ? 'Pobieranie...' : 'Pobierz dane z tego okresu'}
+                            </button>
+                        </>
+                    )}
+                    {comparison.status === 'ready' && (
+                        <span>
+                            Zmiana względem: <strong>{comparison.label}</strong>
+                            {comparison.isCurrentPeriodOngoing && ' (bieżący okres jeszcze trwa, więc liczby mogą jeszcze rosnąć)'}
+                        </span>
+                    )}
+                </div>
+            )}
+
             <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
                     <div className={styles.statValue}>{statistics.total}</div>
+                    {renderDelta(statistics.total, previous?.total)}
                     <div className={styles.statLabel}>Wszystkich przetargów</div>
                 </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: '#f39c12' }}>
-                        {statistics.byStatus.favorites}
-                    </div>
-                    <div className={styles.statLabel}>Ulubionych</div>
-                </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: '#2ecc71' }}>
-                        {statistics.byStatus.toBeEntered}
-                    </div>
-                    <div className={styles.statLabel}>Do wpisania</div>
-                </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: '#e74c3c' }}>
-                        {statistics.deadlineStats.upcoming}
-                    </div>
-                    <div className={styles.statLabel}>Nadchodzących deadline</div>
-                </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue}>{statistics.dateStats.today}</div>
-                    <div className={styles.statLabel}>Opublikowanych dzisiaj</div>
-                </div>
-                
-                <div className={styles.statCard}>
-                    <div className={styles.statValue}>{statistics.dateStats.thisWeek}</div>
-                    <div className={styles.statLabel}>W tym tygodniu</div>
-                </div>
+
+                {TENDER_STATUSES.map((status) => (
+                    <button
+                        key={status}
+                        type="button"
+                        className={`${styles.statCard} ${styles.clickable}`}
+                        onClick={() => onDrillDown({ kind: 'status', status })}
+                    >
+                        <div className={styles.statValue} style={{ color: STATUS_CONFIG[status].color }}>
+                            {statistics.byStatus[status]}
+                        </div>
+                        {renderDelta(statistics.byStatus[status], previous?.byStatus[status])}
+                        <div className={styles.statLabel}>{STATUS_CONFIG[status].label}</div>
+                    </button>
+                ))}
             </div>
             
+            <div className={`${styles.section} ${styles.fullWidthSection} ${styles.desktopOnly}`}>
+                <div className={styles.collapsibleHeader}>
+                    <h3 className={styles.sectionTitle}>Postęp przeglądania</h3>
+                    <button
+                        type="button"
+                        className={styles.collapseButton}
+                        onClick={toggleFunnel}
+                        aria-expanded={!funnelCollapsed}
+                        aria-label={funnelCollapsed ? 'Rozwiń sekcję Postęp przeglądania' : 'Zwiń sekcję Postęp przeglądania'}
+                        title={funnelCollapsed ? 'Rozwiń' : 'Zwiń'}
+                    >
+                        {funnelCollapsed ? '+' : '−'}
+                    </button>
+                </div>
+                {!funnelCollapsed && (
+                <>
+                <p className={styles.chartSubtitle}>
+                    Ile przetargów z listy ma już status, a ile czeka na przejrzenie. Udziały liczone względem wszystkich przetargów.
+                </p>
+                <div className={styles.funnel}>
+                    {funnelRows.map(({ key, count, percent }) => {
+                        const isStatus = key !== 'total' && key !== 'reviewed';
+                        const label = key === 'total' ? 'Wszystkie przetargi'
+                            : key === 'reviewed' ? 'Ze statusem'
+                            : key === 'unmarked' ? 'Bez statusu (do przejrzenia)'
+                            : STATUS_CONFIG[key].label;
+                        const color = key === 'total' || key === 'reviewed' ? 'var(--button-primary)'
+                            : key === 'unmarked' ? '#95a5a6'
+                            : STATUS_CONFIG[key].color;
+                        const content = (
+                            <>
+                                <span className={styles.funnelLabel}>{label}</span>
+                                <span className={styles.funnelTrack}>
+                                    <span className={styles.funnelBar} style={{ width: `${percent}%`, backgroundColor: color }} />
+                                </span>
+                                <span className={styles.funnelValue}>{count} <small>({percent}%)</small></span>
+                            </>
+                        );
+                        return isStatus ? (
+                            <button
+                                key={key}
+                                type="button"
+                                className={`${styles.funnelRow} ${styles.clickable}`}
+                                onClick={() => onDrillDown({ kind: 'status', status: key })}
+                            >
+                                {content}
+                            </button>
+                        ) : (
+                            <div key={key} className={styles.funnelRow}>{content}</div>
+                        );
+                    })}
+                </div>
+                </>
+                )}
+            </div>
+
             <div className={styles.sectionsGrid}>
                 <div className={styles.section}>
                     <h3 className={styles.sectionTitle}>Według źródła</h3>
@@ -138,7 +275,12 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         {Object.entries(statistics.bySource).map(([source, count]) => {
                             const config = getSourceConfig(source as TenderSource);
                             return (
-                                <div key={source} className={styles.sourceItem}>
+                                <button
+                                    key={source}
+                                    type="button"
+                                    className={`${styles.sourceItem} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'source', source: source as TenderSource })}
+                                >
                                     <span 
                                         className={styles.sourceBadge}
                                         style={{
@@ -148,8 +290,10 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                                     >
                                         {config.label}
                                     </span>
-                                    <span className={styles.sourceCount}>{count}</span>
-                                </div>
+                                    <span className={styles.sourceCount}>
+                                        {count} {renderDelta(count, previous?.bySource[source as TenderSource])}
+                                    </span>
+                                </button>
                             );
                         })}
                     </div>
@@ -160,10 +304,15 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         <h3 className={styles.sectionTitle}>Według typu zamówienia</h3>
                         <div className={styles.orderTypeStats}>
                             {Object.entries(statistics.byOrderType).map(([type, count]) => (
-                                <div key={type} className={styles.orderTypeItem}>
-                                    <span className={styles.orderTypeLabel}>{type}</span>
+                                <button
+                                    key={type}
+                                    type="button"
+                                    className={`${styles.orderTypeItem} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'orderType', orderType: type as OrderType })}
+                                >
+                                    <span className={styles.orderTypeLabel}>{getOrderTypeConfig(type as OrderType).label}</span>
                                     <span className={styles.orderTypeCount}>{count}</span>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     </div>
@@ -209,7 +358,21 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         <span>Wybrany dzień: <strong>{selectedHourlyDate}</strong></span>
                         <span>Łącznie {totalHourlyValue} ogłoszeń</span>
                     </div>
-                    <div className={styles.hourlyChartScroll}>
+                    <div className={styles.hourlyRows}>
+                        {hourlyData.map((count, hour) => (
+                            <div key={hour} className={styles.hourlyRow}>
+                                <span className={styles.hourlyRowLabel}>{hour.toString().padStart(2, '0')}:00</span>
+                                <span className={styles.hourlyRowTrack}>
+                                    <span
+                                        className={styles.hourlyRowBar}
+                                        style={{ width: maxHourlyValue > 0 ? `${(count / maxHourlyValue) * 100}%` : 0 }}
+                                    />
+                                </span>
+                                <span className={styles.hourlyRowCount}>{count > 0 ? count : ''}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className={`${styles.hourlyChartScroll} ${styles.hourlyChartVertical}`}>
                         <div className={styles.hourlyChartContainer}>
                             <div className={styles.hourlyChartGrid}>
                                 {[...Array(5)].map((_, i) => (
@@ -373,6 +536,30 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                 </div>
             )}
             
+            {statistics.topCpvCodes.length > 0 && (
+                <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                    <h3 className={styles.sectionTitle}>Top 10 kodów CPV (IT)</h3>
+                    <p className={styles.chartSubtitle}>
+                        Liczba przetargów zawierających dany kod. Przetarg może mieć kilka kodów, więc sumy się nie dodają.
+                    </p>
+                    <ul className={styles.list}>
+                        {statistics.topCpvCodes.map(({ code, count }, index) => (
+                            <li key={code} className={styles.listItem}>
+                                <button
+                                    type="button"
+                                    className={`${styles.listButton} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'cpv', code })}
+                                >
+                                    <span className={styles.listRank}>{index + 1}.</span>
+                                    <span className={styles.listName}>{getCpvName(code)} ({code})</span>
+                                    <span className={styles.listCount}>{count}</span>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
             <div className={styles.sectionsGrid}>
                 {statistics.topCities.length > 0 && (
                     <div className={styles.section}>
@@ -380,9 +567,15 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         <ul className={styles.list}>
                             {statistics.topCities.map(({ city, count }, index) => (
                                 <li key={city} className={styles.listItem}>
-                                    <span className={styles.listRank}>{index + 1}.</span>
-                                    <span className={styles.listName}>{city}</span>
-                                    <span className={styles.listCount}>{count}</span>
+                                    <button
+                                        type="button"
+                                        className={`${styles.listButton} ${styles.clickable}`}
+                                        onClick={() => onDrillDown({ kind: 'city', city })}
+                                    >
+                                        <span className={styles.listRank}>{index + 1}.</span>
+                                        <span className={styles.listName}>{city}</span>
+                                        <span className={styles.listCount}>{count}</span>
+                                    </button>
                                 </li>
                             ))}
                         </ul>
@@ -395,9 +588,15 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, isDate
                         <ul className={styles.list}>
                             {statistics.topBuyers.map(({ buyer, count }, index) => (
                                 <li key={buyer} className={styles.listItem}>
-                                    <span className={styles.listRank}>{index + 1}.</span>
-                                    <span className={styles.listName}>{buyer}</span>
-                                    <span className={styles.listCount}>{count}</span>
+                                    <button
+                                        type="button"
+                                        className={`${styles.listButton} ${styles.clickable}`}
+                                        onClick={() => onDrillDown({ kind: 'buyer', buyer })}
+                                    >
+                                        <span className={styles.listRank}>{index + 1}.</span>
+                                        <span className={styles.listName}>{buyer}</span>
+                                        <span className={styles.listCount}>{count}</span>
+                                    </button>
                                 </li>
                             ))}
                         </ul>

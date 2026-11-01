@@ -12,6 +12,7 @@
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "axios": "^1.9.0",
+    "firebase": "^11.10.0",
     "react": "^19.1.0",
     "react-datepicker": "^8.4.0",
     "react-dom": "^19.1.0",
@@ -21,8 +22,12 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && node scripts/createApiConfig.js",
+    "build": "react-scripts build",
     "test": "react-scripts test",
+    "emulators": "firebase emulators:start --project demo-tenders",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-rules-test \"node --test tests/firestore.rules.test.mjs\"",
+    "test:unit": "npm --prefix functions run build && node --test tests/mappers.test.mjs",
+    "test:functions": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-tenders \"node --test --test-concurrency=1 tests/invite.integration.test.mjs tests/refresh.integration.test.mjs\"",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -49,10 +54,10 @@
     ]
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
     "autoprefixer": "^10.4.21",
     "firebase-tools": "^14.4.0",
     "postcss": "^8.5.3",
     "puppeteer": "^24.9.0"
-  },
-  "proxy": "https://api.ted.europa.eu"
+  }
 }

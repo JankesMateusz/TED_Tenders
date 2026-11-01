@@ -1,0 +1,32 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "tenders",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+      ]
+    },
+    {
+      "collectionGroup": "comments",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+      ]
+    },
+    {
+      "collectionGroup": "refreshLog",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+      ]
+    }
+  ]
+}

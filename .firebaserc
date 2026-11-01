@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "tendersted"
+    "default": "tendersted",
+    "test": "tenders-test-b5bb3"
   }
 } 

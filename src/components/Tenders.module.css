@@ -269,20 +269,7 @@
     transform: scale(1.05);
 }
 
-.statusCounts {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-left: auto;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-}
 
-.statusCountItem {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
 
 .statusFiltersSection {
     margin-bottom: 20px;
@@ -292,21 +279,7 @@
     box-shadow: var(--card-shadow);
 }
 
-.statusCountLabel {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
 
-.statusCountValue {
-    font-size: 14px;
-    font-weight: 600;
-    background: rgba(0, 0, 0, 0.05);
-    padding: 2px 8px;
-    border-radius: 10px;
-    min-width: 24px;
-    text-align: center;
-}
 
 .message {
     text-align: center;
@@ -487,27 +460,12 @@
     box-shadow: var(--card-hover-shadow);
 }
 
-.tenderCardFavorite {
-    border-color: var(--button-primary);
-    background: linear-gradient(to bottom, 
-        var(--bg-secondary), 
-        color-mix(in srgb, var(--button-primary) 3%, var(--bg-secondary))
-    );
-}
-
-.tenderCardToBeEntered {
-    border-color: #2ecc71;
-    background: linear-gradient(to bottom, 
-        var(--bg-secondary), 
-        color-mix(in srgb, #2ecc71 3%, var(--bg-secondary))
-    );
-}
-
-.tenderCardNotToBeEntered {
-    border-color: #e74c3c;
-    background: linear-gradient(to bottom, 
-        var(--bg-secondary), 
-        color-mix(in srgb, #e74c3c 3%, var(--bg-secondary))
+/* Kolor karty zależy od wspólnego statusu; ustawia go komponent przez zmienną --status-color */
+.tenderCardStatus {
+    border-color: var(--status-color);
+    background: linear-gradient(to bottom,
+        var(--bg-secondary),
+        color-mix(in srgb, var(--status-color) 6%, var(--bg-secondary))
     );
 }
 
@@ -558,14 +516,6 @@
 
 .statusButton:hover {
     transform: scale(1.1);
-}
-
-.toBeEnteredActive {
-    color: #2ecc71;
-}
-
-.notToBeEnteredActive {
-    color: #e74c3c;
 }
 
 .selectButton {
@@ -837,9 +787,15 @@
     background: #c0392b;
 }
 
+.links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
 .link {
     display: inline-block;
-    margin-top: 16px;
     padding: 8px 16px;
     background: var(--button-primary);
     color: white;
@@ -1074,12 +1030,6 @@
         gap: 4px;
     }
     
-    .statusCounts {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
     
     .message {
         padding: 12px;
@@ -1207,3 +1157,70 @@
         opacity: 0.8;
     }
 } 
+.clearFiltersButton {
+    margin-left: auto;
+    padding: 6px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.clearFiltersButton:hover:not(:disabled) {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+.clearFiltersButton:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.activeCpvFilter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    background: rgba(52, 152, 219, 0.12);
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.activeCpvFilter button {
+    background: transparent;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+    padding: 0 2px;
+    font: inherit;
+}
+
+.sortSection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.sortLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.sortSelect {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
