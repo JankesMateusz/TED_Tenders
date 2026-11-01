@@ -1,6 +1,6 @@
 # Przekazanie pracy: stan projektu i kolejne kroki
 
-Ten plik jest dla agenta rozpoczynającego nową sesję. Czytaj go razem z `docs/CLAUDE.md` (zasady pracy), `docs/goals.md` (cel), `docs/plan.md` (etapy i ustalenia) oraz `docs/code-review-notes.md` (uwagi z przeglądu kodu). Stan na 2026-10-30.
+Ten plik jest dla agenta rozpoczynającego nową sesję. Czytaj go razem z `docs/CLAUDE.md` (zasady pracy), `docs/goals.md` (cel), `docs/plan.md` (etapy i ustalenia) oraz `docs/code-review-notes.md` (uwagi z przeglądu kodu). Stan na 2026-11-01 (po wdrożeniu na produkcję).
 
 **Zadanie o Bazie Konkurencyjności:** cały dotychczasowy research (endpointy, struktura danych, wolumen, niewiadome, plan) jest w `docs/research-baza-konkurencyjnosci.md`. Przeczytaj go przed rozpoczęciem takiej pracy. Nie ma tam jeszcze żadnego kodu.
 
@@ -14,14 +14,14 @@ Użytkownik komunikuje się po polsku. Odpowiadaj po polsku, zwięźle, z uzasad
 
 - **Zasady z `docs/CLAUDE.md` obowiązują.** Najważniejsze: najpierw poznaj kod, ograniczaj zakres zmian, nie twierdź, że coś działa, jeśli tego nie sprawdziłeś, i raportuj uczciwie, co zweryfikowano, a co nie.
 - **Commity i pushe tylko za wyraźną zgodą.** Dotychczas pytałem przed każdą porcją commitów i pushem. Commit message kończy się linią współautora podaną w system-reminderze sesji (do tej pory: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`).
-- **Nic nie wdrażaj na produkcję** (projekt `tendersted`). Wszystko robimy na projekcie testowym `tenders-test-b5bb3` i na emulatorach. Merge do `main` uruchamia GitHub Actions i wdraża hosting na produkcję (patrz sekcja 8).
+- **Nic nie wdrażaj na produkcję bez wyraźnej zgody** (projekt `tendersted`, działa od 2026-11-01). Zmiany robimy i sprawdzamy na projekcie testowym `tenders-test-b5bb3` i na emulatorach. Każdy push do `main` uruchamia GitHub Actions i wdraża hosting na produkcję, także zmiana samej dokumentacji (patrz sekcja 8).
 - Użytkownik pytany o decyzje odpowiada konkretnie. Nie pytaj o rzeczy, które da się rozstrzygnąć rozsądnym domyślnym wyborem; opisz założenie i idź dalej.
 - Użytkownik sprawdza zmiany w przeglądarce sam i raportuje wyniki. Nie widziałeś interfejsu na żywo, więc zawsze zaznaczaj, co zweryfikowano tylko typami, buildem i testami. Reguły Firestore na projekt testowy wdrażaj dopiero po jego zgodzie (tak było dotąd), bo frontend z nowymi regułami zmienia to, co użytkownik zobaczy.
-- Użytkownik wstrzymał na razie wdrożenie na produkcję, bo planuje kolejne funkcjonalności. Zapytaj o jego plany, zanim zaczniesz etap 5.
+- Produkcja jest wdrożona i użytkownik potwierdził, że działa. Zapytaj o jego plany na kolejne funkcjonalności, zanim zaczniesz nową pracę.
 
 ## 3. Środowisko (Windows 11, PowerShell 5.1)
 
-- **Katalog projektu:** `C:\Users\janke\Desktop\Projekty\TED_Tenders-main`. Repozytorium: `https://github.com/JankesMateusz/TED_Tenders.git`. Gałąź robocza: `feature/shared-tenders` (wypchnięta na `origin`, ok. 24 commity przed `origin/main`, wypchnięta 2026-10-30). `main` nie ruszamy do czasu wdrożenia na produkcję (etap 5). Na `origin` jest też stara gałąź `development`, niezwiązana z tymi pracami. Lokalna gałąź `master` to stary, zbędny commit z `git init` (zawiera `node_modules`); można ją usunąć za zgodą użytkownika.
+- **Katalog projektu:** `C:\Users\janke\Desktop\Projekty\TED_Tenders-main`. Repozytorium: `https://github.com/JankesMateusz/TED_Tenders.git`. Gałąź `feature/shared-tenders` została zmergowana do `main` (PR #4, 2026-11-01); `main` odpowiada teraz produkcji. Nową pracę rób na osobnej gałęzi odchodzącej od `main`. Na `origin` jest też stara gałąź `development`, niezwiązana z tymi pracami. Lokalna gałąź `master` to stary, zbędny commit z `git init` (zawiera `node_modules`); można ją usunąć za zgodą użytkownika.
 - **Node 24, npm 11.** `npx firebase` to firebase-tools 14.4.0 (z `devDependencies`).
 - **Java 21** (Microsoft OpenJDK) jest w `C:\Program Files\Microsoft\jdk-21.0.13.21-hotspot\bin`, ale proces agenta jej nie widzi w `PATH`. Przed każdym poleceniem z emulatorami ustaw: `$env:PATH = 'C:\Program Files\Microsoft\jdk-21.0.13.21-hotspot\bin;' + $env:PATH`.
 - **`gcloud`** jest w `%LOCALAPPDATA%\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd` (poza `PATH` agenta). Poświadczenia aplikacji (ADC) są ustawione, więc skrypty z Admin SDK działają na projekcie testowym.
@@ -39,7 +39,7 @@ Użytkownik komunikuje się po polsku. Odpowiadaj po polsku, zwięźle, z uzasad
 | Projekt | Rola | Stan |
 |---|---|---|
 | `tenders-test-b5bb3` | testowy | Authentication (email i hasło) włączone, Firestore `(default)` w `europe-central2`, wdrożone funkcje `inviteUser` i `refreshTenders` (Node 22, `europe-central2`; `refreshTenders` zaktualizowany 2026-10-29 o `contract-nature`, a 2026-10-30 o `document-url-lot`), reguły (aktualne, w tym statusy, gwiazdki i komentarze) i indeksy z TTL (`tenders`, `refreshLog`, `comments`), polityka czyszczenia obrazów 1 dzień. Jest tu konto admina użytkownika (rola `admin`). Dane testowe (kilka tysięcy dokumentów `tenders`) wygasają same po 30 dniach. **Hosting testowy jest wyłączony** (2026-10-30, `firebase hosting:disable`; zbędny, bo aplikację testujemy lokalnie przez `npm start`, a `.env.local` wskazuje na ten projekt). Workflow GitHub Actions wdraża wyłącznie produkcję, test nie ma automatycznych wdrożeń. |
-| `tendersted` | **produkcja** | Stary kod: hosting, funkcje `api` (`/tedProxy`, `/health`) i `getApiKey` w `us-central1` oraz sekret `API_KEY` w Secret Managerze. **Publiczny `getApiKey` zwraca klucz TED każdemu.** Nie ma tam Authentication ani Firestore skonfigurowanych pod nową wersję. |
+| `tendersted` | **produkcja** (wdrożona 2026-11-01) | Authentication (email i hasło) włączone, Firestore `(default)`, reguły i indeksy z TTL wdrożone, funkcje `inviteUser` i `refreshTenders` (Node 22, `europe-central2`), hosting wdrażany przez GitHub Actions po merge do `main`. Admin założony skryptem `setAdmin.js`. Stare funkcje `api` i `getApiKey` oraz sekret `API_KEY` usunięte. Polityka czyszczenia obrazów: 1 dzień. Użytkownik sprawdził w przeglądarce, że aplikacja działa. |
 
 Pozostałe projekty na koncie (`tenders-app-32189`, `tendersapptests`) nie są częścią tych prac.
 
@@ -129,7 +129,7 @@ Po etapie 4 użytkownik sprawdził w przeglądarce i zaakceptował: napis o osta
 
 **Niezweryfikowane lub czekające na użytkownika:**
 - Ścieżka ponawiania po 429 przetestowana tylko atrapą; na prawdziwym TED jeszcze nie wystąpiła (wcześniej raz wystąpił sam 429).
-- Porządki z etapu 5 (README, usunięcie klucza TED z builda i CI) zweryfikowano buildem i testami; **workflow GitHub Actions nie był uruchamiany** (zmieniony tylko tekstowo).
+- Workflow GitHub Actions został uruchomiony 2026-11-01 i po poprawce przechodzi (patrz etap 5).
 - Układ na telefonie i w ciemnym motywie dla nowych elementów (4 przyciski statusu, zakładka „Zapisane”, okienko komentarzy, napis o aktualizacji w headerze) nie był oglądany przez agenta; użytkownik zaakceptował całość bez uwag.
 - Po testach UI agenta mogły zostać puste dokumenty `users/{uid}` po tymczasowych kontach testowych w projekcie testowym (konta usunięto, usunięcie dokumentów zablokował klasyfikator uprawnień). Nieszkodliwe; można usunąć po uzgodnieniu z użytkownikiem.
 
@@ -150,7 +150,7 @@ Szczegóły w `docs/plan.md` (sekcja „Status"). Etap 4 (wspólne statusy, indy
 
 Po etapie 4 dodano (2026-10-29/30, wszystko zacommitowane i wypchnięte): czas ostatniej aktualizacji w headerze, rodzaj zamówienia z TED (z backfillem na projekcie testowym i wdrożeniem `refreshTenders`), komentarze do przetargów (reguły + TTL wdrożone na projekt testowy), a potem usprawnienia statystyk (klikalne elementy, przycisk „Wyczyść filtry”, top kody CPV, postęp przeglądania, porównanie z poprzednim dniem roboczym; wszystko tylko we frontendzie, bez zmian reguł i funkcji). Opis w sekcji 5.
 
-Potem (2026-10-30) link do dokumentacji z TED (`documentsUrl`, przycisk „Dokumentacja”, skrypt `backfillDocumentsUrl.js`): zacommitowane lokalnie (`3c81a77`), **jeszcze niewypchnięte**. Wdrożone na projekt testowy (funkcje, backfill 438 dokumentów); produkcją użytkownik zajmie się najpewniej w weekend (31.10–1.11.2026). Funkcji po tej zmianie nie sprawdzono na emulatorach (`test:functions` nie był uruchamiany), a pierwsze odświeżenie na teście po wdrożeniu nie zostało obejrzane: zapis `documentsUrl` przez `refreshTenders` potwierdza dopiero ono.
+Potem (2026-10-30) link do dokumentacji z TED (`documentsUrl`, przycisk „Dokumentacja”, skrypt `backfillDocumentsUrl.js`). Przed wdrożeniem na produkcję (2026-11-01) uruchomiono wszystkie testy lokalnie: `test:unit` 17/17, `test:rules` 37/37, `test:functions` 20/20, Jest 69/69, `tsc` bez błędów, build przechodzi. Backfill `documentsUrl` na produkcji jest zbędny, bo Firestore produkcyjny był nowy i pusty.
 
 ### Następne zadanie wybrane przez użytkownika: Baza Konkurencyjności (research zrobiony, kod nie)
 Użytkownik wybrał to źródło jako pierwsze z listy usprawnień. Stan i plan: `docs/research-baza-konkurencyjnosci.md`. Pierwszy krok: test, czy numery, które 2026-10-30 zwracały 404, pojawiły się później (decyduje o projekcie kursora; sekcja 6 tamtego pliku). Użytkownik zaznaczył „nie spieszy mi się”: nie buduj, dopóki nie wskaże zadania.
@@ -160,17 +160,15 @@ Użytkownik wybrał to źródło jako pierwsze z listy usprawnień. Stan i plan:
 - Usunięto pozostałości klucza TED: `scripts/createApiConfig.js` (zapisywał klucz do pliku `build/static/js/config/api.ts`, który trafiał na hosting), jego wywołanie w `npm run build`, krok „Create API config" w workflow i wpis w `.gitignore`. Klucz TED nie jest już nigdzie potrzebny.
 - Workflow `firebase-deploy.yml` buduje teraz z sekretami `REACT_APP_FIREBASE_*` (do ustawienia w repozytorium, patrz niżej).
 
-### Etap 5: wdrożenie na produkcję (WSTRZYMANE na prośbę użytkownika)
-Nie zaczynaj bez wyraźnego polecenia. Do zrobienia:
-- Decyzja, czy używać projektu `tendersted`, czy nowego.
-- Włączyć Authentication (email i hasło) i Firestore (region `europe-central2`); wdrożyć reguły, indeksy (TTL), funkcje.
-- **Usunąć stare funkcje** `api` i `getApiKey` z `us-central1` (np. `firebase functions:delete`) i sekret `API_KEY`; po wdrożeniu zrotować klucz TED (był publicznie dostępny przez `getApiKey`).
-- Założyć pierwszego admina skryptem `functions/scripts/setAdmin.js` (ADC); dodać domenę produkcyjną w Authentication → Authorized domains.
-- **Dodać sekrety repozytorium GitHub** `REACT_APP_FIREBASE_API_KEY`, `..._AUTH_DOMAIN`, `..._PROJECT_ID`, `..._STORAGE_BUCKET`, `..._MESSAGING_SENDER_ID`, `..._APP_ID` (publiczna konfiguracja webowa produkcyjnego projektu). Bez nich build w CI wyprodukuje aplikację bez konfiguracji. Istniejące `FIREBASE_SERVICE_ACCOUNT` i `FIREBASE_PROJECT_ID` muszą wskazywać ten sam projekt.
-- Ustawić alert budżetowy; sprawdzić, że `runtime` i `predeploy` w `firebase.json` działają przy wdrożeniu produkcyjnym.
-- Przejrzeć diff do `main`: commit `1bdf845` przestaje śledzić `functions/node_modules`, więc PR pokaże ok. 5900 usuniętych plików (zamierzone). Dopiero po przygotowaniu produkcji otworzyć PR i zmergować, bo **merge do `main` uruchamia wdrożenie hostingu na produkcję**. Workflow wdraża tylko hosting; reguły i funkcje trzeba wdrożyć ręcznie (`firebase deploy --only ... --project <projekt>`).
-- **Po zmianie `documentsUrl` (2026-10-30), na produkcji:** (1) wdrożyć funkcje (`firebase deploy --only functions --project tendersted`), bo workflow wdraża tylko hosting, a bez tego nowe przetargi nie dostaną adresu dokumentacji; (2) uruchomić `node functions/scripts/backfillDocumentsUrl.js tendersted` (najpierw bez `--apply`, potem z nim) dla przetargów już zapisanych; (3) merge do `main` wdroży hosting z przyciskiem. Najlepiej zrobić (1) i (2) przed merge albo zaraz po nim. Zgody na skrypty i wdrożenia użytkownik dawał dotąd osobno dla projektu testowego i tylko na daną sesję; przed użyciem na produkcji zapytaj o wyraźną zgodę.
-- Zebrać końcowy raport zgodnie z `docs/CLAUDE.md`.
+### Etap 5: wdrożenie na produkcję (ZROBIONE 2026-11-01)
+Projekt produkcyjny to `tendersted`. Zrobione, w tej kolejności:
+- Użytkownik włączył Authentication (email i hasło) i Firestore, dodał sekrety `REACT_APP_FIREBASE_*` w repozytorium (`FIREBASE_SERVICE_ACCOUNT` i `FIREBASE_PROJECT_ID` istniały i wskazują `tendersted`).
+- Na wyraźną zgodę wdrożono na `tendersted` reguły, indeksy (TTL) i funkcje `inviteUser`, `refreshTenders`. Pełne `firebase deploy --only functions` odmawia, dopóki w projekcie są funkcje spoza kodu (`api`, `getApiKey`), więc wdrażano po nazwach (`--only functions:inviteUser,functions:refreshTenders`). `inviteUser` przy pierwszej próbie nie powstała (409 przy tworzeniu bucketu źródeł, wyścig z drugą funkcją); ponowienie samej funkcji przeszło.
+- Admin założony skryptem `setAdmin.js <projectId> <email>` (użytkownik, osobny terminal). Użytkownik usunął stare funkcje `api` i `getApiKey` (`npx firebase functions:delete ... --region us-central1`; `firebase` nie jest globalne, trzeba `npx`) oraz sekret `API_KEY`.
+- PR #4 zmergowany do `main`. Pierwsze uruchomienie workflow wywaliło się na `npm ci` (Node 20 / npm 10 odrzuca lockfile wygenerowany przez npm 11: brak `@types/node@26` i `undici-types`). Poprawka: `node-version: '24'` w `firebase-deploy.yml` (commit `efba7d9`); workflow przeszedł na zielono, a użytkownik potwierdził, że aplikacja działa. Polityka czyszczenia obrazów (1 dzień) już istniała.
+- **Do zrobienia przez użytkownika:** unieważnić klucz TED w portalu TED (był publicznie dostępny przez `getApiKey`; nowa wersja go nie używa). Nie wiadomo, czy zrobione. Alert budżetowy: nie potwierdzono.
+- **Sprawdzone przez użytkownika na produkcji:** logowanie admina, odświeżanie przetargów oraz zapraszanie innych osób przez `inviteUser` działają.
+- Każdy push do `main` (także zmiana samej dokumentacji) wdraża hosting na produkcję. Reguły i funkcje nadal wdraża się ręcznie, z jawnym `--project`, po wyraźnej zgodzie użytkownika.
 
 ### Znane drobiazgi (poza zakresem, do decyzji użytkownika)
 - `axios` jest w `dependencies`, ale nic w `src/` go nie używa; `puppeteer` (devDependency) służy tylko skryptowi `scripts/generate-favicon.js`.
@@ -187,4 +185,4 @@ Starsze pomysły: Baza Konkurencyjności (scraping, świadomie pominięta); usuw
 
 1. Przeczytaj `docs/CLAUDE.md`, `docs/goals.md`, `docs/plan.md` i ten plik. Jeśli zadanie dotyczy Bazy Konkurencyjności, przeczytaj też `docs/research-baza-konkurencyjnosci.md`. `git status` i `git log --oneline -15` na gałęzi `feature/shared-tenders`.
 2. Sprawdź środowisko: Java w `PATH` (sekcja 3), `npx firebase use` (powinno być `test`), `npm run test:unit`.
-3. Zapytaj użytkownika, co chce zrobić dalej: planował kolejne funkcjonalności i usprawnienia (jeszcze nie opisane) przed wdrożeniem na produkcję. Nową pracę planuj w małych krokach (reguły i testy reguł → model i kontekst → interfejs), tak jak etapy 1–4, i pamiętaj o zasadach z sekcji 2.
+3. Zapytaj użytkownika, co chce zrobić dalej: produkcja działa od 2026-11-01, więc kolejne funkcjonalności i usprawnienia (jeszcze nie opisane) idą na osobnej gałęzi, sprawdzane najpierw na projekcie testowym. Nową pracę planuj w małych krokach (reguły i testy reguł → model i kontekst → interfejs), tak jak etapy 1–4, i pamiętaj o zasadach z sekcji 2.
