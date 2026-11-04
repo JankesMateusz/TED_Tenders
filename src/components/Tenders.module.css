@@ -410,11 +410,9 @@
     box-shadow: var(--card-shadow);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     border: 2px solid transparent;
-    cursor: pointer;
 }
 
 .tenderCard:hover {
-    transform: translateY(-2px);
     box-shadow: var(--card-hover-shadow);
 }
 
@@ -430,18 +428,17 @@
 .cardHeader {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px 16px;
     margin-bottom: 8px;
-}
-
-.publicationNumber {
-    color: var(--text-secondary);
-    font-size: 14px;
 }
 
 .cardActions {
     display: flex;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 4px;
+    margin-left: auto;
 }
 
 .favoriteButton {
@@ -451,6 +448,8 @@
     cursor: pointer;
     color: var(--text-secondary);
     padding: 4px;
+    min-width: 40px;
+    min-height: 40px;
     transition: color 0.2s ease, transform 0.2s ease;
 }
 
@@ -460,20 +459,6 @@
 
 .favoriteActive {
     color: var(--star-color);
-}
-
-.statusButton {
-    background: transparent;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    transition: color 0.2s ease, transform 0.2s ease;
-}
-
-.statusButton:hover {
-    transform: scale(1.1);
 }
 
 .selectButton {
@@ -499,14 +484,14 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 8px;
+    min-height: 40px;
 }
 
 .title {
     color: var(--text-primary);
     font-size: 18px;
     font-weight: 600;
-    margin: 0 0 16px 0;
+    margin: 0 0 6px 0;
     line-height: 1.4;
 }
 
@@ -533,70 +518,76 @@
     flex-shrink: 0;
 }
 
-.info {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
+.metaLine {
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.4;
 }
 
-.infoItem {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.metaBuyer {
+    color: var(--text-primary);
+    font-weight: 500;
 }
 
-.infoLabel {
+.cardFootnote {
+    margin: 12px 0 0;
     color: var(--text-secondary);
     font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
-.infoValue {
+.cpvChips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.cpvChip {
+    max-width: 100%;
+    padding: 4px 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: var(--cpv-bg);
     color: var(--text-primary);
-    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 13px;
 }
 
-.publicationTime {
-    color: var(--text-secondary);
-    font-size: 0.9em;
-    font-weight: 400;
+/* Kod IT, który zadecydował o dopasowaniu ogłoszenia */
+.cpvChipIt {
+    background: var(--accent-bg);
+    border-color: var(--button-primary);
 }
 
-.sourceAttribution {
-    margin: 8px 0 0;
+.cpvMore {
+    min-height: 28px;
+    padding: 2px 10px;
+    background: transparent;
     color: var(--text-secondary);
-    font-size: 0.8em;
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.cpvMore:hover {
+    background: var(--cpv-bg-hover);
+}
+
+.cpvCodes {
+    margin-top: 8px;
+}
+
+.cpvCodeIt {
+    box-shadow: inset 3px 0 0 var(--button-primary);
 }
 
 .cpvSection {
-    margin: 16px 0;
-}
-
-.cpvContainer {
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.cpvToggle {
-    width: 100%;
-    padding: 8px 12px;
-    background: var(--bg-primary);
-    border: none;
-    text-align: left;
-    color: var(--text-primary);
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background-color 0.2s ease;
-}
-
-.cpvToggle:hover {
-    background: var(--bg-secondary);
+    margin: 0 0 4px;
 }
 
 .cpvCodes {
@@ -816,10 +807,6 @@
         padding: 16px;
     }
     
-    .info {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 10px;
-    }
     
     .cpvCodes {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -904,9 +891,6 @@
         margin-bottom: 12px;
     }
     
-    .publicationNumber {
-        font-size: 12px;
-    }
     
     .cardActions {
         align-self: flex-end;
@@ -918,7 +902,6 @@
         padding: 6px;
     }
     
-    .statusButton,
     .selectButton {
         font-size: 18px;
         padding: 6px;
@@ -929,36 +912,14 @@
         margin-bottom: 12px;
     }
     
-    .info {
-        grid-template-columns: 1fr;
-        gap: 8px;
-        margin-bottom: 12px;
-    }
     
-    .infoItem {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 0;
-    }
     
-    .infoLabel {
-        font-size: 11px;
-    }
     
-    .infoValue {
-        font-size: 13px;
-        text-align: right;
-    }
     
     .cpvSection {
         margin: 12px 0;
     }
     
-    .cpvToggle {
-        padding: 6px 10px;
-        font-size: 13px;
-    }
     
     .cpvCodes {
         grid-template-columns: 1fr;
@@ -1043,9 +1004,6 @@
         margin-bottom: 10px;
     }
     
-    .publicationNumber {
-        font-size: 11px;
-    }
     
     .cardActions {
         gap: 4px;
@@ -1056,7 +1014,6 @@
         padding: 4px;
     }
     
-    .statusButton,
     .selectButton {
         font-size: 16px;
         padding: 4px;
@@ -1068,31 +1025,14 @@
         line-height: 1.3;
     }
     
-    .info {
-        gap: 6px;
-        margin-bottom: 10px;
-    }
     
-    .infoItem {
-        padding: 3px 0;
-    }
     
-    .infoLabel {
-        font-size: 10px;
-    }
     
-    .infoValue {
-        font-size: 12px;
-    }
     
     .cpvSection {
         margin: 10px 0;
     }
     
-    .cpvToggle {
-        padding: 5px 8px;
-        font-size: 12px;
-    }
     
     .cpvCodes {
         gap: 4px;
@@ -1128,14 +1068,10 @@
     }
     
     .favoriteButton:hover,
-    .statusButton:hover,
     .selectButton:hover {
         transform: none;
     }
     
-    .cpvToggle:hover {
-        background: var(--bg-primary);
-    }
     
     .cpvCodeContainer:hover {
         background: var(--cpv-bg);

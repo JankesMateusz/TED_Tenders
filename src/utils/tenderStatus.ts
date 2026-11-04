@@ -19,6 +19,15 @@ export const STATUS_CONFIG: Record<TenderStatus, StatusConfig> = {
 export const isTenderStatus = (value: unknown): value is TenderStatus =>
     typeof value === 'string' && (TENDER_STATUSES as string[]).includes(value);
 
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+/** Podpis pod statusem na karcie, np. "anna@example.com, 29.10 14:32"; bez daty zostaje sam autor. */
+export const statusAuthorCaption = (byEmail?: string, at?: Date): string => {
+    const author = byEmail ?? 'nieznany użytkownik';
+    if (!at) return author;
+    return `${author}, ${pad2(at.getDate())}.${pad2(at.getMonth() + 1)} ${pad2(at.getHours())}:${pad2(at.getMinutes())}`;
+};
+
 /** Podpowiedź przy statusie: kto go ustawił i kiedy, np. "Do wpisania: anna@example.com, 29.10.2026 14:32". */
 export const statusTooltip = (status: TenderStatus, byEmail?: string, at?: Date): string => {
     const author = byEmail ?? 'nieznany użytkownik';

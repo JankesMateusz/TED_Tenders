@@ -11,6 +11,8 @@
     font-size: 18px;
     cursor: pointer;
     padding: 4px;
+    min-width: 40px;
+    min-height: 40px;
     color: var(--text-secondary);
     opacity: 0.6;
     transition: opacity 0.2s ease, transform 0.2s ease;
