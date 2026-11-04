@@ -16,9 +16,15 @@ describe('odczyt zapisanych filtrów', () => {
             selectedCities: ['Kraków'],
             selectedCpvs: ['30213100-6'],
             statusFilters: { toEnter: true, entered: false, toClarify: false, notToEnter: false, unmarked: true },
-            sortOrder: 'deadline'
+            sortOrder: 'buyer'
         };
         expect(parsePersistedFilters(JSON.stringify(saved))).toEqual(saved);
+    });
+
+    it('zapisane sortowanie po terminie składania wraca do daty publikacji', () => {
+        const parsed = parsePersistedFilters(JSON.stringify({ sortOrder: 'deadline', selectedBuyers: ['Urząd'] }));
+        expect(parsed.sortOrder).toBe('publication');
+        expect(parsed.selectedBuyers).toEqual(['Urząd']);
     });
 
     it('odrzuca nieznane wartości, ale zachowuje poprawne pola', () => {

@@ -87,7 +87,8 @@ export const parsePersistedFilters = (raw: string | null): PersistedFilters => {
         }
     }
 
-    if (isSortOrder(data.sortOrder)) filters.sortOrder = data.sortOrder;
+    // Sortowanie po terminie składania zniknęło z listy opcji; zapis z tą wartością wraca do domyślnego
+    if (isSortOrder(data.sortOrder) && data.sortOrder !== 'deadline') filters.sortOrder = data.sortOrder;
 
     return filters;
 };

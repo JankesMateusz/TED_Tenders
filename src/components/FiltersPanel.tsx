@@ -3,19 +3,22 @@ import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
 import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS } from '../constants';
 import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
+import { ALL_SOURCES } from '../utils/persistedFilters';
 import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
 import { ActiveFilterChip } from '../utils/activeFilters';
 import { ActiveFilterChips } from './ActiveFilterChips';
+import { FilterPopover, FilterPopoverOption } from './FilterPopover';
 import styles from './Tenders.module.css';
 
-const STATUS_FILTER_OPTIONS: Array<{ key: keyof StatusFilters; label: string; color: string }> = [
-    ...TENDER_STATUSES.map((status) => ({ key: status, ...STATUS_CONFIG[status] })),
-    { key: 'unmarked', label: 'Nieoznaczone', color: UNMARKED_COLOR }
-];
+const STATUS_FILTER_KEYS: Array<keyof StatusFilters> = [...TENDER_STATUSES, 'unmarked'];
+
+const statusOption = (key: keyof StatusFilters) =>
+    key === 'unmarked'
+        ? { label: 'Nieoznaczone', color: UNMARKED_COLOR }
+        : { label: STATUS_CONFIG[key].label, color: STATUS_CONFIG[key].color };
 
 const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
     { value: 'publication', label: 'Data publikacji (najnowsze)' },
-    { value: 'deadline', label: 'Termin składania (najbliższy)' },
     { value: 'buyer', label: 'Zamawiający (A–Z)' }
 ];
 
@@ -29,6 +32,7 @@ interface FiltersPanelProps {
     onOrderTypeToggle: (orderType: OrderType) => void;
     statusFilters: StatusFilters;
     onStatusFilterChange: (filter: keyof StatusFilters) => void;
+    onShowAllStatuses: () => void;
     facetCounts: FacetCounts;
     sortOrder: SortOrder;
     onSortOrderChange: (order: SortOrder) => void;
@@ -43,14 +47,6 @@ interface FiltersPanelProps {
     onShowHiddenAdvertisersChange: (show: boolean) => void;
 }
 
-/** Klasy chipa filtra: aktywny, nieaktywny albo nieaktywny z licznikiem 0 (przyciemniony, ale nadal klikalny). */
-const chipClass = (selected: boolean, count: number): string =>
-    [
-        styles.sourceFilterBadge,
-        selected ? styles.filterChipOn : styles.filterChipOff,
-        !selected && count === 0 ? styles.filterChipEmpty : ''
-    ].join(' ');
-
 export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     searchQuery,
     onSearchChange,
@@ -61,6 +57,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onOrderTypeToggle,
     statusFilters,
     onStatusFilterChange,
+    onShowAllStatuses,
     facetCounts,
     sortOrder,
     onSortOrderChange,
@@ -72,6 +69,40 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     showHiddenAdvertisers,
     onShowHiddenAdvertisersChange
 }) => {
+    const statusOptions: FilterPopoverOption[] = STATUS_FILTER_KEYS.map((key) => ({
+        key,
+        ...statusOption(key),
+        count: facetCounts.statuses[key] ?? 0,
+        checked: statusFilters[key]
+    }));
+
+    const sourceOptions: FilterPopoverOption[] = ALL_SOURCES.map((source) => {
+        const config = getSourceConfig(source);
+        return {
+            key: source,
+            label: config.label,
+            color: config.backgroundColor,
+            count: facetCounts.sources[source] ?? 0,
+            checked: selectedSources.includes(source)
+        };
+    });
+
+    const orderTypeOptions: FilterPopoverOption[] = DEFAULT_ORDER_TYPES.map((orderType) => {
+        const config = getOrderTypeConfig(orderType);
+        return {
+            key: orderType,
+            label: config.label,
+            color: config.backgroundColor,
+            count: facetCounts.orderTypes[orderType] ?? 0,
+            checked: selectedOrderTypes.includes(orderType)
+        };
+    });
+
+    // Znaczek pokazuje liczbę wybranych tylko wtedy, gdy wybór coś zawęża
+    const narrowedBadge = (selected: number, total: number): number | undefined =>
+        selected < total ? selected : undefined;
+    const selectedStatusCount = STATUS_FILTER_KEYS.filter((key) => statusFilters[key]).length;
+
     return (
         <>
             <div className={styles.searchSection}>
@@ -102,118 +133,63 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     )}
                 </div>
             </div>
-            
+
+            <div className={styles.toolbar}>
+                <FilterPopover
+                    label="Status"
+                    options={statusOptions}
+                    onToggle={(key) => onStatusFilterChange(key as keyof StatusFilters)}
+                    badge={selectedStatusCount}
+                >
+                    <button type="button" className={styles.popoverFooter} onClick={onShowAllStatuses}>
+                        Pokaż wszystkie statusy
+                    </button>
+                </FilterPopover>
+                <FilterPopover
+                    label="Źródło"
+                    options={sourceOptions}
+                    onToggle={(key) => onSourceToggle(key as TenderSource)}
+                    badge={narrowedBadge(selectedSources.length, ALL_SOURCES.length)}
+                />
+                <FilterPopover
+                    label="Typ"
+                    options={orderTypeOptions}
+                    onToggle={(key) => onOrderTypeToggle(key as OrderType)}
+                    badge={narrowedBadge(selectedOrderTypes.length, DEFAULT_ORDER_TYPES.length)}
+                />
+
+                {(hiddenAdvertisersCount > 0 || showHiddenAdvertisers) && (
+                    <label className={styles.plainCheckbox} title="Firmy prywatne i organizacje pozarządowe są domyślnie ukryte">
+                        <input
+                            type="checkbox"
+                            checked={showHiddenAdvertisers}
+                            onChange={(e) => onShowHiddenAdvertisersChange(e.target.checked)}
+                        />
+                        <span>Pokaż ukrytych zamawiających ({hiddenAdvertisersCount})</span>
+                    </label>
+                )}
+
+                <div className={styles.toolbarSort}>
+                    <label className={styles.sortLabel} htmlFor="sort-order">Sortuj:</label>
+                    <select
+                        id="sort-order"
+                        className={styles.sortSelect}
+                        value={sortOrder}
+                        onChange={(e) => onSortOrderChange(e.target.value as SortOrder)}
+                    >
+                        {SORT_OPTIONS.map(({ value, label }) => (
+                            <option key={value} value={value}>{label}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             <ActiveFilterChips
                 chips={activeChips}
                 onRemove={onRemoveChip}
                 hasActiveFilters={hasActiveFilters}
                 onClearFilters={onClearFilters}
             />
-
-            <div className={styles.sortSection}>
-                <label className={styles.sortLabel} htmlFor="sort-order">Sortuj:</label>
-                <select
-                    id="sort-order"
-                    className={styles.sortSelect}
-                    value={sortOrder}
-                    onChange={(e) => onSortOrderChange(e.target.value as SortOrder)}
-                >
-                    {SORT_OPTIONS.map(({ value, label }) => (
-                        <option key={value} value={value}>{label}</option>
-                    ))}
-                </select>
-            </div>
-
-            <div className={styles.filtersSection}>
-                <div className={styles.sourceFilters}>
-                    <span className={styles.sourceFiltersLabel}>Źródła:</span>
-                    {[TenderSource.TED, TenderSource.E_ZAMOWIENIA, TenderSource.BAZA_KONKURENCYJNOSCI].map((source) => {
-                        const config = getSourceConfig(source);
-                        const isSelected = selectedSources.includes(source);
-                        return (
-                            <label key={source} className={styles.sourceFilterLabel}>
-                                <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => onSourceToggle(source)}
-                                    className={styles.sourceCheckbox}
-                                />
-                                <span
-                                    className={chipClass(isSelected, facetCounts.sources[source] ?? 0)}
-                                    style={isSelected ? { backgroundColor: config.backgroundColor, color: config.color, borderColor: config.backgroundColor } : undefined}
-                                >
-                                    {config.label} ({facetCounts.sources[source] ?? 0})
-                                </span>
-                            </label>
-                        );
-                    })}
-                </div>
-                
-                {selectedSources.length > 0 && (
-                    <div className={styles.sourceFilters}>
-                        <span className={styles.sourceFiltersLabel}>Typy:</span>
-                        {DEFAULT_ORDER_TYPES.map((orderType) => {
-                            const config = getOrderTypeConfig(orderType);
-                            const isSelected = selectedOrderTypes.includes(orderType);
-                            return (
-                                <label key={orderType} className={styles.sourceFilterLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() => onOrderTypeToggle(orderType)}
-                                        className={styles.sourceCheckbox}
-                                    />
-                                    <span
-                                        className={chipClass(isSelected, facetCounts.orderTypes[orderType] ?? 0)}
-                                        style={isSelected ? { backgroundColor: config.backgroundColor, color: config.color, borderColor: config.backgroundColor } : undefined}
-                                    >
-                                        {config.label} ({facetCounts.orderTypes[orderType] ?? 0})
-                                    </span>
-                                </label>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-            
-            <div className={styles.statusFiltersSection}>
-                <div className={styles.sourceFilters}>
-                    <span className={styles.sourceFiltersLabel}>Filtruj po statusie:</span>
-                    {STATUS_FILTER_OPTIONS.map(({ key, label, color }) => (
-                        <label key={key} className={styles.sourceFilterLabel}>
-                            <input
-                                type="checkbox"
-                                checked={statusFilters[key]}
-                                onChange={() => onStatusFilterChange(key)}
-                                className={styles.sourceCheckbox}
-                            />
-                            <span
-                                className={`${chipClass(statusFilters[key], facetCounts.statuses[key] ?? 0)} ${statusFilters[key] ? styles.filterChipStatusOn : ''}`}
-                                style={{ '--chip-color': color } as React.CSSProperties}
-                            >
-                                {/* Znak zaznaczenia, żeby stan nie opierał się tylko na kolorze */}
-                                {statusFilters[key] && <span aria-hidden="true">✓ </span>}
-                                {label} ({facetCounts.statuses[key] ?? 0})
-                            </span>
-                        </label>
-                    ))}
-                </div>
-            </div>
-
-            {(hiddenAdvertisersCount > 0 || showHiddenAdvertisers) && (
-                <div className={styles.statusFiltersSection}>
-                    <div className={styles.sourceFilters}>
-                        <label className={styles.plainCheckbox} title="Firmy prywatne i organizacje pozarządowe są domyślnie ukryte">
-                            <input
-                                type="checkbox"
-                                checked={showHiddenAdvertisers}
-                                onChange={(e) => onShowHiddenAdvertisersChange(e.target.checked)}
-                            />
-                            <span>Pokaż ukrytych zamawiających ({hiddenAdvertisersCount})</span>
-                        </label>
-                    </div>
-                </div>
-            )}
         </>
     );
 };

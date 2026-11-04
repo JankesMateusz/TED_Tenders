@@ -632,6 +632,7 @@ const Tenders: React.FC = () => {
                                     onStatusFilterChange={(filter) =>
                                         setStatusFilters(prev => ({...prev, [filter]: !prev[filter]}))
                                     }
+                                    onShowAllStatuses={() => setStatusFilters({ toEnter: true, entered: true, toClarify: true, notToEnter: true, unmarked: true })}
                                     facetCounts={facetCounts}
                                     sortOrder={sortOrder}
                                     onSortOrderChange={setSortOrder}
