@@ -451,25 +451,17 @@
 }
 
 .tenderCard {
-    background: var(--bg-secondary);
-    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--border-color);
+    border-radius: var(--radius-card);
     padding: 20px;
     box-shadow: var(--card-shadow);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    border: 2px solid transparent;
 }
 
-.tenderCard:hover {
-    box-shadow: var(--card-hover-shadow);
-}
-
-/* Kolor karty zależy od wspólnego statusu; ustawia go komponent przez zmienną --status-color */
+/* Kolor paska z lewej zależy od wspólnego statusu; ustawia go komponent przez zmienną --status-color */
 .tenderCardStatus {
-    border-color: var(--status-color);
-    background: linear-gradient(to bottom,
-        var(--bg-secondary),
-        color-mix(in srgb, var(--status-color) 6%, var(--bg-secondary))
-    );
+    border-left-color: var(--status-color);
 }
 
 .cardHeader {
@@ -596,17 +588,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    background: var(--cpv-bg);
+    background: var(--bg-secondary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 7px;
     font-size: 13px;
-}
-
-/* Kod IT, który zadecydował o dopasowaniu ogłoszenia */
-.cpvChipIt {
-    background: var(--accent-bg);
-    border-color: var(--button-primary);
 }
 
 .cpvMore {
@@ -627,10 +613,6 @@
 
 .cpvCodes {
     margin-top: 8px;
-}
-
-.cpvCodeIt {
-    box-shadow: inset 3px 0 0 var(--button-primary);
 }
 
 .cpvSection {
@@ -1122,10 +1104,6 @@
 
 /* Touch device optimizations */
 @media (hover: none) and (pointer: coarse) {
-    .tenderCard:hover {
-        transform: none;
-    }
-    
     .favoriteButton:hover,
     .selectButton:hover {
         transform: none;

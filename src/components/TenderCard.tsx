@@ -43,7 +43,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
     const fav = isFavorite(tender.id);
     const statusColor = tender.status ? STATUS_CONFIG[tender.status].color : undefined;
 
-    // Chipy pokazują najpierw kody IT, bo to one zdecydowały o dopasowaniu ogłoszenia
+    // Kolejność chipów: kody IT pierwsze (to tylko kolejność, karta ich nie oznacza)
     const itCodes = cpvCodes.filter(isItRelatedCpv);
     const chipCodes = (itCodes.length > 0 ? itCodes : cpvCodes).slice(0, VISIBLE_CPV_CHIPS);
     const hiddenCpvCount = cpvCodes.length - chipCodes.length;
@@ -108,11 +108,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                 <div className={styles.cpvSection}>
                     <div className={styles.cpvChips}>
                         {chipCodes.map(cpv => (
-                            <span
-                                key={cpv}
-                                className={`${styles.cpvChip} ${isItRelatedCpv(cpv) ? styles.cpvChipIt : ''}`}
-                                title={isItRelatedCpv(cpv) ? `${cpv} (kod IT, dopasował ogłoszenie)` : cpv}
-                            >
+                            <span key={cpv} className={styles.cpvChip} title={cpv}>
                                 {getCpvName(cpv)}
                             </span>
                         ))}
@@ -130,7 +126,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     {expanded && (
                         <div className={styles.cpvCodes}>
                             {cpvCodes.map(cpv => (
-                                <div key={cpv} className={`${styles.cpvCodeContainer} ${isItRelatedCpv(cpv) ? styles.cpvCodeIt : ''}`}>
+                                <div key={cpv} className={styles.cpvCodeContainer}>
                                     <span className={styles.cpvCode}>{cpv}</span>
                                     <span className={styles.cpvName}>{getCpvName(cpv)}</span>
                                 </div>
