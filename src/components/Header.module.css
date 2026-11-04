@@ -190,7 +190,7 @@
     display: inline-block;
     padding: 4px 10px;
     border-radius: 12px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -519,7 +519,7 @@
     
     .sourceFilterBadge {
         padding: 3px 8px;
-        font-size: 10px;
+        font-size: 12px;
     }
     
     .buttons {
@@ -566,7 +566,7 @@
     }
     
     .lastRefresh {
-        font-size: 11px;
+        font-size: 12px;
     }
     
     .controls {
@@ -580,7 +580,7 @@
     }
     
     .datePickerLabel {
-        font-size: 11px;
+        font-size: 12px;
         white-space: nowrap;
     }
     
@@ -601,7 +601,7 @@
     }
     
     .checkboxLabel {
-        font-size: 11px;
+        font-size: 12px;
     }
     
     .dateSeparator {
@@ -611,7 +611,7 @@
     
     .dateRangeCheckbox {
         white-space: nowrap;
-        font-size: 11px;
+        font-size: 12px;
     }
     
     .sourceFilters {
@@ -619,13 +619,13 @@
     }
     
     .sourceFiltersLabel {
-        font-size: 11px;
+        font-size: 12px;
         margin-right: 2px;
     }
     
     .sourceFilterBadge {
         padding: 2px 6px;
-        font-size: 9px;
+        font-size: 12px;
     }
     
     .buttons {
@@ -672,7 +672,7 @@
     :global(.react-datepicker__day-name) {
         width: 28px;
         margin: 2px;
-        font-size: 11px;
+        font-size: 12px;
     }
     
     :global(.react-datepicker__day) {
@@ -680,6 +680,6 @@
         height: 28px;
         line-height: 28px;
         margin: 2px;
-        font-size: 11px;
+        font-size: 12px;
     }
 } 

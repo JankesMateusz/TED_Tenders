@@ -595,17 +595,17 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                                 <div className={styles.dayTooltip}>
                                                     <strong>{date}</strong>
                                                     {tedCount > 0 && (
-                                                        <span style={{ color: '#e67e22' }}>
+                                                        <span style={{ color: 'var(--series-ted)' }}>
                                                             TED: {tedCount}
                                                         </span>
                                                     )}
                                                     {ezamCount > 0 && (
-                                                        <span style={{ color: '#3498db' }}>
+                                                        <span style={{ color: 'var(--series-ezam)' }}>
                                                             eZamówienia: {ezamCount}
                                                         </span>
                                                     )}
                                                     {bazaCount > 0 && (
-                                                        <span style={{ color: '#9b59b6' }}>
+                                                        <span style={{ color: 'var(--series-baza)' }}>
                                                             Baza: {bazaCount}
                                                         </span>
                                                     )}

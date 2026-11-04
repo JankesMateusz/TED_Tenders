@@ -33,6 +33,18 @@ body[data-theme="dark"] {
     --accent-bg: rgba(52, 152, 219, 0.12);
     --accent-ring: rgba(52, 152, 219, 0.1);
     --accent-shadow: rgba(52, 152, 219, 0.3);
+    --accent: #3498db;
+    --accent-dark: #2980b9;
+    --accent-tint: rgba(52, 152, 219, 0.1);
+    --accent-tint-soft: rgba(52, 152, 219, 0.08);
+    --accent-border: rgba(52, 152, 219, 0.3);
+    --warning-bg: rgba(243, 156, 18, 0.12);
+    --warning-border: rgba(243, 156, 18, 0.4);
+    /* Kolory serii na wykresach: jedno źródło danych = jeden kolor */
+    --series-ted: #e67e22;
+    --series-ezam: #3498db;
+    --series-baza: #9b59b6;
+    --tooltip-bg: rgba(0, 0, 0, 0.9);
 }
 
 :root[data-theme="light"] {
@@ -103,8 +115,8 @@ body[data-theme="dark"] {
     color: white;
 }
 
-/* Focus styles */
-:focus {
+/* Focus styles: obrys tylko przy nawigacji klawiaturą, nie po kliknięciu myszą */
+:focus-visible {
     outline: 2px solid var(--button-primary);
     outline-offset: 2px;
 }

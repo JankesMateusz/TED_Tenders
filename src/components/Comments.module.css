@@ -38,7 +38,7 @@
     border-radius: 8px;
     background: var(--button-primary);
     color: #fff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     line-height: 16px;
     text-align: center;
@@ -118,7 +118,7 @@
 }
 
 .deleteButton:hover {
-    color: #e74c3c;
+    color: var(--danger);
 }
 
 .text {

@@ -200,7 +200,7 @@
     font-size: 16px;
     font-weight: 600;
     color: var(--button-primary);
-    background: rgba(52, 152, 219, 0.1);
+    background: var(--accent-tint);
     padding: 4px 12px;
     border-radius: 12px;
 }
@@ -305,7 +305,7 @@
     position: absolute;
     left: -40px;
     top: -8px;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
     font-weight: 500;
 }
@@ -351,7 +351,7 @@
 }
 
 .hourCountHovered {
-    color: #3498db;
+    color: var(--accent);
     font-size: 15px;
     transform: scale(1.1);
 }
@@ -361,7 +361,7 @@
     bottom: calc(100% + 12px);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
+    background: var(--tooltip-bg);
     color: white;
     padding: 8px 12px;
     border-radius: 8px;
@@ -386,7 +386,7 @@
     height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, 0.9);
+    border-top: 6px solid var(--tooltip-bg);
 }
 
 @keyframes tooltipFadeIn {
@@ -404,12 +404,12 @@
     width: 100%;
     border-radius: 6px 6px 0 0;
     background: linear-gradient(180deg, 
-        rgba(52, 152, 219, 1) 0%, 
-        rgba(52, 152, 219, 0.8) 50%,
-        rgba(52, 152, 219, 0.6) 100%
+        var(--accent) 0%, 
+        color-mix(in srgb, var(--accent) 80%, transparent) 50%,
+        color-mix(in srgb, var(--accent) 60%, transparent) 100%
     );
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
     position: relative;
     flex-shrink: 0;
 }
@@ -427,16 +427,16 @@
 
 .hourBarHovered {
     background: linear-gradient(180deg, 
-        rgba(52, 152, 219, 1) 0%, 
-        rgba(41, 128, 185, 0.9) 50%,
-        rgba(41, 128, 185, 0.7) 100%
+        var(--accent) 0%, 
+        color-mix(in srgb, var(--accent-dark) 90%, transparent) 50%,
+        color-mix(in srgb, var(--accent-dark) 70%, transparent) 100%
     );
-    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.5);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 50%, transparent);
     transform: scaleX(1.1);
 }
 
 .hourLabel {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
     letter-spacing: 0.3px;
     font-weight: 500;
@@ -526,7 +526,7 @@
     height: 100%;
     min-width: 0;
     border-radius: 0 4px 4px 0;
-    background: linear-gradient(90deg, rgba(52, 152, 219, 0.6), rgba(52, 152, 219, 1));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent), var(--accent));
 }
 
 .hourlyRowCount {
@@ -605,29 +605,29 @@
 
 .dayBarTed {
     background: linear-gradient(180deg, 
-        rgba(230, 126, 34, 1) 0%, 
-        rgba(230, 126, 34, 0.8) 50%,
-        rgba(230, 126, 34, 0.6) 100%
+        var(--series-ted) 0%, 
+        color-mix(in srgb, var(--series-ted) 80%, transparent) 50%,
+        color-mix(in srgb, var(--series-ted) 60%, transparent) 100%
     );
-    box-shadow: 0 2px 8px rgba(230, 126, 34, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--series-ted) 30%, transparent);
 }
 
 .dayBarEzam {
     background: linear-gradient(180deg, 
-        rgba(52, 152, 219, 1) 0%, 
-        rgba(52, 152, 219, 0.8) 50%,
-        rgba(52, 152, 219, 0.6) 100%
+        var(--series-ezam) 0%, 
+        color-mix(in srgb, var(--series-ezam) 80%, transparent) 50%,
+        color-mix(in srgb, var(--series-ezam) 60%, transparent) 100%
     );
-    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--series-ezam) 30%, transparent);
 }
 
 .dayBarBaza {
     background: linear-gradient(180deg, 
-        rgba(155, 89, 182, 1) 0%, 
-        rgba(155, 89, 182, 0.8) 50%,
-        rgba(155, 89, 182, 0.6) 100%
+        var(--series-baza) 0%, 
+        color-mix(in srgb, var(--series-baza) 80%, transparent) 50%,
+        color-mix(in srgb, var(--series-baza) 60%, transparent) 100%
     );
-    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--series-baza) 30%, transparent);
 }
 
 .dayBarHovered {
@@ -636,7 +636,7 @@
 }
 
 .dayLabel {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
     letter-spacing: 0.3px;
     font-weight: 500;
@@ -647,7 +647,7 @@
     bottom: calc(100% + 12px);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
+    background: var(--tooltip-bg);
     color: white;
     padding: 8px 12px;
     border-radius: 8px;
@@ -673,7 +673,7 @@
     height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, 0.9);
+    border-top: 6px solid var(--tooltip-bg);
 }
 
 .chartLegend {
@@ -699,15 +699,15 @@
 }
 
 .legendDotTed {
-    background: linear-gradient(135deg, rgba(230, 126, 34, 1) 0%, rgba(230, 126, 34, 0.7) 100%);
+    background: linear-gradient(135deg, var(--series-ted) 0%, color-mix(in srgb, var(--series-ted) 70%, transparent) 100%);
 }
 
 .legendDotEzam {
-    background: linear-gradient(135deg, rgba(52, 152, 219, 1) 0%, rgba(52, 152, 219, 0.7) 100%);
+    background: linear-gradient(135deg, var(--series-ezam) 0%, color-mix(in srgb, var(--series-ezam) 70%, transparent) 100%);
 }
 
 .legendDotBaza {
-    background: linear-gradient(135deg, rgba(155, 89, 182, 1) 0%, rgba(155, 89, 182, 0.7) 100%);
+    background: linear-gradient(135deg, var(--series-baza) 0%, color-mix(in srgb, var(--series-baza) 70%, transparent) 100%);
 }
 
 
@@ -732,7 +732,7 @@
 .sourceItem.clickable:hover,
 .orderTypeItem.clickable:hover,
 .listButton.clickable:hover {
-    background: rgba(52, 152, 219, 0.08);
+    background: var(--accent-tint-soft);
 }
 
 /* Klikalny wiersz: strzałka po prawej i podkreślenie nazwy przy najechaniu */
@@ -810,7 +810,7 @@
 }
 
 .funnelRow.clickable:hover {
-    background: rgba(52, 152, 219, 0.08);
+    background: var(--accent-tint-soft);
 }
 
 .funnelLabel {
@@ -861,8 +861,8 @@
     margin-bottom: 16px;
     padding: 10px 16px;
     border-radius: 8px;
-    background: rgba(243, 156, 18, 0.12);
-    border: 1px solid rgba(243, 156, 18, 0.4);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     color: var(--text-primary);
     font-size: 14px;
 }
@@ -878,8 +878,8 @@
 }
 
 .filterNotice button:hover {
-    border-color: #e74c3c;
-    color: #e74c3c;
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 .comparisonNotice {
@@ -890,8 +890,8 @@
     margin-bottom: 16px;
     padding: 10px 16px;
     border-radius: 8px;
-    background: rgba(52, 152, 219, 0.1);
-    border: 1px solid rgba(52, 152, 219, 0.3);
+    background: var(--accent-tint);
+    border: 1px solid var(--accent-border);
     color: var(--text-primary);
     font-size: 14px;
 }

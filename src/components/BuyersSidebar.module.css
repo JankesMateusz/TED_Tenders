@@ -53,7 +53,7 @@
 .searchInput:focus {
     outline: none;
     border-color: var(--button-primary);
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 .searchInput::placeholder {
