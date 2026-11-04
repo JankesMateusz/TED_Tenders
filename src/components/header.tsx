@@ -1,5 +1,6 @@
 import React from "react";
-import DatePicker from "react-datepicker";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { pl } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
@@ -33,6 +34,9 @@ interface HeaderProps {
     onSearchChange: (query: string) => void;
     searchInputRef: React.RefObject<HTMLInputElement | null>;
 }
+
+// Polskie nazwy miesięcy i dni w kalendarzu, tydzień zaczyna się od poniedziałku
+registerLocale("pl", pl);
 
 const RefreshIcon: React.FC = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -151,6 +155,7 @@ const Header: React.FC<HeaderProps> = ({
                                 selected={startDate}
                                 onChange={(date) => setStartDate(date)}
                                 selectsStart
+                                locale="pl"
                             popperPlacement="bottom-start"
                                 startDate={startDate}
                                 endDate={endDate}
@@ -163,6 +168,7 @@ const Header: React.FC<HeaderProps> = ({
                                 selected={endDate}
                                 onChange={(date) => setEndDate(date)}
                                 selectsEnd
+                                locale="pl"
                                 popperPlacement="bottom-end"
                                 startDate={startDate}
                                 endDate={endDate}
@@ -178,6 +184,7 @@ const Header: React.FC<HeaderProps> = ({
                             onChange={(date) => setStartDate(date)}
                             dateFormat={DATE_FORMAT}
                             placeholderText={PLACEHOLDER_TEXTS.DATE_PICKER}
+                            locale="pl"
                                 popperPlacement="bottom-start"
                             className={styles.dateInput}
                         />
