@@ -16,6 +16,9 @@ export const STATUS_CONFIG: Record<TenderStatus, StatusConfig> = {
     notToEnter: { label: 'Nie do wpisania', icon: '✕', color: '#e74c3c' }
 };
 
+/** Kolor filtra "Nieoznaczone" (przetarg bez statusu). */
+export const UNMARKED_COLOR = '#7f8c8d';
+
 export const isTenderStatus = (value: unknown): value is TenderStatus =>
     typeof value === 'string' && (TENDER_STATUSES as string[]).includes(value);
 

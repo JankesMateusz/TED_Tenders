@@ -3,13 +3,13 @@ import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
 import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS } from '../constants';
 import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
-import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
+import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
 import { getCpvName } from '../utils/cpvMapping';
 import styles from './Tenders.module.css';
 
 const STATUS_FILTER_OPTIONS: Array<{ key: keyof StatusFilters; label: string; color: string }> = [
     ...TENDER_STATUSES.map((status) => ({ key: status, ...STATUS_CONFIG[status] })),
-    { key: 'unmarked', label: 'Nieoznaczone', color: '#95a5a6' }
+    { key: 'unmarked', label: 'Nieoznaczone', color: UNMARKED_COLOR }
 ];
 
 const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
@@ -40,6 +40,14 @@ interface FiltersPanelProps {
     showHiddenAdvertisers: boolean;
     onShowHiddenAdvertisersChange: (show: boolean) => void;
 }
+
+/** Klasy chipa filtra: aktywny, nieaktywny albo nieaktywny z licznikiem 0 (przyciemniony, ale nadal klikalny). */
+const chipClass = (selected: boolean, count: number): string =>
+    [
+        styles.sourceFilterBadge,
+        selected ? styles.filterChipOn : styles.filterChipOff,
+        !selected && count === 0 ? styles.filterChipEmpty : ''
+    ].join(' ');
 
 export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     searchQuery,
@@ -135,13 +143,9 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                     onChange={() => onSourceToggle(source)}
                                     className={styles.sourceCheckbox}
                                 />
-                                <span 
-                                    className={styles.sourceFilterBadge}
-                                    style={{
-                                        backgroundColor: isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.1)',
-                                        color: isSelected ? config.color : 'var(--text-secondary)',
-                                        border: `1px solid ${isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.2)'}`
-                                    }}
+                                <span
+                                    className={chipClass(isSelected, facetCounts.sources[source] ?? 0)}
+                                    style={isSelected ? { backgroundColor: config.backgroundColor, color: config.color, borderColor: config.backgroundColor } : undefined}
                                 >
                                     {config.label} ({facetCounts.sources[source] ?? 0})
                                 </span>
@@ -164,13 +168,9 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                         onChange={() => onOrderTypeToggle(orderType)}
                                         className={styles.sourceCheckbox}
                                     />
-                                    <span 
-                                        className={styles.sourceFilterBadge}
-                                        style={{
-                                            backgroundColor: isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.1)',
-                                            color: isSelected ? config.color : 'var(--text-secondary)',
-                                            border: `1px solid ${isSelected ? config.backgroundColor : 'rgba(0, 0, 0, 0.2)'}`
-                                        }}
+                                    <span
+                                        className={chipClass(isSelected, facetCounts.orderTypes[orderType] ?? 0)}
+                                        style={isSelected ? { backgroundColor: config.backgroundColor, color: config.color, borderColor: config.backgroundColor } : undefined}
                                     >
                                         {config.label} ({facetCounts.orderTypes[orderType] ?? 0})
                                     </span>
@@ -193,13 +193,11 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                 className={styles.sourceCheckbox}
                             />
                             <span
-                                className={styles.sourceFilterBadge}
-                                style={{
-                                    backgroundColor: statusFilters[key] ? color : 'rgba(0, 0, 0, 0.1)',
-                                    color: statusFilters[key] ? '#ffffff' : 'var(--text-secondary)',
-                                    border: `1px solid ${statusFilters[key] ? color : 'rgba(0, 0, 0, 0.2)'}`
-                                }}
+                                className={`${chipClass(statusFilters[key], facetCounts.statuses[key] ?? 0)} ${statusFilters[key] ? styles.filterChipStatusOn : ''}`}
+                                style={{ '--chip-color': color } as React.CSSProperties}
                             >
+                                {/* Znak zaznaczenia, żeby stan nie opierał się tylko na kolorze */}
+                                {statusFilters[key] && <span aria-hidden="true">✓ </span>}
                                 {label} ({facetCounts.statuses[key] ?? 0})
                             </span>
                         </label>

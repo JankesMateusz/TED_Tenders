@@ -200,13 +200,24 @@
 }
 
 .sourceFilterLabel {
+    position: relative;
     display: flex;
     align-items: center;
     cursor: pointer;
 }
 
+/* Ukryty wizualnie, ale dostępny z klawiatury i dla czytników ekranu (display: none by to wyłączał) */
 .sourceCheckbox {
-    display: none;
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+}
+
+.sourceCheckbox:focus-visible + .sourceFilterBadge {
+    outline: 2px solid var(--button-primary);
+    outline-offset: 2px;
 }
 
 .sourceFilterBadge {
@@ -218,13 +229,37 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
     cursor: pointer;
 }
 
 .sourceFilterBadge:hover {
     opacity: 0.9;
-    transform: scale(1.05);
+}
+
+/* Nieaktywny: przezroczyste tło i wyraźna ramka, widoczne w obu motywach */
+.filterChipOff {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
+
+.filterChipOn {
+    font-weight: 700;
+}
+
+/* Licznik 0: przyciemnione, żeby wzrok szedł do pozycji, w których coś jest */
+.filterChipEmpty {
+    opacity: 0.5;
+}
+
+/* Aktywny status: lekki odcień koloru statusu, pełna ramka i zwykły tekst (kontrast jak dla tekstu strony) */
+.filterChipStatusOn {
+    background: color-mix(in srgb, var(--chip-color) 20%, var(--bg-secondary));
+    color: var(--text-primary);
+    border: 2px solid var(--chip-color);
+    padding: 5px 11px;
 }
 
 

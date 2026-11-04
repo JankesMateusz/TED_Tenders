@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Statistics } from '../utils/calculateStatistics';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig } from '../utils/tenderSources';
-import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
+import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
@@ -252,7 +252,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                             : key === 'unmarked' ? 'Bez statusu (do przejrzenia)'
                             : STATUS_CONFIG[key].label;
                         const color = key === 'total' || key === 'reviewed' ? 'var(--button-primary)'
-                            : key === 'unmarked' ? '#95a5a6'
+                            : key === 'unmarked' ? UNMARKED_COLOR
                             : STATUS_CONFIG[key].color;
                         const content = (
                             <>
