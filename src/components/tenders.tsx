@@ -14,6 +14,8 @@ import { ALL_SOURCES, NO_STATUS_FILTERS, loadFilters, saveFilters } from "../uti
 import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { useComments } from "../hooks/useComments";
+import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
+import { isHiddenAdvertiser } from "../utils/advertisers";
 import { usePreviousPeriod } from "../hooks/usePreviousPeriod";
 import { useDayTenders, useRefreshedDays } from "../hooks/useHourlyDays";
 import { describePeriod, getComparisonPeriod } from "../utils/comparison";
@@ -118,6 +120,9 @@ const Tenders: React.FC = () => {
     );
 
     const { commentsByTender, commentsError, addComment, deleteComment } = useComments(startDay, endDay);
+    const { advertiserDecisions, advertiserError, setAdvertiserDecision } = useAdvertiserDecisions();
+    // Firmy prywatne i NGO są domyślnie ukryte; przełącznik w filtrach pokazuje je na czas przeglądania
+    const [showHiddenAdvertisers, setShowHiddenAdvertisers] = useState<boolean>(false);
 
     // Nasłuch przetargów z bazy dla wybranego zakresu dat (zmiany od innych użytkowników widać na bieżąco)
     useEffect(() => {
@@ -302,27 +307,37 @@ const Tenders: React.FC = () => {
         isFiltered,
         searchQuery,
         statusFilters,
-        sortOrder
-    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, isFiltered, searchQuery, statusFilters, sortOrder]);
+        sortOrder,
+        advertiserDecisions,
+        showHiddenAdvertisers
+    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, isFiltered, searchQuery, statusFilters, sortOrder, advertiserDecisions, showHiddenAdvertisers]);
+
+    // Zapisane (gwiazdką) zostają widoczne nawet po ukryciu zamawiającego: ktoś świadomie je wybrał
+    const savedFilterOptions = useMemo(() => ({ ...filterOptions, showHiddenAdvertisers: true }), [filterOptions]);
 
     const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, filterOptions), [filterOptions]);
 
     // Obie listy są filtrowane osobno, by licznik "Przetargi" nie zależał od aktywnej zakładki
     const filteredTenders = useMemo(() => applyFilters(unsavedTenders), [applyFilters, unsavedTenders]);
-    const filteredSavedTenders = useMemo(() => applyFilters(savedTenders), [applyFilters, savedTenders]);
+    const filteredSavedTenders = useMemo(() => filterAndSortTenders(savedTenders, savedFilterOptions), [savedTenders, savedFilterOptions]);
+    const hiddenAdvertisersCount = useMemo(
+        () => unsavedTenders.filter((tender) => isHiddenAdvertiser(tender, advertiserDecisions)).length,
+        [unsavedTenders, advertiserDecisions]
+    );
     const displayedTenders = activeTab === 'saved' ? filteredSavedTenders : filteredTenders;
 
     // Listy w panelu bocznym pomijają własny filtr (żeby dało się dobrać kolejne pozycje), ale uwzględniają resztę
     const activeTabTenders = activeTab === 'saved' ? savedTenders : unsavedTenders;
+    const activeTabOptions = activeTab === 'saved' ? savedFilterOptions : filterOptions;
     const buyerOptionTenders = useMemo(
-        () => filterTenders(activeTabTenders, filterOptions, 'buyer'),
-        [activeTabTenders, filterOptions]
+        () => filterTenders(activeTabTenders, activeTabOptions, 'buyer'),
+        [activeTabTenders, activeTabOptions]
     );
     const cityOptionTenders = useMemo(
-        () => filterTenders(activeTabTenders, filterOptions, 'city'),
-        [activeTabTenders, filterOptions]
+        () => filterTenders(activeTabTenders, activeTabOptions, 'city'),
+        [activeTabTenders, activeTabOptions]
     );
-    const facetCounts = useMemo(() => countFacets(activeTabTenders, filterOptions), [activeTabTenders, filterOptions]);
+    const facetCounts = useMemo(() => countFacets(activeTabTenders, activeTabOptions), [activeTabTenders, activeTabOptions]);
 
     // Filtry z panelu, paska bocznego i statystyk; przełącznik "Wszystkie / IT" w nagłówku to tryb widoku,
     // więc nie jest tu liczony ani czyszczony.
@@ -557,6 +572,9 @@ const Tenders: React.FC = () => {
                                     onRemoveCpv={(code) => setSelectedCpvs((prev) => prev.filter((item) => item !== code))}
                                     hasActiveFilters={hasActiveFilters}
                                     onClearFilters={handleClearFilters}
+                                    hiddenAdvertisersCount={hiddenAdvertisersCount}
+                                    showHiddenAdvertisers={showHiddenAdvertisers}
+                                    onShowHiddenAdvertisersChange={setShowHiddenAdvertisers}
                                 />
                 {activeTab === 'tenders' && isLoading && (
                     <div className={styles.skeletonContainer}>
@@ -581,6 +599,7 @@ const Tenders: React.FC = () => {
                 {activeTab === 'tenders' && refreshError && <p className={styles.message} role="alert">{refreshError}</p>}
                 {actionError && <p className={styles.message} role="alert">{actionError}</p>}
                 {commentsError && <p className={styles.message} role="alert">{commentsError}</p>}
+                {advertiserError && <p className={styles.message} role="alert">{advertiserError}</p>}
                 {activeTab === 'tenders' && isRefreshing && !isLoading && (
                     <p className={styles.message}>
                         {REFRESHING_MESSAGE}
@@ -611,6 +630,8 @@ const Tenders: React.FC = () => {
                                     canComment={liveTendersById.has(tender.id)}
                                     onAddComment={addComment}
                                     onDeleteComment={deleteComment}
+                                    advertiserHidden={isHiddenAdvertiser(tender, advertiserDecisions)}
+                                    onSetAdvertiserDecision={setAdvertiserDecision}
                                 />
                             );
                         })}

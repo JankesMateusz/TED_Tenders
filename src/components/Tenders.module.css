@@ -814,6 +814,31 @@
     background: var(--button-primary-hover);
 }
 
+.advertiserButton {
+    /* Pasek linków to flex: auto po lewej odsuwa przycisk na prawy brzeg karty */
+    margin-left: auto;
+    padding: 8px 16px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+    transition: background-color 0.2s ease;
+}
+
+.advertiserButton:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.hiddenAdvertiserBadge {
+    padding: 2px 8px;
+    border: 1px dashed var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 0.85em;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .mainContent {

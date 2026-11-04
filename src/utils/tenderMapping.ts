@@ -46,6 +46,8 @@ export const tenderFromDoc = (data: Record<string, any>, id: string): Tender => 
     country: data.country,
     buyerMainActivity: data.buyerMainActivity ?? undefined,
     fetchedAt: dateFromTimestamp(data.fetchedAt),
+    buyerNip: data.buyerNip ?? undefined,
+    buyerSectorAuto: data.buyerSectorAuto ?? undefined,
     changeNoticeVersionIdentifier: null,
     ...statusFromDoc(data)
 });
@@ -77,6 +79,8 @@ export const favoriteFromDoc = (data: Record<string, any>, id: string): Tender =
     country: data.country,
     buyerMainActivity: data.buyerMainActivity,
     fetchedAt: dateFromTimestamp(data.fetchedAt),
+    buyerNip: data.buyerNip ?? undefined,
+    buyerSectorAuto: data.buyerSectorAuto ?? undefined,
     changeNoticeVersionIdentifier: null
 });
 

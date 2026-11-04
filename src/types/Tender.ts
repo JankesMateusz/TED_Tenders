@@ -1,5 +1,6 @@
 import { TenderSource } from './TenderSource';
 import { TenderStatus } from './TenderStatus';
+import { BuyerSector } from '../utils/advertisers';
 
 export interface Tender {
     /** Identyfikator dokumentu w Firestore (`{źródło}_{numer}`); numer publikacji sam nie jest unikalny między źródłami. */
@@ -22,6 +23,10 @@ export interface Tender {
     buyerMainActivity?: string;
     /** Kiedy aplikacja pobrała przetarg ze źródła (do atrybucji danych z Bazy Konkurencyjności). */
     fetchedAt?: Date;
+    /** NIP zamawiającego (tylko Baza Konkurencyjności); po nim zapamiętujemy decyzje o ukrywaniu. */
+    buyerNip?: string;
+    /** Sektor zamawiającego ustalony automatycznie po nazwie (tylko Baza Konkurencyjności). */
+    buyerSectorAuto?: BuyerSector;
     /** Wspólny status, jeśli ktoś go ustawił; autor i czas służą do podpowiedzi. */
     status?: TenderStatus;
     statusByEmail?: string;
