@@ -4,13 +4,16 @@ import { TenderStatus } from '../types/TenderStatus';
 import { OrderType } from '../utils/tenderSources';
 import { isItRelatedCpv, normalizeCpv } from './cpvFilter';
 import { CPV_CATEGORY_LABELS, CpvCategoryKey, getTenderCpvCategories } from './cpvCategories';
+import { MIN_REPEAT_COUNT } from './repeatOptions';
+import { normalizeName } from './stringUtils';
 
 export interface Statistics {
     total: number;
     bySource: Record<TenderSource, number>;
     byOrderType: Partial<Record<OrderType, number>>;
     topCities: Array<{ city: string; count: number }>;
-    topBuyers: Array<{ buyer: string; count: number }>;
+    /** Zamawiający z co najmniej MIN_REPEAT_COUNT ogłoszeniami (nazwy porównywane po normalizacji), od najliczniejszych, max 10. */
+    repeatBuyers: Array<{ buyer: string; count: number }>;
     /** Kody CPV związane z IT; liczba przetargów, które zawierają dany kod (jeden przetarg może mieć kilka kodów). */
     topCpvCodes: Array<{ code: string; count: number }>;
     /** Co jest zamawiane: liczba przetargów w każdej kategorii CPV (jeden przetarg może być w kilku, więc sumy się nie dodają). */
@@ -68,7 +71,7 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         },
         byOrderType: {},
         topCities: [],
-        topBuyers: [],
+        repeatBuyers: [],
         topCpvCodes: [],
         byCpvCategory: [],
         byReviewer: [],
@@ -94,7 +97,8 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
     };
     
     const cityMap = new Map<string, number>();
-    const buyerMap = new Map<string, number>();
+    // Klucz to znormalizowana nazwa; pokazujemy najdłuższy wariant (zwykle najpełniejszy), jak w panelu bocznym
+    const buyerMap = new Map<string, { buyer: string; count: number }>();
     const cpvMap = new Map<string, number>();
     const categoryMap = new Map<CpvCategoryKey, number>();
     const reviewerMap = new Map<string, number>();
@@ -118,7 +122,13 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         
         // Top buyers
         if (tender.buyerName && tender.buyerName !== 'Brak danych') {
-            buyerMap.set(tender.buyerName, (buyerMap.get(tender.buyerName) || 0) + 1);
+            const key = normalizeName(tender.buyerName);
+            const displayName = tender.buyerName.trim().replace(/\s+/g, ' ');
+            const existing = buyerMap.get(key);
+            buyerMap.set(key, {
+                buyer: existing && existing.buyer.length >= displayName.length ? existing.buyer : displayName,
+                count: (existing?.count ?? 0) + 1
+            });
         }
 
         // Top CPV: tylko kody IT (mają oficjalne nazwy); kod powtórzony w jednym przetargu liczy się raz
@@ -201,10 +211,9 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
     
-    // Top buyers (top 10)
-    stats.topBuyers = Array.from(buyerMap.entries())
-        .map(([buyer, count]) => ({ buyer, count }))
-        .sort((a, b) => b.count - a.count)
+    stats.repeatBuyers = Array.from(buyerMap.values())
+        .filter(({ count }) => count >= MIN_REPEAT_COUNT)
+        .sort((a, b) => b.count - a.count || a.buyer.localeCompare(b.buyer, 'pl'))
         .slice(0, 10);
 
     // Top CPV (top 10)

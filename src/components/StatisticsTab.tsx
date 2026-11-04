@@ -10,6 +10,7 @@ import { CpvCategoryKey } from '../utils/cpvCategories';
 import { TREND_DAYS, TrendPoint } from '../utils/recentTrend';
 import { dayToDisplayDate } from '../utils/dateUtils';
 import { formatDelta } from '../utils/comparison';
+import { MIN_REPEAT_COUNT } from '../utils/repeatOptions';
 import styles from './StatisticsTab.module.css';
 
 const parseStatisticDate = (dateStr: string): number => {
@@ -614,11 +615,14 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     </div>
                 )}
                 
-                {statistics.topBuyers.length > 0 && (
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Top 10 zamawiających</h3>
+                <div className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Powtarzający się zamawiający</h3>
+                    <p className={styles.chartSubtitle}>
+                        Zamawiający z co najmniej {MIN_REPEAT_COUNT} ogłoszeniami w wybranym okresie: to oni wracają.
+                    </p>
+                    {statistics.repeatBuyers.length > 0 ? (
                         <ul className={styles.list}>
-                            {statistics.topBuyers.map(({ buyer, count }, index) => (
+                            {statistics.repeatBuyers.map(({ buyer, count }, index) => (
                                 <li key={buyer} className={styles.listItem}>
                                     <button
                                         type="button"
@@ -632,8 +636,10 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                 </li>
                             ))}
                         </ul>
-                    </div>
-                )}
+                    ) : (
+                        <p className={styles.chartSubtitle}>Brak zamawiających z więcej niż jednym ogłoszeniem.</p>
+                    )}
+                </div>
             </div>
         </div>
     );

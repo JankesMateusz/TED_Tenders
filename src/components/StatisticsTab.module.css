@@ -12,17 +12,12 @@
 }
 
 .statCard {
-    background: var(--bg-secondary);
-    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
     padding: 20px;
     box-shadow: var(--card-shadow);
     text-align: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.statCard:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--card-hover-shadow);
 }
 
 .statValue {
@@ -67,6 +62,15 @@
     transition: width 0.3s ease;
 }
 
+/* Klikalny kafelek (przycisk) ma to samo obramowanie co zwykły; najechanie zaznacza go kolorem akcentu */
+.statCard.clickable {
+    border: 1px solid var(--border-color);
+}
+
+.statCard.clickable:hover {
+    border-color: var(--accent);
+}
+
 /* Zerowe kafelki są przyciemnione, żeby wzrok szedł do tych, w których coś jest */
 .statCardZero {
     opacity: 0.55;
@@ -80,8 +84,9 @@
 }
 
 .section {
-    background: var(--bg-secondary);
-    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
     padding: 20px;
     box-shadow: var(--card-shadow);
 }
