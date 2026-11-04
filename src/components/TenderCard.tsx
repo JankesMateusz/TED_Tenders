@@ -30,6 +30,18 @@ type Props = {
     onActivate: (tenderId: string) => void;
 };
 
+const StarIcon: React.FC<{ filled: boolean }> = ({ filled }) => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />
+    </svg>
+);
+
+const ExternalIcon: React.FC = () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+    </svg>
+);
+
 /** Tyle nazw CPV widać od razu pod tytułem; reszta kodów jest pod przyciskiem "+N". */
 const VISIBLE_CPV_CHIPS = 2;
 
@@ -99,7 +111,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                         aria-pressed={fav}
                         title={fav ? 'Usuń z zapisanych (widoczne tylko dla Ciebie)' : 'Zapisz dla siebie (widoczne tylko dla Ciebie)'}
                     >
-                        {fav ? '★' : '☆'}
+                        <StarIcon filled={fav} />
                     </button>
                 </div>
             </div>
@@ -150,11 +162,11 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
 
             <div className={styles.links}>
                 <a href={tender.link} target="_blank" rel="noopener noreferrer" className={styles.link}>
-                    Zobacz ogłoszenie
+                    Zobacz ogłoszenie <ExternalIcon />
                 </a>
                 {tender.documentsUrl && (
                     <a href={tender.documentsUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>
-                        Dokumentacja
+                        Dokumentacja <ExternalIcon />
                     </a>
                 )}
                 {tender.buyerNip && (

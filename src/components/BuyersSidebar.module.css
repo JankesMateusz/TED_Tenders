@@ -1,14 +1,17 @@
 .sidebar {
     width: 320px;
     flex-shrink: 0;
-    background: transparent;
-    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    box-sizing: border-box;
+    padding: 16px;
     position: sticky;
-    top: 100px;
+    top: 16px;
     align-self: flex-start;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 120px);
+    max-height: calc(100vh - 32px);
 }
 
 .headerRow {
@@ -109,7 +112,7 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 2px;
     flex: 1;
     overflow-y: auto;
     min-height: 0;
@@ -130,29 +133,34 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 12px 14px;
-    background: var(--bg-secondary);
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
     border-radius: 8px;
-    box-shadow: var(--card-shadow);
-    transition: all 0.2s ease;
     cursor: pointer;
-    border: 1px solid var(--border-color);
     gap: 8px;
 }
 
 .buyerItem:hover {
     background: var(--bg-secondary);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
 }
 
-.buyerItemSelected {
-    background: var(--button-primary) !important;
-    color: white;
-    border-color: var(--button-primary);
+.buyerItemSelected,
+.buyerItemSelected:hover {
+    background: var(--accent-bg);
+    font-weight: 600;
 }
 
 .buyerItemSelected .buyerName {
+    color: var(--accent);
+}
+
+.buyerItemSelected .buyerCount {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+.buyerName {
     color: white;
 }
 
@@ -180,7 +188,7 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--bg-secondary);
     padding: 2px 8px;
     border-radius: 10px;
     min-width: 24px;
@@ -258,7 +266,8 @@
         position: static;
         width: 100%;
         max-height: 60vh;
-        padding: 12px 0 0;
+        margin-top: 8px;
+        padding: 12px;
         box-sizing: border-box;
     }
 

@@ -69,7 +69,9 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
                 aria-expanded={open}
                 title={label}
             >
-                💬
+                <svg viewBox="0 0 24 24" width="20" height="20" fill={count > 0 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z" />
+                </svg>
                 {count > 0 && <span className={styles.commentCount}>{count}</span>}
             </button>
 

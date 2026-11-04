@@ -377,7 +377,6 @@ const Tenders: React.FC = () => {
         selectedCpvCategory !== null ||
         selectedSources.length !== ALL_SOURCES.length ||
         selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length;
-    const hasActiveFilters = hasActiveStatisticsFilters || Object.values(statusFilters).some(Boolean);
 
     // Kolejka jest pusta, gdy są ogłoszenia pasujące do pozostałych filtrów, ale wszystkie mają już status
     const isQueueEmpty =
@@ -680,8 +679,8 @@ const Tenders: React.FC = () => {
                         activeId={activeTab}
                         onChange={setActiveTab}
                         tabs={[
-                            { id: 'tenders', label: `Przetargi (${filteredTenders.length})` },
-                            { id: 'saved', label: `Zapisane (${favorites.length})` },
+                            { id: 'tenders', label: <>Przetargi <span className={styles.tabCount}>{filteredTenders.length}</span></> },
+                            { id: 'saved', label: <>Zapisane <span className={styles.tabCount}>{favorites.length}</span></> },
                             { id: 'statistics', label: 'Statystyki' }
                         ]}
                     />
@@ -722,7 +721,7 @@ const Tenders: React.FC = () => {
                                     onSortOrderChange={setSortOrder}
                                     activeChips={activeChips}
                                     onRemoveChip={handleRemoveChip}
-                                    hasActiveFilters={hasActiveFilters}
+                                    hasActiveFilters={activeChips.length > 0 || searchQuery.trim() !== ""}
                                     onClearFilters={handleClearFilters}
                                     hiddenAdvertisersCount={hiddenAdvertisersCount}
                                     showHiddenAdvertisers={showHiddenAdvertisers}
