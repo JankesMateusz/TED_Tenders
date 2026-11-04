@@ -23,7 +23,7 @@ przeglądarka (React) ──czyta na żywo──> Firestore <──zapisuje─�
 ```
 
 - **Frontend** (`src/`): React 19, TypeScript, CSS Modules, Firebase SDK.
-- **Functions** (`functions/`, Node 22, region `europe-central2`): `refreshTenders`, `inviteUser`.
+- **Functions** (`functions/`, Node 22, region `europe-central2`): `refreshTenders`, `scheduledRefresh` (cykliczne odświeżanie co 10 minut, 9:00-23:50), `inviteUser`.
 - **Firestore**: `tenders`, `refreshLog`, `users` (+ `users/{uid}/favorites`), `meta`. Reguły w `firestore.rules`, indeksy i polityki TTL w `firestore.indexes.json`.
 - **Dostęp** daje wyłącznie custom claim `role` (`admin` lub `member`); samo zalogowanie nie wystarcza.
 
