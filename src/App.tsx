@@ -8,13 +8,14 @@ import LoginScreen from './components/LoginScreen';
 import NoAccessScreen from './components/NoAccessScreen';
 import UserBar from './components/UserBar';
 import { MESSAGES } from './constants';
+import styles from './components/Auth.module.css';
 import './styles/theme.css';
 
 /** Pokazuje aplikację tylko zalogowanym użytkownikom, którzy mają nadaną rolę. */
 const AuthGate: React.FC = () => {
   const { user, role, loading } = useAuth();
 
-  if (loading) return <p>{MESSAGES.LOADING}</p>;
+  if (loading) return <div className={styles.loadingScreen} role="status">{MESSAGES.LOADING}</div>;
   if (!user) return <LoginScreen />;
   if (!role) return <NoAccessScreen />;
 

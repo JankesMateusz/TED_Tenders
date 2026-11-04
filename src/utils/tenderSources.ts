@@ -20,7 +20,7 @@ export const tenderSourceConfig: Record<TenderSource, TenderSourceConfig> = {
     [TenderSource.BAZA_KONKURENCYJNOSCI]: {
         label: "Baza Konkurencyjności",
         color: "#ffffff",
-        backgroundColor: "#cc6600"
+        backgroundColor: "#b35900"
     }
 };
 
@@ -53,16 +53,17 @@ export const orderTypeConfig: Record<OrderType, OrderTypeConfig> = {
     Delivery: {
         label: "Dostawa",
         color: "#ffffff",
-        backgroundColor: "#28a745"
+        backgroundColor: "#1e7e34"
     },
     Services: {
         label: "Usługa",
         color: "#ffffff",
-        backgroundColor: "#17a2b8"
+        backgroundColor: "#117a8b"
     },
     Works: {
         label: "Roboty budowlane",
-        color: "#ffffff",
+        // Żółte tło wymaga ciemnego tekstu; biały dawał kontrast 1.6:1
+        color: "#212529",
         backgroundColor: "#ffc107"
     }
 };

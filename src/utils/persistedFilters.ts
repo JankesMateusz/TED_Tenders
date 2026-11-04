@@ -29,18 +29,25 @@ export const NO_STATUS_FILTERS: StatusFilters = {
     unmarked: false
 };
 
+/** Domyślny widok to kolejka pracy: ogłoszenia, których nikt jeszcze nie ocenił. */
+export const DEFAULT_STATUS_FILTERS: StatusFilters = { ...NO_STATUS_FILTERS, unmarked: true };
+
 export const defaultFilters = (): PersistedFilters => ({
     selectedSources: [...ALL_SOURCES],
     selectedOrderTypes: [...DEFAULT_ORDER_TYPES],
     selectedBuyers: [],
     selectedCities: [],
     selectedCpvs: [],
-    statusFilters: { ...NO_STATUS_FILTERS },
+    statusFilters: { ...DEFAULT_STATUS_FILTERS },
     sortOrder: DEFAULT_SORT_ORDER
 });
 
-/** Klucz zależy od konta, żeby na wspólnym komputerze każdy miał własne ustawienia. */
-export const storageKey = (uid: string): string => `tenders.filters.v1.${uid}`;
+/**
+ * Klucz zależy od konta, żeby na wspólnym komputerze każdy miał własne ustawienia.
+ * v2: zmieniony domyślny filtr statusu ("Nieoznaczone"); w v1 zapisany pusty filtr był nie do odróżnienia od
+ * świadomego wyboru, więc stare zapisy porzucamy zamiast zostawiać wszystkim widok bez kolejki pracy.
+ */
+export const storageKey = (uid: string): string => `tenders.filters.v2.${uid}`;
 
 const pickStrings = (value: unknown, allowed?: readonly string[]): string[] | null => {
     if (!Array.isArray(value)) return null;

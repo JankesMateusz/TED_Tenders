@@ -39,6 +39,39 @@
     letter-spacing: 0.5px;
 }
 
+.progress {
+    margin-bottom: 16px;
+}
+
+.progressHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.progressTrack {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--border-color);
+    overflow: hidden;
+}
+
+.progressBar {
+    display: block;
+    height: 100%;
+    border-radius: 6px;
+    background: var(--button-primary);
+    transition: width 0.3s ease;
+}
+
+/* Zerowe kafelki są przyciemnione, żeby wzrok szedł do tych, w których coś jest */
+.statCardZero {
+    opacity: 0.55;
+}
+
 .sectionsGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -72,9 +105,29 @@
 .sourceItem,
 .orderTypeItem {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
+    gap: 4px 0;
     padding: 8px 0;
+}
+
+/* Pasek udziału w osobnej linii pod pozycją */
+.shareTrack {
+    order: 2; /* po strzałce klikalnego wiersza, która jest ostatnim elementem w DOM */
+    flex: 0 0 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border-color);
+    overflow: hidden;
+}
+
+.shareBar {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--button-primary);
+    min-width: 2px;
 }
 
 .sourceBadge {
@@ -111,11 +164,14 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.listButton {
+.listButton,
+.listRow {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 4px 12px;
     padding: 8px 0;
+    width: 100%;
 }
 
 .listItem:last-child {
@@ -139,7 +195,7 @@
     font-size: 16px;
     font-weight: 600;
     color: var(--button-primary);
-    background: rgba(52, 152, 219, 0.1);
+    background: var(--accent-tint);
     padding: 4px 12px;
     border-radius: 12px;
 }
@@ -244,7 +300,7 @@
     position: absolute;
     left: -40px;
     top: -8px;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
     font-weight: 500;
 }
@@ -290,7 +346,7 @@
 }
 
 .hourCountHovered {
-    color: #3498db;
+    color: var(--accent);
     font-size: 15px;
     transform: scale(1.1);
 }
@@ -300,7 +356,7 @@
     bottom: calc(100% + 12px);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
+    background: var(--tooltip-bg);
     color: white;
     padding: 8px 12px;
     border-radius: 8px;
@@ -325,7 +381,7 @@
     height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, 0.9);
+    border-top: 6px solid var(--tooltip-bg);
 }
 
 @keyframes tooltipFadeIn {
@@ -343,12 +399,12 @@
     width: 100%;
     border-radius: 6px 6px 0 0;
     background: linear-gradient(180deg, 
-        rgba(52, 152, 219, 1) 0%, 
-        rgba(52, 152, 219, 0.8) 50%,
-        rgba(52, 152, 219, 0.6) 100%
+        var(--accent) 0%, 
+        color-mix(in srgb, var(--accent) 80%, transparent) 50%,
+        color-mix(in srgb, var(--accent) 60%, transparent) 100%
     );
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
     position: relative;
     flex-shrink: 0;
 }
@@ -366,16 +422,16 @@
 
 .hourBarHovered {
     background: linear-gradient(180deg, 
-        rgba(52, 152, 219, 1) 0%, 
-        rgba(41, 128, 185, 0.9) 50%,
-        rgba(41, 128, 185, 0.7) 100%
+        var(--accent) 0%, 
+        color-mix(in srgb, var(--accent-dark) 90%, transparent) 50%,
+        color-mix(in srgb, var(--accent-dark) 70%, transparent) 100%
     );
-    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.5);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 50%, transparent);
     transform: scaleX(1.1);
 }
 
 .hourLabel {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
     letter-spacing: 0.3px;
     font-weight: 500;
@@ -426,9 +482,6 @@
         display: none;
     }
 
-    .desktopOnly {
-        display: none;
-    }
 }
 
 .hourlyRows {
@@ -465,7 +518,7 @@
     height: 100%;
     min-width: 0;
     border-radius: 0 4px 4px 0;
-    background: linear-gradient(90deg, rgba(52, 152, 219, 0.6), rgba(52, 152, 219, 1));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent), var(--accent));
 }
 
 .hourlyRowCount {
@@ -544,29 +597,29 @@
 
 .dayBarTed {
     background: linear-gradient(180deg, 
-        rgba(230, 126, 34, 1) 0%, 
-        rgba(230, 126, 34, 0.8) 50%,
-        rgba(230, 126, 34, 0.6) 100%
+        var(--series-ted) 0%, 
+        color-mix(in srgb, var(--series-ted) 80%, transparent) 50%,
+        color-mix(in srgb, var(--series-ted) 60%, transparent) 100%
     );
-    box-shadow: 0 2px 8px rgba(230, 126, 34, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--series-ted) 30%, transparent);
 }
 
 .dayBarEzam {
     background: linear-gradient(180deg, 
-        rgba(52, 152, 219, 1) 0%, 
-        rgba(52, 152, 219, 0.8) 50%,
-        rgba(52, 152, 219, 0.6) 100%
+        var(--series-ezam) 0%, 
+        color-mix(in srgb, var(--series-ezam) 80%, transparent) 50%,
+        color-mix(in srgb, var(--series-ezam) 60%, transparent) 100%
     );
-    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--series-ezam) 30%, transparent);
 }
 
 .dayBarBaza {
     background: linear-gradient(180deg, 
-        rgba(155, 89, 182, 1) 0%, 
-        rgba(155, 89, 182, 0.8) 50%,
-        rgba(155, 89, 182, 0.6) 100%
+        var(--series-baza) 0%, 
+        color-mix(in srgb, var(--series-baza) 80%, transparent) 50%,
+        color-mix(in srgb, var(--series-baza) 60%, transparent) 100%
     );
-    box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--series-baza) 30%, transparent);
 }
 
 .dayBarHovered {
@@ -575,7 +628,7 @@
 }
 
 .dayLabel {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
     letter-spacing: 0.3px;
     font-weight: 500;
@@ -586,7 +639,7 @@
     bottom: calc(100% + 12px);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
+    background: var(--tooltip-bg);
     color: white;
     padding: 8px 12px;
     border-radius: 8px;
@@ -612,7 +665,7 @@
     height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, 0.9);
+    border-top: 6px solid var(--tooltip-bg);
 }
 
 .chartLegend {
@@ -638,15 +691,15 @@
 }
 
 .legendDotTed {
-    background: linear-gradient(135deg, rgba(230, 126, 34, 1) 0%, rgba(230, 126, 34, 0.7) 100%);
+    background: linear-gradient(135deg, var(--series-ted) 0%, color-mix(in srgb, var(--series-ted) 70%, transparent) 100%);
 }
 
 .legendDotEzam {
-    background: linear-gradient(135deg, rgba(52, 152, 219, 1) 0%, rgba(52, 152, 219, 0.7) 100%);
+    background: linear-gradient(135deg, var(--series-ezam) 0%, color-mix(in srgb, var(--series-ezam) 70%, transparent) 100%);
 }
 
 .legendDotBaza {
-    background: linear-gradient(135deg, rgba(155, 89, 182, 1) 0%, rgba(155, 89, 182, 0.7) 100%);
+    background: linear-gradient(135deg, var(--series-baza) 0%, color-mix(in srgb, var(--series-baza) 70%, transparent) 100%);
 }
 
 
@@ -671,108 +724,29 @@
 .sourceItem.clickable:hover,
 .orderTypeItem.clickable:hover,
 .listButton.clickable:hover {
-    background: rgba(52, 152, 219, 0.08);
+    background: var(--accent-tint-soft);
+}
+
+/* Klikalny wiersz: strzałka po prawej i podkreślenie nazwy przy najechaniu */
+.sourceItem.clickable::after,
+.orderTypeItem.clickable::after,
+.listButton.clickable::after {
+    content: '›';
+    margin-left: 8px;
+    color: var(--text-secondary);
+    font-size: 18px;
+    line-height: 1;
+}
+
+.sourceItem.clickable:hover::after,
+.orderTypeItem.clickable:hover::after,
+.listButton.clickable:hover::after {
+    color: var(--button-primary);
 }
 
 .clickable:focus-visible {
     outline: 2px solid var(--button-primary);
     outline-offset: 2px;
-}
-
-.collapsibleHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.collapsibleHeader .sectionTitle {
-    flex: 1;
-}
-
-.collapseButton {
-    width: 28px;
-    height: 28px;
-    flex-shrink: 0;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-secondary);
-    font: inherit;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.collapseButton:hover {
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
-}
-
-.funnel {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 12px;
-}
-
-.funnelRow {
-    display: grid;
-    grid-template-columns: 220px 1fr 110px;
-    align-items: center;
-    gap: 12px;
-    padding: 6px 4px;
-    font-size: 14px;
-}
-
-.funnelRow.clickable {
-    width: 100%;
-    background: none;
-    border-radius: 6px;
-}
-
-.funnelRow.clickable:hover {
-    background: rgba(52, 152, 219, 0.08);
-}
-
-.funnelLabel {
-    color: var(--text-primary);
-}
-
-.funnelTrack {
-    height: 12px;
-    border-radius: 6px;
-    background: var(--border-color);
-    overflow: hidden;
-}
-
-.funnelBar {
-    display: block;
-    height: 100%;
-    border-radius: 6px;
-    min-width: 2px;
-}
-
-.funnelValue {
-    text-align: right;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.funnelValue small {
-    font-weight: 400;
-    color: var(--text-secondary);
-}
-
-@media (max-width: 600px) {
-    .funnelRow {
-        grid-template-columns: 1fr 90px;
-    }
-
-    .funnelTrack {
-        grid-column: 1 / -1;
-        order: 3;
-    }
 }
 
 .filterNotice {
@@ -783,8 +757,8 @@
     margin-bottom: 16px;
     padding: 10px 16px;
     border-radius: 8px;
-    background: rgba(243, 156, 18, 0.12);
-    border: 1px solid rgba(243, 156, 18, 0.4);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
     color: var(--text-primary);
     font-size: 14px;
 }
@@ -800,8 +774,8 @@
 }
 
 .filterNotice button:hover {
-    border-color: #e74c3c;
-    color: #e74c3c;
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 .comparisonNotice {
@@ -812,8 +786,8 @@
     margin-bottom: 16px;
     padding: 10px 16px;
     border-radius: 8px;
-    background: rgba(52, 152, 219, 0.1);
-    border: 1px solid rgba(52, 152, 219, 0.3);
+    background: var(--accent-tint);
+    border: 1px solid var(--accent-border);
     color: var(--text-primary);
     font-size: 14px;
 }
@@ -845,4 +819,56 @@
 .sourceCount .delta {
     display: inline;
     margin: 0 0 0 6px;
+}
+
+/* Trend nowych ogłoszeń z ostatnich dni */
+.trendChart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.trendColumn {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.trendCount {
+    min-height: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.trendBar {
+    display: block;
+    width: 100%;
+    max-width: 36px;
+    border-radius: 4px 4px 0 0;
+    background: var(--button-primary);
+}
+
+/* Dzień, którego dane mogą być niekompletne: kreskowany, bez wypełnienia */
+.trendBarIncomplete {
+    background: transparent;
+    border: 1px dashed var(--button-primary);
+}
+
+.trendDay {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Liczby po prawej, strzałka zaraz za nimi */
+.sourceCount,
+.orderTypeCount {
+    margin-left: auto;
 }

@@ -79,7 +79,7 @@
 
 .error {
     margin: 4px 0 0;
-    color: #e53e3e;
+    color: var(--danger);
     font-size: 0.9rem;
 }
 
@@ -90,26 +90,48 @@
 }
 
 /* Pasek użytkownika nad aplikacją */
+/* Pasek nad nagłówkiem w tym samym kolorze, więc oba wyglądają jak jedna całość */
 .userBar {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
-    padding: 6px 16px;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    background: var(--bg-primary);
-    border-bottom: 1px solid var(--border-color);
+    padding: 8px 24px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.92);
+    background: var(--header-gradient-start);
 }
 
 .userBarButton {
-    padding: 4px 10px;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    min-height: 36px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 14px;
+    color: white;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 6px;
     cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.userBarButton:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.userBarButton:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+/* Ekran ładowania stanu logowania (zanim wiadomo, czy pokazać logowanie czy aplikację) */
+.loadingScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 16px;
 }
 
 /* Panel administratora */

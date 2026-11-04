@@ -6,34 +6,11 @@ import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
-import { buildStatusFunnel } from '../utils/statusFunnel';
+import { CpvCategoryKey } from '../utils/cpvCategories';
+import { TREND_DAYS, TrendPoint } from '../utils/recentTrend';
+import { dayToDisplayDate } from '../utils/dateUtils';
 import { formatDelta } from '../utils/comparison';
 import styles from './StatisticsTab.module.css';
-
-const ACTIVITY_LABELS: Record<string, string> = {
-    health: 'Zdrowie',
-    'general-public-services': 'Administracja publiczna',
-    defence: 'Obrona',
-    'public-order-and-safety': 'Porządek i bezpieczeństwo',
-    environment: 'Środowisko',
-    'economic-and-financial-affairs': 'Sprawy gospodarczo-finansowe',
-    'housing-and-community-amenities': 'Budownictwo i infrastruktura komunalna',
-    'recreation-culture-and-religion': 'Rekreacja, kultura i religia',
-    education: 'Edukacja',
-    'social-protection': 'Ochrona socjalna',
-    other: 'Inne'
-};
-
-const formatActivityLabel = (rawKey: string): string => {
-    const normalizedKey = rawKey.toLowerCase();
-    if (ACTIVITY_LABELS[normalizedKey]) {
-        return ACTIVITY_LABELS[normalizedKey];
-    }
-    return normalizedKey
-        .split('-')
-        .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
-        .join(' ');
-};
 
 const parseStatisticDate = (dateStr: string): number => {
     if (!dateStr || dateStr === 'Brak daty' || dateStr === 'Błąd formatu daty') {
@@ -55,7 +32,8 @@ export type StatisticsDrillDown =
     | { kind: 'status'; status: TenderStatus | 'unmarked' }
     | { kind: 'city'; city: string }
     | { kind: 'buyer'; buyer: string }
-    | { kind: 'cpv'; code: string };
+    | { kind: 'cpv'; code: string }
+    | { kind: 'cpvCategory'; category: CpvCategoryKey };
 
 /** Stan porównania wybranego okresu z poprzednim (poprzedni dzień roboczy lub okres tej samej długości). */
 export type StatisticsComparison =
@@ -74,7 +52,23 @@ interface StatisticsTabProps {
     /** `null`, gdy nie ma wybranego zakresu dat. */
     comparison: StatisticsComparison | null;
     hourly: HourlyChartData;
+    /** Nowe ogłoszenia z ostatnich dni, po tych samych filtrach co statystyki (poza zakresem dat). */
+    trend: { points: TrendPoint[]; error: string | null };
 }
+
+/** Godziny pracy pokazywane na wykresie godzinowym; poza nimi tylko wtedy, gdy ktoś coś opublikował. */
+const DEFAULT_FIRST_HOUR = 7;
+const DEFAULT_LAST_HOUR = 19;
+
+/** Wysokość (px) najwyższego słupka trendu. */
+const TREND_BAR_MAX_HEIGHT = 100;
+
+/** Pasek udziału: jaka część całości przypada na daną pozycję. */
+const ShareBar: React.FC<{ count: number; total: number }> = ({ count, total }) => (
+    <span className={styles.shareTrack} aria-hidden="true">
+        <span className={styles.shareBar} style={{ width: `${total > 0 ? Math.min(100, (count / total) * 100) : 0}%` }} />
+    </span>
+);
 
 /** Dane wykresu godzinowego eZamówień: dni do wyboru (DD-MM-RRRR, od najnowszego) i rozkład godzin po dniach. */
 export interface HourlyChartData {
@@ -87,17 +81,6 @@ export interface HourlyChartData {
     onSelectDay: (day: string) => void;
 }
 
-const FUNNEL_COLLAPSED_KEY = 'statistics.funnelCollapsed';
-
-const readFunnelCollapsed = (): boolean => {
-    try {
-        return window.localStorage.getItem(FUNNEL_COLLAPSED_KEY) === 'true';
-    } catch {
-        // localStorage bywa zablokowany (tryb prywatny); sekcja jest wtedy po prostu rozwinięta
-        return false;
-    }
-};
-
 export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     statistics,
     isDateRange,
@@ -105,29 +88,26 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     hasActiveFilters,
     onClearFilters,
     comparison,
-    hourly
+    hourly,
+    trend
 }) => {
     const previous = comparison?.status === 'ready' ? comparison.statistics : null;
-    const renderDelta = (current: number, previousValue: number | undefined) =>
-        previousValue === undefined ? null : (
-            <span className={styles.delta} title={`Poprzednio: ${previousValue}`}>{formatDelta(current, previousValue)}</span>
-        );
-    const [funnelCollapsed, setFunnelCollapsed] = useState<boolean>(readFunnelCollapsed);
-    const toggleFunnel = () => {
-        const next = !funnelCollapsed;
-        setFunnelCollapsed(next);
-        try {
-            window.localStorage.setItem(FUNNEL_COLLAPSED_KEY, String(next));
-        } catch {
-            // brak możliwości zapisu: zwinięcie działa tylko do odświeżenia strony
+    const isPeriodOngoing = comparison?.status === 'ready' && comparison.isCurrentPeriodOngoing;
+    // Dopóki bieżący okres trwa, jego liczby są niepełne i różnica względem całego poprzedniego okresu
+    // byłaby prawie zawsze ujemna, więc pokazujemy samą wartość z poprzedniego okresu.
+    const renderDelta = (current: number, previousValue: number | undefined) => {
+        if (previousValue === undefined) return null;
+        if (isPeriodOngoing) {
+            return (
+                <span className={styles.delta} title="Bieżący okres jeszcze trwa, więc różnica byłaby zaniżona">
+                    poprzednio: {previousValue}
+                </span>
+            );
         }
+        return <span className={styles.delta} title={`Poprzednio: ${previousValue}`}>{formatDelta(current, previousValue)}</span>;
     };
-    const funnelRows = useMemo(
-        () => buildStatusFunnel(statistics.total, statistics.byStatus),
-        [statistics.total, statistics.byStatus]
-    );
-    const buyerActivityEntries = Object.entries(statistics.byBuyerActivity);
-    const hasBuyerActivity = buyerActivityEntries.length > 0;
+    const reviewedCount = statistics.total - statistics.byStatus.unmarked;
+    const reviewedPercent = statistics.total > 0 ? Math.round((reviewedCount / statistics.total) * 100) : 0;
     const hourlyDates = hourly.days;
     // Domyślnie najnowszy dzień z wybranego zakresu; inne dni z bazy użytkownik wybiera sam
     const newestRangeDate = useMemo(
@@ -155,6 +135,14 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     const maxHourlyValue = useMemo(() => hourlyData.reduce((max, value) => Math.max(max, value), 0), [hourlyData]);
     const totalHourlyValue = useMemo(() => hourlyData.reduce((sum, value) => sum + value, 0), [hourlyData]);
     const hasHourlyData = hourlyDates.length > 0;
+    const visibleHours = useMemo(() => {
+        const active = hourlyData.flatMap((count, hour) => (count > 0 ? [hour] : []));
+        const first = Math.min(DEFAULT_FIRST_HOUR, ...active);
+        const last = Math.max(DEFAULT_LAST_HOUR, ...active);
+        return hourlyData.map((count, hour) => ({ count, hour })).filter(({ hour }) => hour >= first && hour <= last);
+    }, [hourlyData]);
+    const maxTrendValue = useMemo(() => trend.points.reduce((max, point) => Math.max(max, point.count), 0), [trend.points]);
+    const reviewedTotal = statistics.byReviewer.reduce((sum, item) => sum + item.count, 0);
     
     // Daily distribution by source
     const dailyEntries = useMemo(
@@ -196,9 +184,28 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     {comparison.status === 'ready' && (
                         <span>
                             Zmiana względem: <strong>{comparison.label}</strong>
-                            {comparison.isCurrentPeriodOngoing && ' (bieżący okres jeszcze trwa, więc liczby mogą jeszcze rosnąć)'}
+                            {comparison.isCurrentPeriodOngoing && '. Bieżący okres jeszcze trwa, więc pokazujemy liczby z poprzedniego okresu zamiast różnicy.'}
                         </span>
                     )}
+                </div>
+            )}
+
+            {statistics.total > 0 && (
+                <div className={styles.progress}>
+                    <div className={styles.progressHeader}>
+                        <span><strong>{reviewedCount}</strong> z {statistics.total} ocenionych</span>
+                        <span>{reviewedPercent}%</span>
+                    </div>
+                    <div
+                        className={styles.progressTrack}
+                        role="progressbar"
+                        aria-label="Postęp oceniania przetargów"
+                        aria-valuemin={0}
+                        aria-valuemax={statistics.total}
+                        aria-valuenow={reviewedCount}
+                    >
+                        <span className={styles.progressBar} style={{ width: `${reviewedPercent}%` }} />
+                    </div>
                 </div>
             )}
 
@@ -213,7 +220,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     <button
                         key={status}
                         type="button"
-                        className={`${styles.statCard} ${styles.clickable}`}
+                        className={`${styles.statCard} ${styles.clickable} ${statistics.byStatus[status] === 0 ? styles.statCardZero : ''}`}
                         onClick={() => onDrillDown({ kind: 'status', status })}
                     >
                         <div className={styles.statValue} style={{ color: STATUS_CONFIG[status].color }}>
@@ -223,62 +230,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         <div className={styles.statLabel}>{STATUS_CONFIG[status].label}</div>
                     </button>
                 ))}
-            </div>
-            
-            <div className={`${styles.section} ${styles.fullWidthSection} ${styles.desktopOnly}`}>
-                <div className={styles.collapsibleHeader}>
-                    <h3 className={styles.sectionTitle}>Postęp przeglądania</h3>
-                    <button
-                        type="button"
-                        className={styles.collapseButton}
-                        onClick={toggleFunnel}
-                        aria-expanded={!funnelCollapsed}
-                        aria-label={funnelCollapsed ? 'Rozwiń sekcję Postęp przeglądania' : 'Zwiń sekcję Postęp przeglądania'}
-                        title={funnelCollapsed ? 'Rozwiń' : 'Zwiń'}
-                    >
-                        {funnelCollapsed ? '+' : '−'}
-                    </button>
-                </div>
-                {!funnelCollapsed && (
-                <>
-                <p className={styles.chartSubtitle}>
-                    Ile przetargów z listy ma już status, a ile czeka na przejrzenie. Udziały liczone względem wszystkich przetargów.
-                </p>
-                <div className={styles.funnel}>
-                    {funnelRows.map(({ key, count, percent }) => {
-                        const isStatus = key !== 'total' && key !== 'reviewed';
-                        const label = key === 'total' ? 'Wszystkie przetargi'
-                            : key === 'reviewed' ? 'Ze statusem'
-                            : key === 'unmarked' ? 'Bez statusu (do przejrzenia)'
-                            : STATUS_CONFIG[key].label;
-                        const color = key === 'total' || key === 'reviewed' ? 'var(--button-primary)'
-                            : key === 'unmarked' ? '#95a5a6'
-                            : STATUS_CONFIG[key].color;
-                        const content = (
-                            <>
-                                <span className={styles.funnelLabel}>{label}</span>
-                                <span className={styles.funnelTrack}>
-                                    <span className={styles.funnelBar} style={{ width: `${percent}%`, backgroundColor: color }} />
-                                </span>
-                                <span className={styles.funnelValue}>{count} <small>({percent}%)</small></span>
-                            </>
-                        );
-                        return isStatus ? (
-                            <button
-                                key={key}
-                                type="button"
-                                className={`${styles.funnelRow} ${styles.clickable}`}
-                                onClick={() => onDrillDown({ kind: 'status', status: key })}
-                            >
-                                {content}
-                            </button>
-                        ) : (
-                            <div key={key} className={styles.funnelRow}>{content}</div>
-                        );
-                    })}
-                </div>
-                </>
-                )}
             </div>
 
             <div className={styles.sectionsGrid}>
@@ -306,6 +257,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                     <span className={styles.sourceCount}>
                                         {count} {renderDelta(count, previous?.bySource[source as TenderSource])}
                                     </span>
+                                    <ShareBar count={count} total={statistics.total} />
                                 </button>
                             );
                         })}
@@ -325,25 +277,13 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                 >
                                     <span className={styles.orderTypeLabel}>{getOrderTypeConfig(type as OrderType).label}</span>
                                     <span className={styles.orderTypeCount}>{count}</span>
+                                    <ShareBar count={count} total={statistics.total} />
                                 </button>
                             ))}
                         </div>
                     </div>
                 )}
 
-                {hasBuyerActivity && (
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Według działalności zamawiającego</h3>
-                        <div className={styles.orderTypeStats}>
-                            {buyerActivityEntries.map(([activity, count]) => (
-                                <div key={activity} className={styles.orderTypeItem}>
-                                    <span className={styles.orderTypeLabel}>{formatActivityLabel(activity)}</span>
-                                    <span className={styles.orderTypeCount}>{count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
 
             {hasHourlyData && (
@@ -352,7 +292,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         <div>
                             <h3 className={styles.sectionTitle}>Godzinowa aktywność eZamówienia</h3>
                             <p className={styles.chartSubtitle}>
-                                Liczba ogłoszeń opublikowanych w każdej godzinie wybranego dnia
+                                Liczba ogłoszeń opublikowanych w każdej godzinie wybranego dnia ({DEFAULT_FIRST_HOUR}:00–{DEFAULT_LAST_HOUR}:59, inne godziny tylko gdy coś w nich opublikowano)
                             </p>
                         </div>
                         <select
@@ -376,7 +316,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         </span>
                     </div>
                     <div className={styles.hourlyRows}>
-                        {hourlyData.map((count, hour) => (
+                        {visibleHours.map(({ count, hour }) => (
                             <div key={hour} className={styles.hourlyRow}>
                                 <span className={styles.hourlyRowLabel}>{hour.toString().padStart(2, '0')}:00</span>
                                 <span className={styles.hourlyRowTrack}>
@@ -401,7 +341,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                 ))}
                             </div>
                             <div className={styles.hourlyChart}>
-                                {hourlyData.map((count, hour) => {
+                                {visibleHours.map(({ count, hour }) => {
                                     const maxChartHeight = 180;
                                     const height = maxHourlyValue > 0 ? (count / maxHourlyValue) * maxChartHeight : 0;
                                     const intensity = maxHourlyValue ? count / maxHourlyValue : 0;
@@ -441,6 +381,81 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                <h3 className={styles.sectionTitle}>Nowe ogłoszenia, ostatnie {TREND_DAYS} dni</h3>
+                <p className={styles.chartSubtitle}>
+                    Liczba ogłoszeń opublikowanych każdego dnia, bez względu na wybrany zakres dat. Kreskowany słupek oznacza dzień, którego dane mogą być niekompletne.
+                </p>
+                {trend.error ? (
+                    <p className={styles.chartSubtitle}>{trend.error}</p>
+                ) : (
+                    <ol className={styles.trendChart} aria-label={`Nowe ogłoszenia w ostatnich ${TREND_DAYS} dniach`}>
+                        {trend.points.map(({ day, count, complete }) => {
+                            const label = dayToDisplayDate(day);
+                            const height = maxTrendValue > 0 ? (count / maxTrendValue) * TREND_BAR_MAX_HEIGHT : 0;
+                            return (
+                                <li
+                                    key={day}
+                                    className={styles.trendColumn}
+                                    title={`${label}: ${count}${complete ? '' : ' (dane mogą być niekompletne)'}`}
+                                >
+                                    <span className={styles.trendCount}>{count > 0 ? count : ''}</span>
+                                    <span
+                                        className={`${styles.trendBar} ${complete ? '' : styles.trendBarIncomplete}`}
+                                        style={{ height: `${Math.max(height, 2)}px` }}
+                                    />
+                                    <span className={styles.trendDay}>{label.slice(0, 2)}</span>
+                                </li>
+                            );
+                        })}
+                    </ol>
+                )}
+            </div>
+
+            {statistics.byCpvCategory.length > 0 && (
+                <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                    <h3 className={styles.sectionTitle}>Co jest zamawiane</h3>
+                    <p className={styles.chartSubtitle}>
+                        Liczba przetargów z kodem CPV z danej kategorii. Przetarg może mieć kody z kilku kategorii, więc sumy się nie dodają.
+                    </p>
+                    <ul className={styles.list}>
+                        {statistics.byCpvCategory.map(({ key, label, count }) => (
+                            <li key={key} className={styles.listItem}>
+                                <button
+                                    type="button"
+                                    className={`${styles.listButton} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'cpvCategory', category: key })}
+                                >
+                                    <span className={styles.listName}>{label}</span>
+                                    <span className={styles.listCount}>{count}</span>
+                                    <ShareBar count={count} total={statistics.total} />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {statistics.byReviewer.length > 0 && (
+                <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                    <h3 className={styles.sectionTitle}>Kto ocenia</h3>
+                    <p className={styles.chartSubtitle}>
+                        Przetargi według osoby, która ustawiła obecny status (przy zmianie statusu liczy się ostatnia osoba).
+                    </p>
+                    <ul className={styles.list}>
+                        {statistics.byReviewer.map(({ reviewer, count }) => (
+                            <li key={reviewer} className={styles.listItem}>
+                                <div className={styles.listRow}>
+                                    <span className={styles.listName}>{reviewer}</span>
+                                    <span className={styles.listCount}>{count}</span>
+                                    <ShareBar count={count} total={reviewedTotal} />
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
 
@@ -488,17 +503,17 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                                 <div className={styles.dayTooltip}>
                                                     <strong>{date}</strong>
                                                     {tedCount > 0 && (
-                                                        <span style={{ color: '#e67e22' }}>
+                                                        <span style={{ color: 'var(--series-ted)' }}>
                                                             TED: {tedCount}
                                                         </span>
                                                     )}
                                                     {ezamCount > 0 && (
-                                                        <span style={{ color: '#3498db' }}>
+                                                        <span style={{ color: 'var(--series-ezam)' }}>
                                                             eZamówienia: {ezamCount}
                                                         </span>
                                                     )}
                                                     {bazaCount > 0 && (
-                                                        <span style={{ color: '#9b59b6' }}>
+                                                        <span style={{ color: 'var(--series-baza)' }}>
                                                             Baza: {bazaCount}
                                                         </span>
                                                     )}
