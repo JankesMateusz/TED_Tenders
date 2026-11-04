@@ -4,8 +4,8 @@ import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderS
 import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS } from '../constants';
 import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
 import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
-import { getCpvName } from '../utils/cpvMapping';
-import { CPV_CATEGORY_LABELS, CpvCategoryKey } from '../utils/cpvCategories';
+import { ActiveFilterChip } from '../utils/activeFilters';
+import { ActiveFilterChips } from './ActiveFilterChips';
 import styles from './Tenders.module.css';
 
 const STATUS_FILTER_OPTIONS: Array<{ key: keyof StatusFilters; label: string; color: string }> = [
@@ -32,11 +32,9 @@ interface FiltersPanelProps {
     facetCounts: FacetCounts;
     sortOrder: SortOrder;
     onSortOrderChange: (order: SortOrder) => void;
-    selectedCpvs: string[];
-    onRemoveCpv: (code: string) => void;
-    /** Kategoria CPV wybrana w statystykach; null, gdy brak. */
-    selectedCpvCategory: CpvCategoryKey | null;
-    onClearCpvCategory: () => void;
+    /** Chipy wszystkiego, co zawęża listę (poza frazą wyszukiwania) i usuwanie pojedynczego chipa. */
+    activeChips: ActiveFilterChip[];
+    onRemoveChip: (chip: ActiveFilterChip) => void;
     hasActiveFilters: boolean;
     onClearFilters: () => void;
     /** Ile ogłoszeń ukrywają decyzje o zamawiających (firmy prywatne i NGO); przełącznik pojawia się, gdy są takie ogłoszenia. */
@@ -66,10 +64,8 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     facetCounts,
     sortOrder,
     onSortOrderChange,
-    selectedCpvs,
-    onRemoveCpv,
-    selectedCpvCategory,
-    onClearCpvCategory,
+    activeChips,
+    onRemoveChip,
     hasActiveFilters,
     onClearFilters,
     hiddenAdvertisersCount,
@@ -107,33 +103,12 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 </div>
             </div>
             
-            {selectedCpvCategory && (
-                <div className={styles.activeCpvFilter}>
-                    <span>Kategoria CPV: {CPV_CATEGORY_LABELS[selectedCpvCategory]}</span>
-                    <button
-                        type="button"
-                        onClick={onClearCpvCategory}
-                        aria-label="Usuń filtr kategorii CPV"
-                        title="Usuń filtr kategorii CPV"
-                    >
-                        ✕
-                    </button>
-                </div>
-            )}
-
-            {selectedCpvs.map((code) => (
-                <div key={code} className={styles.activeCpvFilter}>
-                    <span>CPV: {getCpvName(code)} ({code})</span>
-                    <button
-                        type="button"
-                        onClick={() => onRemoveCpv(code)}
-                        aria-label={`Usuń filtr kodu CPV ${code}`}
-                        title="Usuń filtr kodu CPV"
-                    >
-                        ✕
-                    </button>
-                </div>
-            ))}
+            <ActiveFilterChips
+                chips={activeChips}
+                onRemove={onRemoveChip}
+                hasActiveFilters={hasActiveFilters}
+                onClearFilters={onClearFilters}
+            />
 
             <div className={styles.sortSection}>
                 <label className={styles.sortLabel} htmlFor="sort-order">Sortuj:</label>
@@ -222,14 +197,6 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                             </span>
                         </label>
                     ))}
-                    <button
-                        type="button"
-                        className={styles.clearFiltersButton}
-                        onClick={onClearFilters}
-                        disabled={!hasActiveFilters}
-                    >
-                        Wyczyść filtry
-                    </button>
                 </div>
             </div>
 

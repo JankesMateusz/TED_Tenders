@@ -1120,7 +1120,6 @@
     }
 } 
 .clearFiltersButton {
-    margin-left: auto;
     padding: 6px 14px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -1142,25 +1141,54 @@
     cursor: default;
 }
 
-.activeCpvFilter {
-    display: inline-flex;
+.activeChips {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-    padding: 6px 12px;
-    border-radius: 16px;
-    background: var(--accent-bg);
-    color: var(--text-primary);
-    font-size: 13px;
+    gap: 6px;
+    margin: 0 0 16px;
 }
 
-.activeCpvFilter button {
-    background: transparent;
-    border: none;
-    color: var(--danger);
+.activeChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 3px 6px 3px 10px;
+    border-radius: 20px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.activeChipRemove {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
     cursor: pointer;
-    padding: 0 2px;
-    font: inherit;
+}
+
+/* Cel dotykowy większy niż widoczny przycisk */
+.activeChipRemove::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+}
+
+.activeChipRemove:hover {
+    background: var(--accent);
+    color: var(--bg-primary);
 }
 
 .sortSection {

@@ -25,6 +25,7 @@ import { useDayTenders, useRefreshedDays } from "../hooks/useHourlyDays";
 import { describePeriod, getComparisonPeriod } from "../utils/comparison";
 import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
+import { ActiveFilterChip, buildActiveFilterChips } from "../utils/activeFilters";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import TenderCard from "./TenderCard";
@@ -373,6 +374,45 @@ const Tenders: React.FC = () => {
         setStatusFilters(NO_STATUS_FILTERS);
     };
 
+    const activeChips = useMemo(() => buildActiveFilterChips({
+        statusFilters,
+        selectedSources,
+        selectedOrderTypes,
+        selectedBuyers,
+        selectedCities,
+        selectedCpvs,
+        selectedCpvCategory
+    }), [statusFilters, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, selectedCpvCategory]);
+
+    const handleRemoveChip = (chip: ActiveFilterChip) => {
+        switch (chip.kind) {
+            case 'status':
+                setStatusFilters(prev => ({ ...prev, [chip.value as keyof typeof prev]: false }));
+                break;
+            case 'allStatuses':
+                setStatusFilters(NO_STATUS_FILTERS);
+                break;
+            case 'sources':
+                setSelectedSources([...ALL_SOURCES]);
+                break;
+            case 'orderTypes':
+                setSelectedOrderTypes([...DEFAULT_ORDER_TYPES]);
+                break;
+            case 'buyer':
+                setSelectedBuyers(prev => prev.filter(item => item !== chip.value));
+                break;
+            case 'city':
+                setSelectedCities(prev => prev.filter(item => item !== chip.value));
+                break;
+            case 'cpv':
+                setSelectedCpvs(prev => prev.filter(item => item !== chip.value));
+                break;
+            case 'cpvCategory':
+                setSelectedCpvCategory(null);
+                break;
+        }
+    };
+
     // Kliknięcie elementu statystyk: ustawia odpowiadający mu filtr (zastępując poprzedni wybór tego samego
     // rodzaju) i przechodzi do listy, żeby od razu pokazać pasujące przetargi.
     const handleStatisticsDrillDown = (target: StatisticsDrillDown) => {
@@ -595,10 +635,8 @@ const Tenders: React.FC = () => {
                                     facetCounts={facetCounts}
                                     sortOrder={sortOrder}
                                     onSortOrderChange={setSortOrder}
-                                    selectedCpvs={selectedCpvs}
-                                    onRemoveCpv={(code) => setSelectedCpvs((prev) => prev.filter((item) => item !== code))}
-                                    selectedCpvCategory={selectedCpvCategory}
-                                    onClearCpvCategory={() => setSelectedCpvCategory(null)}
+                                    activeChips={activeChips}
+                                    onRemoveChip={handleRemoveChip}
                                     hasActiveFilters={hasActiveFilters}
                                     onClearFilters={handleClearFilters}
                                     hiddenAdvertisersCount={hiddenAdvertisersCount}
