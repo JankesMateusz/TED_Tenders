@@ -1,14 +1,12 @@
 import React from "react";
-import DatePicker, { registerLocale } from "react-datepicker";
-import { pl } from "date-fns/locale";
-import "react-datepicker/dist/react-datepicker.css";
 import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
 import UserMenu from "./UserMenu";
+import DatePopover from "./DatePopover";
 import { TenderSource } from "../types/TenderSource";
 import { tenderSourceConfig } from "../utils/tenderSources";
 import { formatRelativeTime } from "../utils/dateUtils";
-import { DATE_FORMAT, PLACEHOLDER_TEXTS } from "../constants";
+import { PLACEHOLDER_TEXTS } from "../constants";
 
 interface HeaderProps {
     startDate: Date | null;
@@ -34,9 +32,6 @@ interface HeaderProps {
     onSearchChange: (query: string) => void;
     searchInputRef: React.RefObject<HTMLInputElement | null>;
 }
-
-// Polskie nazwy miesięcy i dni w kalendarzu, tydzień zaczyna się od poniedziałku
-registerLocale("pl", pl);
 
 const RefreshIcon: React.FC = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -159,60 +154,14 @@ const Header: React.FC<HeaderProps> = ({
                     </span>
                     Tylko IT
                 </button>
-                <div className={styles.datePicker}>
-                    <label className={styles.datePickerLabel}>
-                        {useDateRange ? "Zakres dat:" : "Data:"}
-                    </label>
-                    {useDateRange ? (
-                        <div className={styles.dateRangeContainer}>
-                            <DatePicker
-                                selected={startDate}
-                                onChange={(date) => setStartDate(date)}
-                                selectsStart
-                                locale="pl"
-                            popperPlacement="bottom-start"
-                                startDate={startDate}
-                                endDate={endDate}
-                                dateFormat={DATE_FORMAT}
-                                placeholderText={PLACEHOLDER_TEXTS.DATE_FROM}
-                                className={styles.dateInput}
-                            />
-                            <span className={styles.dateSeparator}>-</span>
-                            <DatePicker
-                                selected={endDate}
-                                onChange={(date) => setEndDate(date)}
-                                selectsEnd
-                                locale="pl"
-                                popperPlacement="bottom-end"
-                                startDate={startDate}
-                                endDate={endDate}
-                                minDate={startDate || undefined}
-                                dateFormat={DATE_FORMAT}
-                                placeholderText={PLACEHOLDER_TEXTS.DATE_TO}
-                                className={styles.dateInput}
-                            />
-                        </div>
-                    ) : (
-                        <DatePicker
-                            selected={startDate}
-                            onChange={(date) => setStartDate(date)}
-                            dateFormat={DATE_FORMAT}
-                            placeholderText={PLACEHOLDER_TEXTS.DATE_PICKER}
-                            locale="pl"
-                                popperPlacement="bottom-start"
-                            className={styles.dateInput}
-                        />
-                    )}
-                    <label className={styles.dateRangeCheckbox}>
-                        <input
-                            type="checkbox"
-                            checked={useDateRange}
-                            onChange={(e) => setUseDateRange(e.target.checked)}
-                            className={styles.checkboxInput}
-                        />
-                        <span className={styles.checkboxLabel}>Zakres dat</span>
-                    </label>
-                </div>
+                <DatePopover
+                    startDate={startDate}
+                    endDate={endDate}
+                    setStartDate={setStartDate}
+                    setEndDate={setEndDate}
+                    useDateRange={useDateRange}
+                    setUseDateRange={setUseDateRange}
+                />
                 <div className={styles.buttons}>
                     <button
                         type="button"
