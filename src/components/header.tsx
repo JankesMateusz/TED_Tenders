@@ -145,6 +145,20 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
             </div>
             <div className={styles.controls}>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isFiltered}
+                    className={styles.switchToggle}
+                    onClick={isFiltered ? onAllTendersClick : onFilterClick}
+                    disabled={isLoading}
+                    title={isFiltered ? "Pokazuję tylko ogłoszenia z kodami CPV z branży IT" : "Pokazuję wszystkie ogłoszenia, także spoza branży IT"}
+                >
+                    <span className={styles.switchTrack} aria-hidden="true">
+                        <span className={styles.switchThumb} />
+                    </span>
+                    Tylko IT
+                </button>
                 <div className={styles.datePicker}>
                     <label className={styles.datePickerLabel}>
                         {useDateRange ? "Zakres dat:" : "Data:"}
@@ -200,20 +214,6 @@ const Header: React.FC<HeaderProps> = ({
                     </label>
                 </div>
                 <div className={styles.buttons}>
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={isFiltered}
-                        className={styles.button}
-                        onClick={isFiltered ? onAllTendersClick : onFilterClick}
-                        disabled={isLoading}
-                        title={isFiltered ? "Pokazuję tylko ogłoszenia z kodami CPV z branży IT" : "Pokazuję wszystkie ogłoszenia, także spoza branży IT"}
-                    >
-                        <span className={styles.switchTrack} aria-hidden="true">
-                            <span className={styles.switchThumb} />
-                        </span>
-                        Tylko IT
-                    </button>
                     <button
                         type="button"
                         className={`${styles.button} ${styles.iconButton} ${isRefreshing ? styles.spinning : ''}`}

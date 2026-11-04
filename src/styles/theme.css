@@ -37,6 +37,8 @@ body[data-theme="dark"] {
     --series-ezam: #3498db;
     --series-baza: #9b59b6;
     --tooltip-bg: rgba(0, 0, 0, 0.9);
+    /* Kropka "online" w pasku aplikacji; ten sam zielony co status "Wpisany" */
+    --online-color: #2ecc71;
     --radius-card: 12px;
     --radius-control: 9px;
 }

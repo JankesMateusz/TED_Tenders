@@ -27,7 +27,8 @@ type Props = {
     onSetAdvertiserDecision: (tender: Tender, decision: AdvertiserDecision) => void;
     /** Aktywna karta jest celem skrótów klawiszowych (J/K, 1–4, 0, S). */
     isActive: boolean;
-    onActivate: (tenderId: string) => void;
+    /** `toggle`: drugi klik w aktywną kartę ją wyłącza (nie dotyczy kliknięcia w przycisk lub odnośnik wewnątrz karty). */
+    onActivate: (tenderId: string, toggle: boolean) => void;
 };
 
 const StarIcon: React.FC<{ filled: boolean }> = ({ filled }) => (
@@ -41,6 +42,10 @@ const ExternalIcon: React.FC = () => (
         <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
     </svg>
 );
+
+/** Czy kliknięto element sterujący wewnątrz karty (przycisk, odnośnik, pole); taki klik nie ma wyłączać aktywnej karty. */
+const isInteractiveTarget = (target: EventTarget): boolean =>
+    target instanceof Element && target.closest('button, a, input, select, textarea, label') !== null;
 
 /** Tyle nazw CPV widać od razu pod tytułem; reszta kodów jest pod przyciskiem "+N". */
 const VISIBLE_CPV_CHIPS = 2;
@@ -72,7 +77,8 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
     return (
         <li
             ref={cardRef}
-            onClick={() => onActivate(tender.id)}
+            data-tender-card=""
+            onClick={(event) => onActivate(tender.id, !isInteractiveTarget(event.target))}
             className={`${styles.tenderCard} ${tender.status ? styles.tenderCardStatus : ''} ${isActive ? styles.tenderCardActive : ''}`}
             style={statusColor ? ({ '--status-color': statusColor } as React.CSSProperties) : undefined}
         >

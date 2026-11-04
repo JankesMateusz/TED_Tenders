@@ -126,6 +126,10 @@ const Tenders: React.FC = () => {
     // Karta, której dotyczą skróty klawiszowe (J/K, 1-4, 0, S)
     const [activeTenderId, setActiveTenderId] = useState<string | null>(null);
     const previousIdsRef = useRef<string[]>([]);
+    const handleActivateTender = useCallback(
+        (id: string, toggle: boolean) => setActiveTenderId((current) => (toggle && current === id ? null : id)),
+        []
+    );
 
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
     const startDay = startDate ? toDayString(startDate) : null;
@@ -497,6 +501,18 @@ const Tenders: React.FC = () => {
         previousIdsRef.current = ids;
     }, [displayedTenders]);
 
+    // Kliknięcie poza kartami wyłącza aktywną kartę
+    useEffect(() => {
+        if (activeTenderId === null) return;
+        const handleClick = (event: MouseEvent) => {
+            if (event.target instanceof Element && event.target.closest('[data-tender-card]') === null) {
+                setActiveTenderId(null);
+            }
+        };
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, [activeTenderId]);
+
     // Skróty do oceny: J/K, 1-4, 0, S. Nie działają w polach tekstowych, przy otwartym menu ani z Ctrl/Alt/Meta.
     useEffect(() => {
         if (activeTab === 'statistics') return;
@@ -804,7 +820,7 @@ const Tenders: React.FC = () => {
                                     advertiserHidden={isHiddenAdvertiser(tender, advertiserDecisions)}
                                     onSetAdvertiserDecision={setAdvertiserDecision}
                                     isActive={tender.id === activeTenderId}
-                                    onActivate={setActiveTenderId}
+                                    onActivate={handleActivateTender}
                                 />
                             );
                         })}

@@ -21,8 +21,15 @@ const UserMenu: React.FC = () => {
         <div className={styles.userMenu}>
             {!isGuest && <span className={styles.userEmail} title={user?.email ?? undefined}>{user?.email}</span>}
             {isAdmin && (
-                <button className={styles.button} type="button" onClick={() => setIsAdminPanelOpen(true)}>
-                    Użytkownicy ({online.length} online)
+                <button
+                    className={styles.button}
+                    type="button"
+                    onClick={() => setIsAdminPanelOpen(true)}
+                    aria-label={`Użytkownicy (${online.length} online)`}
+                    title={`Użytkownicy (${online.length} online)`}
+                >
+                    <span className={styles.onlineDot} aria-hidden="true" />
+                    {online.length} online
                 </button>
             )}
             {isGuest ? (

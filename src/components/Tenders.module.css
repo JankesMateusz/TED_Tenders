@@ -1198,6 +1198,10 @@
     cursor: pointer;
 }
 
+.plainCheckboxHint {
+    color: var(--text-secondary);
+}
+
 /* Przełącznik zamiast checkboxa: suwak i wypełnienie pokazują stan, nie tylko kolor */
 .plainCheckbox input {
     position: relative;
