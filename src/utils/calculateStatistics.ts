@@ -12,7 +12,6 @@ export interface Statistics {
     topBuyers: Array<{ buyer: string; count: number }>;
     /** Kody CPV związane z IT; liczba przetargów, które zawierają dany kod (jeden przetarg może mieć kilka kodów). */
     topCpvCodes: Array<{ code: string; count: number }>;
-    byBuyerActivity: Record<string, number>;
     ezamowieniaHourlyDistribution: Record<string, number[]>;
     dailyDistributionBySource: Record<string, Record<TenderSource, number>>;
     byStatus: Record<TenderStatus | 'unmarked', number>;
@@ -66,7 +65,6 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         topCities: [],
         topBuyers: [],
         topCpvCodes: [],
-        byBuyerActivity: {},
         ezamowieniaHourlyDistribution: {},
         dailyDistributionBySource: {},
         byStatus: {
@@ -91,7 +89,6 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
     const cityMap = new Map<string, number>();
     const buyerMap = new Map<string, number>();
     const cpvMap = new Map<string, number>();
-    const activityMap = new Map<string, number>();
     const ezamowieniaHourlyMap = new Map<string, number[]>();
     const dailySourceMap = new Map<string, Record<TenderSource, number>>();
     
@@ -120,14 +117,6 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
             cpvMap.set(code, (cpvMap.get(code) || 0) + 1);
         });
 
-        // Buyer activity
-        if (tender.buyerMainActivity) {
-            const activityKey = tender.buyerMainActivity.trim().toLowerCase();
-            if (activityKey) {
-                activityMap.set(activityKey, (activityMap.get(activityKey) || 0) + 1);
-            }
-        }
-        
         // By status
         stats.byStatus[tender.status ?? 'unmarked']++;
         
@@ -206,13 +195,6 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         .map(([code, count]) => ({ code, count }))
         .sort((a, b) => b.count - a.count || a.code.localeCompare(b.code))
         .slice(0, 10);
-
-    stats.byBuyerActivity = Array.from(activityMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .reduce((acc, [activity, count]) => {
-            acc[activity] = count;
-            return acc;
-        }, {} as Record<string, number>);
 
     stats.ezamowieniaHourlyDistribution = Array.from(ezamowieniaHourlyMap.entries())
         .sort((a, b) => parseDate(b[0]).getTime() - parseDate(a[0]).getTime())

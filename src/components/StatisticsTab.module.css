@@ -39,6 +39,44 @@
     letter-spacing: 0.5px;
 }
 
+.progress {
+    margin-bottom: 16px;
+}
+
+.progressHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.progressTrack {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--border-color);
+    overflow: hidden;
+}
+
+.progressBar {
+    display: block;
+    height: 100%;
+    border-radius: 6px;
+    background: var(--button-primary);
+    transition: width 0.3s ease;
+}
+
+/* Najważniejsza liczba w pracy analityka: ile jeszcze czeka na ocenę */
+.statCard.statCardPrimary {
+    border: 2px solid var(--button-primary);
+}
+
+/* Zerowe kafelki są przyciemnione, żeby wzrok szedł do tych, w których coś jest */
+.statCardZero {
+    opacity: 0.55;
+}
+
 .sectionsGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

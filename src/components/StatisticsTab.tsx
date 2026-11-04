@@ -10,31 +10,6 @@ import { buildStatusFunnel } from '../utils/statusFunnel';
 import { formatDelta } from '../utils/comparison';
 import styles from './StatisticsTab.module.css';
 
-const ACTIVITY_LABELS: Record<string, string> = {
-    health: 'Zdrowie',
-    'general-public-services': 'Administracja publiczna',
-    defence: 'Obrona',
-    'public-order-and-safety': 'Porządek i bezpieczeństwo',
-    environment: 'Środowisko',
-    'economic-and-financial-affairs': 'Sprawy gospodarczo-finansowe',
-    'housing-and-community-amenities': 'Budownictwo i infrastruktura komunalna',
-    'recreation-culture-and-religion': 'Rekreacja, kultura i religia',
-    education: 'Edukacja',
-    'social-protection': 'Ochrona socjalna',
-    other: 'Inne'
-};
-
-const formatActivityLabel = (rawKey: string): string => {
-    const normalizedKey = rawKey.toLowerCase();
-    if (ACTIVITY_LABELS[normalizedKey]) {
-        return ACTIVITY_LABELS[normalizedKey];
-    }
-    return normalizedKey
-        .split('-')
-        .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
-        .join(' ');
-};
-
 const parseStatisticDate = (dateStr: string): number => {
     if (!dateStr || dateStr === 'Brak daty' || dateStr === 'Błąd formatu daty') {
         return 0;
@@ -108,10 +83,22 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     hourly
 }) => {
     const previous = comparison?.status === 'ready' ? comparison.statistics : null;
-    const renderDelta = (current: number, previousValue: number | undefined) =>
-        previousValue === undefined ? null : (
-            <span className={styles.delta} title={`Poprzednio: ${previousValue}`}>{formatDelta(current, previousValue)}</span>
-        );
+    const isPeriodOngoing = comparison?.status === 'ready' && comparison.isCurrentPeriodOngoing;
+    // Dopóki bieżący okres trwa, jego liczby są niepełne i różnica względem całego poprzedniego okresu
+    // byłaby prawie zawsze ujemna, więc pokazujemy samą wartość z poprzedniego okresu.
+    const renderDelta = (current: number, previousValue: number | undefined) => {
+        if (previousValue === undefined) return null;
+        if (isPeriodOngoing) {
+            return (
+                <span className={styles.delta} title="Bieżący okres jeszcze trwa, więc różnica byłaby zaniżona">
+                    poprzednio: {previousValue}
+                </span>
+            );
+        }
+        return <span className={styles.delta} title={`Poprzednio: ${previousValue}`}>{formatDelta(current, previousValue)}</span>;
+    };
+    const reviewedCount = statistics.total - statistics.byStatus.unmarked;
+    const reviewedPercent = statistics.total > 0 ? Math.round((reviewedCount / statistics.total) * 100) : 0;
     const [funnelCollapsed, setFunnelCollapsed] = useState<boolean>(readFunnelCollapsed);
     const toggleFunnel = () => {
         const next = !funnelCollapsed;
@@ -126,8 +113,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
         () => buildStatusFunnel(statistics.total, statistics.byStatus),
         [statistics.total, statistics.byStatus]
     );
-    const buyerActivityEntries = Object.entries(statistics.byBuyerActivity);
-    const hasBuyerActivity = buyerActivityEntries.length > 0;
     const hourlyDates = hourly.days;
     // Domyślnie najnowszy dzień z wybranego zakresu; inne dni z bazy użytkownik wybiera sam
     const newestRangeDate = useMemo(
@@ -196,13 +181,42 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     {comparison.status === 'ready' && (
                         <span>
                             Zmiana względem: <strong>{comparison.label}</strong>
-                            {comparison.isCurrentPeriodOngoing && ' (bieżący okres jeszcze trwa, więc liczby mogą jeszcze rosnąć)'}
+                            {comparison.isCurrentPeriodOngoing && '. Bieżący okres jeszcze trwa, więc pokazujemy liczby z poprzedniego okresu zamiast różnicy.'}
                         </span>
                     )}
                 </div>
             )}
 
+            {statistics.total > 0 && (
+                <div className={styles.progress}>
+                    <div className={styles.progressHeader}>
+                        <span><strong>{reviewedCount}</strong> z {statistics.total} ocenionych</span>
+                        <span>{reviewedPercent}%</span>
+                    </div>
+                    <div
+                        className={styles.progressTrack}
+                        role="progressbar"
+                        aria-label="Postęp oceniania przetargów"
+                        aria-valuemin={0}
+                        aria-valuemax={statistics.total}
+                        aria-valuenow={reviewedCount}
+                    >
+                        <span className={styles.progressBar} style={{ width: `${reviewedPercent}%` }} />
+                    </div>
+                </div>
+            )}
+
             <div className={styles.statsGrid}>
+                <button
+                    type="button"
+                    className={`${styles.statCard} ${styles.statCardPrimary} ${styles.clickable} ${statistics.byStatus.unmarked === 0 ? styles.statCardZero : ''}`}
+                    onClick={() => onDrillDown({ kind: 'status', status: 'unmarked' })}
+                >
+                    <div className={styles.statValue}>{statistics.byStatus.unmarked}</div>
+                    {renderDelta(statistics.byStatus.unmarked, previous?.byStatus.unmarked)}
+                    <div className={styles.statLabel}>Do przejrzenia</div>
+                </button>
+
                 <div className={styles.statCard}>
                     <div className={styles.statValue}>{statistics.total}</div>
                     {renderDelta(statistics.total, previous?.total)}
@@ -213,7 +227,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     <button
                         key={status}
                         type="button"
-                        className={`${styles.statCard} ${styles.clickable}`}
+                        className={`${styles.statCard} ${styles.clickable} ${statistics.byStatus[status] === 0 ? styles.statCardZero : ''}`}
                         onClick={() => onDrillDown({ kind: 'status', status })}
                     >
                         <div className={styles.statValue} style={{ color: STATUS_CONFIG[status].color }}>
@@ -331,19 +345,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     </div>
                 )}
 
-                {hasBuyerActivity && (
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Według działalności zamawiającego</h3>
-                        <div className={styles.orderTypeStats}>
-                            {buyerActivityEntries.map(([activity, count]) => (
-                                <div key={activity} className={styles.orderTypeItem}>
-                                    <span className={styles.orderTypeLabel}>{formatActivityLabel(activity)}</span>
-                                    <span className={styles.orderTypeCount}>{count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
 
             {hasHourlyData && (

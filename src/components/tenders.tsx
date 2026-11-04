@@ -317,6 +317,10 @@ const Tenders: React.FC = () => {
 
     const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, filterOptions), [filterOptions]);
 
+    // Statystyki opisują ocenę przetargów, więc ignorują filtr statusu: domyślny widok "Nieoznaczone" zostawiłby
+    // w nich same nieoznaczone i wyzerował pozostałe statusy.
+    const applyStatisticsFilters = useCallback((list: Tender[]) => filterTenders(list, filterOptions, 'status'), [filterOptions]);
+
     // Obie listy są filtrowane osobno, by licznik "Przetargi" nie zależał od aktywnej zakładki
     const filteredTenders = useMemo(() => applyFilters(unsavedTenders), [applyFilters, unsavedTenders]);
     const filteredSavedTenders = useMemo(() => filterAndSortTenders(savedTenders, savedFilterOptions), [savedTenders, savedFilterOptions]);
@@ -341,14 +345,14 @@ const Tenders: React.FC = () => {
 
     // Filtry z panelu, paska bocznego i statystyk; przełącznik "Wszystkie / IT" w nagłówku to tryb widoku,
     // więc nie jest tu liczony ani czyszczony.
-    const hasActiveFilters =
+    const hasActiveStatisticsFilters =
         searchQuery.trim() !== "" ||
         selectedBuyers.length > 0 ||
         selectedCities.length > 0 ||
         selectedCpvs.length > 0 ||
         selectedSources.length !== ALL_SOURCES.length ||
-        selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length ||
-        Object.values(statusFilters).some(Boolean);
+        selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length;
+    const hasActiveFilters = hasActiveStatisticsFilters || Object.values(statusFilters).some(Boolean);
 
     const handleClearFilters = () => {
         setSearchQuery("");
@@ -422,7 +426,10 @@ const Tenders: React.FC = () => {
     }, [displayedTenders]);
 
     // Statystyki dotyczą przetargów z wybranego zakresu dat, bez własnych gwiazdek (te są w "Zapisane")
-    const statistics = useMemo(() => calculateStatistics(displayedTenders), [displayedTenders]);
+    const statistics = useMemo(
+        () => calculateStatistics(applyStatisticsFilters(unsavedTenders)),
+        [applyStatisticsFilters, unsavedTenders]
+    );
 
     // Porównanie z poprzednim okresem: dane wczytujemy tylko, gdy otwarta jest zakładka statystyk
     const comparisonPeriod = useMemo(
@@ -435,8 +442,8 @@ const Tenders: React.FC = () => {
     );
     // Te same filtry i wyłączenie własnych gwiazdek co w bieżących statystykach, żeby liczby były porównywalne
     const previousStatistics = useMemo(
-        () => calculateStatistics(applyFilters(previousPeriod.tenders.filter((tender) => !isFavorite(tender.id)))),
-        [applyFilters, previousPeriod.tenders, isFavorite]
+        () => calculateStatistics(applyStatisticsFilters(previousPeriod.tenders.filter((tender) => !isFavorite(tender.id)))),
+        [applyStatisticsFilters, previousPeriod.tenders, isFavorite]
     );
     // Wykres godzinowy: dropdown ma dni z całej bazy (według dziennika odświeżeń), a nie tylko z wybranego
     // zakresu. Dzień spoza zakresu doczytujemy dopiero po wybraniu, przetargi tylko tego jednego dnia.
@@ -453,11 +460,11 @@ const Tenders: React.FC = () => {
     const hourlyDistribution = useMemo(() => {
         // Te same filtry i wyłączenie własnych gwiazdek co w statystykach z wybranego zakresu
         const extra = isExtraDayLoaded
-            ? calculateStatistics(applyFilters(extraDay.tenders.filter((tender) => !isFavorite(tender.id))))
+            ? calculateStatistics(applyStatisticsFilters(extraDay.tenders.filter((tender) => !isFavorite(tender.id))))
                 .ezamowieniaHourlyDistribution
             : {};
         return { ...extra, ...statistics.ezamowieniaHourlyDistribution };
-    }, [isExtraDayLoaded, extraDay.tenders, applyFilters, isFavorite, statistics.ezamowieniaHourlyDistribution]);
+    }, [isExtraDayLoaded, extraDay.tenders, applyStatisticsFilters, isFavorite, statistics.ezamowieniaHourlyDistribution]);
     const hourlyDays = useMemo(() => {
         const days = new Set([...Object.keys(statistics.ezamowieniaHourlyDistribution), ...refreshedDays.map(dayToDisplayDate)]);
         return Array.from(days).sort((a, b) => parseDate(b).getTime() - parseDate(a).getTime());
@@ -643,7 +650,7 @@ const Tenders: React.FC = () => {
                                 statistics={statistics}
                                 isDateRange={useDateRange}
                                 onDrillDown={handleStatisticsDrillDown}
-                                hasActiveFilters={hasActiveFilters}
+                                hasActiveFilters={hasActiveStatisticsFilters}
                                 onClearFilters={handleClearFilters}
                                 comparison={comparison}
                                 hourly={{
