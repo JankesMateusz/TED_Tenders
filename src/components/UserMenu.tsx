@@ -3,32 +3,34 @@ import { useAuth } from '../context/AuthContext';
 import { useOnlineUsers, useReportPresence } from '../hooks/usePresence';
 import AdminPanel from './AdminPanel';
 import LoginScreen from './LoginScreen';
-import styles from './Auth.module.css';
+import styles from './Header.module.css';
 
-const UserBar: React.FC = () => {
+/** Konto użytkownika w pasku aplikacji: e-mail, okno użytkowników (administrator), logowanie i wylogowanie. */
+const UserMenu: React.FC = () => {
     const { user, role, logout } = useAuth();
     const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const isGuest = !user || user.isAnonymous;
     const isAdmin = role === 'admin';
 
+    // Obecność jest zgłaszana raz, dla każdego zalogowanego (także gościa), dopóki pasek jest na ekranie
     useReportPresence();
     const online = useOnlineUsers(isAdmin);
 
     return (
-        <div className={styles.userBar}>
-            {!isGuest && <span>{user?.email}</span>}
+        <div className={styles.userMenu}>
+            {!isGuest && <span className={styles.userEmail} title={user?.email ?? undefined}>{user?.email}</span>}
             {isAdmin && (
-                <button className={styles.userBarButton} type="button" onClick={() => setIsAdminPanelOpen(true)}>
+                <button className={styles.button} type="button" onClick={() => setIsAdminPanelOpen(true)}>
                     Użytkownicy ({online.length} online)
                 </button>
             )}
             {isGuest ? (
-                <button className={styles.userBarButton} type="button" onClick={() => setIsLoginOpen(true)}>
+                <button className={styles.button} type="button" onClick={() => setIsLoginOpen(true)}>
                     Zaloguj się
                 </button>
             ) : (
-                <button className={styles.userBarButton} type="button" onClick={logout}>
+                <button className={styles.button} type="button" onClick={logout}>
                     Wyloguj
                 </button>
             )}
@@ -38,4 +40,4 @@ const UserBar: React.FC = () => {
     );
 };
 
-export default UserBar;
+export default UserMenu;

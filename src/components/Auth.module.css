@@ -89,39 +89,22 @@
     font-size: 0.9rem;
 }
 
-/* Pasek użytkownika nad aplikacją */
-/* Pasek nad nagłówkiem w tym samym kolorze, więc oba wyglądają jak jedna całość */
-.userBar {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 8px 24px;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.92);
-    background: var(--header-gradient-start);
-}
-
+/* Przyciski w oknach logowania i użytkowników */
 .userBarButton {
     min-height: 36px;
     padding: 0 14px;
     font: inherit;
     font-size: 14px;
-    color: white;
+    color: var(--text-primary);
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-control);
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
 
 .userBarButton:hover {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.userBarButton:focus-visible {
-    outline: 2px solid white;
-    outline-offset: 2px;
+    background: var(--bg-secondary);
 }
 
 /* Ekran ładowania stanu logowania (zanim wiadomo, czy pokazać logowanie czy aplikację) */

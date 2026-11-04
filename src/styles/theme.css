@@ -59,8 +59,6 @@ body[data-theme="dark"] {
     --accent-tint: rgba(31, 95, 224, 0.1);
     --accent-tint-soft: rgba(31, 95, 224, 0.08);
     --accent-border: rgba(31, 95, 224, 0.3);
-    --header-gradient-start: #2c3e50;
-    --header-gradient-end: #3b5168;
     --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     --card-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     --pop-shadow: 0 12px 32px rgba(24, 32, 47, 0.16);
@@ -87,8 +85,6 @@ body[data-theme="dark"] {
     --accent-tint: rgba(106, 165, 255, 0.12);
     --accent-tint-soft: rgba(106, 165, 255, 0.08);
     --accent-border: rgba(106, 165, 255, 0.35);
-    --header-gradient-start: #161c2a;
-    --header-gradient-end: #1f2d45;
     --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     --card-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
     --pop-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);

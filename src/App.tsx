@@ -6,7 +6,6 @@ import Tenders from './components/tenders';
 import ScrollToTopButton from './components/ScrollToTopButton';
 import LoginScreen from './components/LoginScreen';
 import NoAccessScreen from './components/NoAccessScreen';
-import UserBar from './components/UserBar';
 import { MESSAGES } from './constants';
 import styles from './components/Auth.module.css';
 import './styles/theme.css';
@@ -21,7 +20,6 @@ const AuthGate: React.FC = () => {
 
   return (
     <UserPreferencesProvider>
-      <UserBar />
       <Tenders />
       <ScrollToTopButton />
     </UserPreferencesProvider>

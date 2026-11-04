@@ -3,6 +3,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
+import UserMenu from "./UserMenu";
 import { TenderSource } from "../types/TenderSource";
 import { tenderSourceConfig } from "../utils/tenderSources";
 import { formatRelativeTime } from "../utils/dateUtils";
@@ -72,22 +73,21 @@ const Header: React.FC<HeaderProps> = ({
 
     return (
         <header className={styles.header}>
-            <h1 className={styles.title}>Przetargi</h1>
+          <div className={styles.headerInner}>
+            <div className={styles.brand}>
+                <span className={styles.brandMark} aria-hidden="true">P</span>
+                <h1 className={styles.title}>Przetargi</h1>
+            </div>
             <div className={styles.tenderInfo}>
                 <div className={styles.tenderCounts}>
                     {[TenderSource.TED, TenderSource.E_ZAMOWIENIA, TenderSource.BAZA_KONKURENCYJNOSCI].map((source) => {
-                        const isSelected = selectedSources.includes(source);
-                        
-                        // Ukrywamy licznik jeśli źródło jest odfiltrowane
-                        if (!isSelected) return null;
-                        
-                        const config = tenderSourceConfig[source];
-                        const count = tendersCountBySource[source];
-                        
+                        // Ukrywamy licznik, jeśli źródło jest odfiltrowane
+                        if (!selectedSources.includes(source)) return null;
+
                         return (
                             <span key={source} className={styles.tenderCountItem}>
-                                <span className={styles.tenderCountLabel}>{config.label}:</span>
-                                <span className={styles.tenderCountValue}>{count}</span>
+                                <span>{tenderSourceConfig[source].label}:</span>
+                                <span className={styles.tenderCountValue}>{tendersCountBySource[source]}</span>
                             </span>
                         );
                     })}
@@ -182,6 +182,8 @@ const Header: React.FC<HeaderProps> = ({
                     </button>
                 </div>
             </div>
+            <UserMenu />
+          </div>
         </header>
     );
 };
