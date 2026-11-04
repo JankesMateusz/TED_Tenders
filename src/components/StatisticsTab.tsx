@@ -6,6 +6,9 @@ import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderS
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
+import { CpvCategoryKey } from '../utils/cpvCategories';
+import { TREND_DAYS, TrendPoint } from '../utils/recentTrend';
+import { dayToDisplayDate } from '../utils/dateUtils';
 import { buildStatusFunnel } from '../utils/statusFunnel';
 import { formatDelta } from '../utils/comparison';
 import styles from './StatisticsTab.module.css';
@@ -30,7 +33,8 @@ export type StatisticsDrillDown =
     | { kind: 'status'; status: TenderStatus | 'unmarked' }
     | { kind: 'city'; city: string }
     | { kind: 'buyer'; buyer: string }
-    | { kind: 'cpv'; code: string };
+    | { kind: 'cpv'; code: string }
+    | { kind: 'cpvCategory'; category: CpvCategoryKey };
 
 /** Stan porównania wybranego okresu z poprzednim (poprzedni dzień roboczy lub okres tej samej długości). */
 export type StatisticsComparison =
@@ -49,7 +53,23 @@ interface StatisticsTabProps {
     /** `null`, gdy nie ma wybranego zakresu dat. */
     comparison: StatisticsComparison | null;
     hourly: HourlyChartData;
+    /** Nowe ogłoszenia z ostatnich dni, po tych samych filtrach co statystyki (poza zakresem dat). */
+    trend: { points: TrendPoint[]; error: string | null };
 }
+
+/** Godziny pracy pokazywane na wykresie godzinowym; poza nimi tylko wtedy, gdy ktoś coś opublikował. */
+const DEFAULT_FIRST_HOUR = 7;
+const DEFAULT_LAST_HOUR = 19;
+
+/** Wysokość (px) najwyższego słupka trendu. */
+const TREND_BAR_MAX_HEIGHT = 100;
+
+/** Pasek udziału: jaka część całości przypada na daną pozycję. */
+const ShareBar: React.FC<{ count: number; total: number }> = ({ count, total }) => (
+    <span className={styles.shareTrack} aria-hidden="true">
+        <span className={styles.shareBar} style={{ width: `${total > 0 ? Math.min(100, (count / total) * 100) : 0}%` }} />
+    </span>
+);
 
 /** Dane wykresu godzinowego eZamówień: dni do wyboru (DD-MM-RRRR, od najnowszego) i rozkład godzin po dniach. */
 export interface HourlyChartData {
@@ -80,7 +100,8 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     hasActiveFilters,
     onClearFilters,
     comparison,
-    hourly
+    hourly,
+    trend
 }) => {
     const previous = comparison?.status === 'ready' ? comparison.statistics : null;
     const isPeriodOngoing = comparison?.status === 'ready' && comparison.isCurrentPeriodOngoing;
@@ -140,6 +161,14 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     const maxHourlyValue = useMemo(() => hourlyData.reduce((max, value) => Math.max(max, value), 0), [hourlyData]);
     const totalHourlyValue = useMemo(() => hourlyData.reduce((sum, value) => sum + value, 0), [hourlyData]);
     const hasHourlyData = hourlyDates.length > 0;
+    const visibleHours = useMemo(() => {
+        const active = hourlyData.flatMap((count, hour) => (count > 0 ? [hour] : []));
+        const first = Math.min(DEFAULT_FIRST_HOUR, ...active);
+        const last = Math.max(DEFAULT_LAST_HOUR, ...active);
+        return hourlyData.map((count, hour) => ({ count, hour })).filter(({ hour }) => hour >= first && hour <= last);
+    }, [hourlyData]);
+    const maxTrendValue = useMemo(() => trend.points.reduce((max, point) => Math.max(max, point.count), 0), [trend.points]);
+    const reviewedTotal = statistics.byReviewer.reduce((sum, item) => sum + item.count, 0);
     
     // Daily distribution by source
     const dailyEntries = useMemo(
@@ -320,6 +349,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                     <span className={styles.sourceCount}>
                                         {count} {renderDelta(count, previous?.bySource[source as TenderSource])}
                                     </span>
+                                    <ShareBar count={count} total={statistics.total} />
                                 </button>
                             );
                         })}
@@ -339,6 +369,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                 >
                                     <span className={styles.orderTypeLabel}>{getOrderTypeConfig(type as OrderType).label}</span>
                                     <span className={styles.orderTypeCount}>{count}</span>
+                                    <ShareBar count={count} total={statistics.total} />
                                 </button>
                             ))}
                         </div>
@@ -347,13 +378,88 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
 
             </div>
 
+            {statistics.byCpvCategory.length > 0 && (
+                <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                    <h3 className={styles.sectionTitle}>Co jest zamawiane</h3>
+                    <p className={styles.chartSubtitle}>
+                        Liczba przetargów z kodem CPV z danej kategorii. Przetarg może mieć kody z kilku kategorii, więc sumy się nie dodają.
+                    </p>
+                    <ul className={styles.list}>
+                        {statistics.byCpvCategory.map(({ key, label, count }) => (
+                            <li key={key} className={styles.listItem}>
+                                <button
+                                    type="button"
+                                    className={`${styles.listButton} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'cpvCategory', category: key })}
+                                >
+                                    <span className={styles.listName}>{label}</span>
+                                    <span className={styles.listCount}>{count}</span>
+                                    <ShareBar count={count} total={statistics.total} />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {statistics.byReviewer.length > 0 && (
+                <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                    <h3 className={styles.sectionTitle}>Kto ocenia</h3>
+                    <p className={styles.chartSubtitle}>
+                        Przetargi według osoby, która ustawiła obecny status (przy zmianie statusu liczy się ostatnia osoba).
+                    </p>
+                    <ul className={styles.list}>
+                        {statistics.byReviewer.map(({ reviewer, count }) => (
+                            <li key={reviewer} className={styles.listItem}>
+                                <div className={styles.listRow}>
+                                    <span className={styles.listName}>{reviewer}</span>
+                                    <span className={styles.listCount}>{count}</span>
+                                    <ShareBar count={count} total={reviewedTotal} />
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                <h3 className={styles.sectionTitle}>Nowe ogłoszenia, ostatnie {TREND_DAYS} dni</h3>
+                <p className={styles.chartSubtitle}>
+                    Liczba ogłoszeń opublikowanych każdego dnia, bez względu na wybrany zakres dat. Kreskowany słupek oznacza dzień, którego dane mogą być niekompletne.
+                </p>
+                {trend.error ? (
+                    <p className={styles.chartSubtitle}>{trend.error}</p>
+                ) : (
+                    <ol className={styles.trendChart} aria-label={`Nowe ogłoszenia w ostatnich ${TREND_DAYS} dniach`}>
+                        {trend.points.map(({ day, count, complete }) => {
+                            const label = dayToDisplayDate(day);
+                            const height = maxTrendValue > 0 ? (count / maxTrendValue) * TREND_BAR_MAX_HEIGHT : 0;
+                            return (
+                                <li
+                                    key={day}
+                                    className={styles.trendColumn}
+                                    title={`${label}: ${count}${complete ? '' : ' (dane mogą być niekompletne)'}`}
+                                >
+                                    <span className={styles.trendCount}>{count > 0 ? count : ''}</span>
+                                    <span
+                                        className={`${styles.trendBar} ${complete ? '' : styles.trendBarIncomplete}`}
+                                        style={{ height: `${Math.max(height, 2)}px` }}
+                                    />
+                                    <span className={styles.trendDay}>{label.slice(0, 2)}</span>
+                                </li>
+                            );
+                        })}
+                    </ol>
+                )}
+            </div>
+
             {hasHourlyData && (
                 <div className={`${styles.section} ${styles.fullWidthSection}`}>
                     <div className={styles.chartHeader}>
                         <div>
                             <h3 className={styles.sectionTitle}>Godzinowa aktywność eZamówienia</h3>
                             <p className={styles.chartSubtitle}>
-                                Liczba ogłoszeń opublikowanych w każdej godzinie wybranego dnia
+                                Liczba ogłoszeń opublikowanych w każdej godzinie wybranego dnia ({DEFAULT_FIRST_HOUR}:00–{DEFAULT_LAST_HOUR}:59, inne godziny tylko gdy coś w nich opublikowano)
                             </p>
                         </div>
                         <select
@@ -377,7 +483,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         </span>
                     </div>
                     <div className={styles.hourlyRows}>
-                        {hourlyData.map((count, hour) => (
+                        {visibleHours.map(({ count, hour }) => (
                             <div key={hour} className={styles.hourlyRow}>
                                 <span className={styles.hourlyRowLabel}>{hour.toString().padStart(2, '0')}:00</span>
                                 <span className={styles.hourlyRowTrack}>
@@ -402,7 +508,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                                 ))}
                             </div>
                             <div className={styles.hourlyChart}>
-                                {hourlyData.map((count, hour) => {
+                                {visibleHours.map(({ count, hour }) => {
                                     const maxChartHeight = 180;
                                     const height = maxHourlyValue > 0 ? (count / maxHourlyValue) * maxChartHeight : 0;
                                     const intensity = maxHourlyValue ? count / maxHourlyValue : 0;

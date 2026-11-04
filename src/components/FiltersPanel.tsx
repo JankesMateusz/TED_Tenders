@@ -5,6 +5,7 @@ import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS } from '../constants';
 import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
 import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
 import { getCpvName } from '../utils/cpvMapping';
+import { CPV_CATEGORY_LABELS, CpvCategoryKey } from '../utils/cpvCategories';
 import styles from './Tenders.module.css';
 
 const STATUS_FILTER_OPTIONS: Array<{ key: keyof StatusFilters; label: string; color: string }> = [
@@ -33,6 +34,9 @@ interface FiltersPanelProps {
     onSortOrderChange: (order: SortOrder) => void;
     selectedCpvs: string[];
     onRemoveCpv: (code: string) => void;
+    /** Kategoria CPV wybrana w statystykach; null, gdy brak. */
+    selectedCpvCategory: CpvCategoryKey | null;
+    onClearCpvCategory: () => void;
     hasActiveFilters: boolean;
     onClearFilters: () => void;
     /** Ile ogłoszeń ukrywają decyzje o zamawiających (firmy prywatne i NGO); przełącznik pojawia się, gdy są takie ogłoszenia. */
@@ -64,6 +68,8 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onSortOrderChange,
     selectedCpvs,
     onRemoveCpv,
+    selectedCpvCategory,
+    onClearCpvCategory,
     hasActiveFilters,
     onClearFilters,
     hiddenAdvertisersCount,
@@ -101,6 +107,20 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 </div>
             </div>
             
+            {selectedCpvCategory && (
+                <div className={styles.activeCpvFilter}>
+                    <span>Kategoria CPV: {CPV_CATEGORY_LABELS[selectedCpvCategory]}</span>
+                    <button
+                        type="button"
+                        onClick={onClearCpvCategory}
+                        aria-label="Usuń filtr kategorii CPV"
+                        title="Usuń filtr kategorii CPV"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
             {selectedCpvs.map((code) => (
                 <div key={code} className={styles.activeCpvFilter}>
                     <span>CPV: {getCpvName(code)} ({code})</span>

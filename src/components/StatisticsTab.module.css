@@ -110,9 +110,29 @@
 .sourceItem,
 .orderTypeItem {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
+    gap: 4px 0;
     padding: 8px 0;
+}
+
+/* Pasek udziału w osobnej linii pod pozycją */
+.shareTrack {
+    order: 2; /* po strzałce klikalnego wiersza, która jest ostatnim elementem w DOM */
+    flex: 0 0 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border-color);
+    overflow: hidden;
+}
+
+.shareBar {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--button-primary);
+    min-width: 2px;
 }
 
 .sourceBadge {
@@ -149,11 +169,14 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.listButton {
+.listButton,
+.listRow {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 4px 12px;
     padding: 8px 0;
+    width: 100%;
 }
 
 .listItem:last-child {
@@ -712,6 +735,23 @@
     background: rgba(52, 152, 219, 0.08);
 }
 
+/* Klikalny wiersz: strzałka po prawej i podkreślenie nazwy przy najechaniu */
+.sourceItem.clickable::after,
+.orderTypeItem.clickable::after,
+.listButton.clickable::after {
+    content: '›';
+    margin-left: 8px;
+    color: var(--text-secondary);
+    font-size: 18px;
+    line-height: 1;
+}
+
+.sourceItem.clickable:hover::after,
+.orderTypeItem.clickable:hover::after,
+.listButton.clickable:hover::after {
+    color: var(--button-primary);
+}
+
 .clickable:focus-visible {
     outline: 2px solid var(--button-primary);
     outline-offset: 2px;
@@ -883,4 +923,56 @@
 .sourceCount .delta {
     display: inline;
     margin: 0 0 0 6px;
+}
+
+/* Trend nowych ogłoszeń z ostatnich dni */
+.trendChart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.trendColumn {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.trendCount {
+    min-height: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.trendBar {
+    display: block;
+    width: 100%;
+    max-width: 36px;
+    border-radius: 4px 4px 0 0;
+    background: var(--button-primary);
+}
+
+/* Dzień, którego dane mogą być niekompletne: kreskowany, bez wypełnienia */
+.trendBarIncomplete {
+    background: transparent;
+    border: 1px dashed var(--button-primary);
+}
+
+.trendDay {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Liczby po prawej, strzałka zaraz za nimi */
+.sourceCount,
+.orderTypeCount {
+    margin-left: auto;
 }

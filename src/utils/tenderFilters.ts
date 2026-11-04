@@ -6,6 +6,7 @@ import { filterTendersByCpvCodes, normalizeCpv } from './cpvFilter';
 import { normalizeName } from './stringUtils';
 import { parseDate } from './dateUtils';
 import { AdvertiserDecisions, isHiddenAdvertiser } from './advertisers';
+import { CpvCategoryKey, tenderHasCpvCategory } from './cpvCategories';
 
 export type SortOrder = 'publication' | 'deadline' | 'buyer';
 
@@ -23,6 +24,8 @@ interface FilterOptions {
     selectedCities: string[];
     /** Kody CPV wybrane w statystykach; pusta lista oznacza brak filtra, a przetarg musi zawierać któryś z nich. */
     selectedCpvs: string[];
+    /** Kategoria CPV wybrana w statystykach (nie jest zapamiętywana w przeglądarce); brak lub null oznacza brak filtra. */
+    selectedCpvCategory?: CpvCategoryKey | null;
     isFiltered: boolean;
     searchQuery: string;
     statusFilters: StatusFilters;
@@ -84,6 +87,11 @@ export const filterTenders = (
     if (options.selectedCpvs.length > 0) {
         const selected = options.selectedCpvs.map(normalizeCpv);
         result = result.filter(tender => tender.cpvCodes.some(cpv => selected.includes(normalizeCpv(cpv))));
+    }
+
+    if (options.selectedCpvCategory) {
+        const category = options.selectedCpvCategory;
+        result = result.filter(tender => tenderHasCpvCategory(tender.cpvCodes, category));
     }
 
     // Filtrowanie po CPV jeśli włączone

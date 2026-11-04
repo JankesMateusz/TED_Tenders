@@ -3,6 +3,7 @@ import { TenderSource } from '../types/TenderSource';
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType } from '../utils/tenderSources';
 import { isItRelatedCpv, normalizeCpv } from './cpvFilter';
+import { CPV_CATEGORY_LABELS, CpvCategoryKey, getTenderCpvCategories } from './cpvCategories';
 
 export interface Statistics {
     total: number;
@@ -12,6 +13,10 @@ export interface Statistics {
     topBuyers: Array<{ buyer: string; count: number }>;
     /** Kody CPV związane z IT; liczba przetargów, które zawierają dany kod (jeden przetarg może mieć kilka kodów). */
     topCpvCodes: Array<{ code: string; count: number }>;
+    /** Co jest zamawiane: liczba przetargów w każdej kategorii CPV (jeden przetarg może być w kilku, więc sumy się nie dodają). */
+    byCpvCategory: Array<{ key: CpvCategoryKey; label: string; count: number }>;
+    /** Kto ustawił obecny status przetargów (ostatnia osoba, która go zmieniła), od najwięcej ocen. */
+    byReviewer: Array<{ reviewer: string; count: number }>;
     ezamowieniaHourlyDistribution: Record<string, number[]>;
     dailyDistributionBySource: Record<string, Record<TenderSource, number>>;
     byStatus: Record<TenderStatus | 'unmarked', number>;
@@ -65,6 +70,8 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         topCities: [],
         topBuyers: [],
         topCpvCodes: [],
+        byCpvCategory: [],
+        byReviewer: [],
         ezamowieniaHourlyDistribution: {},
         dailyDistributionBySource: {},
         byStatus: {
@@ -89,6 +96,8 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
     const cityMap = new Map<string, number>();
     const buyerMap = new Map<string, number>();
     const cpvMap = new Map<string, number>();
+    const categoryMap = new Map<CpvCategoryKey, number>();
+    const reviewerMap = new Map<string, number>();
     const ezamowieniaHourlyMap = new Map<string, number[]>();
     const dailySourceMap = new Map<string, Record<TenderSource, number>>();
     
@@ -117,8 +126,16 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
             cpvMap.set(code, (cpvMap.get(code) || 0) + 1);
         });
 
+        getTenderCpvCategories(tender.cpvCodes).forEach(category => {
+            categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+        });
+
         // By status
         stats.byStatus[tender.status ?? 'unmarked']++;
+        if (tender.status) {
+            const reviewer = tender.statusByEmail ?? 'Nieznany użytkownik';
+            reviewerMap.set(reviewer, (reviewerMap.get(reviewer) || 0) + 1);
+        }
         
         // Deadline stats
         const deadlineDate = parseDate(tender.deadlineDate);
@@ -195,6 +212,14 @@ export const calculateStatistics = (tenders: Tender[]): Statistics => {
         .map(([code, count]) => ({ code, count }))
         .sort((a, b) => b.count - a.count || a.code.localeCompare(b.code))
         .slice(0, 10);
+
+    stats.byCpvCategory = Array.from(categoryMap.entries())
+        .map(([key, count]) => ({ key, label: CPV_CATEGORY_LABELS[key], count }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'pl'));
+
+    stats.byReviewer = Array.from(reviewerMap.entries())
+        .map(([reviewer, count]) => ({ reviewer, count }))
+        .sort((a, b) => b.count - a.count || a.reviewer.localeCompare(b.reviewer, 'pl'));
 
     stats.ezamowieniaHourlyDistribution = Array.from(ezamowieniaHourlyMap.entries())
         .sort((a, b) => parseDate(b[0]).getTime() - parseDate(a[0]).getTime())

@@ -249,3 +249,34 @@ describe('filtr ukrytych zamawiających', () => {
         expect(ids({ advertiserDecisions: decisions, showHiddenAdvertisers: true })).toEqual(['gmina', 'prywatna', 'przywrocona', 'reczne', 'ted']);
     });
 });
+
+describe('filtr po kategorii CPV', () => {
+    const withCpv = (id: string, cpvCodes: string[]): Tender => ({ ...tender(id), cpvCodes });
+    const list = [
+        withCpv('k', ['30213100-6']),
+        withCpv('o', ['48000000-8']),
+        withCpv('m', ['30213100-6', '48000000-8']),
+        withCpv('n', ['45000000-7'])
+    ];
+    const run = (selectedCpvCategory: 'computers' | 'software' | null) =>
+        filterAndSortTenders(list, {
+            selectedSources: [TenderSource.TED],
+            selectedOrderTypes: [...DEFAULT_ORDER_TYPES],
+            selectedBuyers: [],
+            selectedCities: [],
+            selectedCpvs: [],
+            selectedCpvCategory,
+            isFiltered: false,
+            searchQuery: '',
+            statusFilters: noFilters
+        }).map((t) => t.id).sort();
+
+    it('pokazuje przetargi z kodem z wybranej kategorii', () => {
+        expect(run('computers')).toEqual(['k', 'm']);
+        expect(run('software')).toEqual(['m', 'o']);
+    });
+
+    it('bez wybranej kategorii niczego nie zawęża', () => {
+        expect(run(null)).toEqual(['k', 'm', 'n', 'o']);
+    });
+});

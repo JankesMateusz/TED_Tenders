@@ -9,6 +9,9 @@ import { TenderComment } from "../types/TenderComment";
 import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
 import { dayToDisplayDate, displayDateToDay, parseDate, toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
+import { CpvCategoryKey } from "../utils/cpvCategories";
+import { useRecentTenders } from "../hooks/useRecentTenders";
+import { TREND_DAYS, countTendersByDay, lastDays } from "../utils/recentTrend";
 import { SortOrder, countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
 import { ALL_SOURCES, NO_STATUS_FILTERS, loadFilters, saveFilters } from "../utils/persistedFilters";
 import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
@@ -97,6 +100,8 @@ const Tenders: React.FC = () => {
     const [selectedBuyers, setSelectedBuyers] = useState<string[]>(initialFilters.selectedBuyers);
     const [selectedCities, setSelectedCities] = useState<string[]>(initialFilters.selectedCities);
     const [selectedCpvs, setSelectedCpvs] = useState<string[]>(initialFilters.selectedCpvs);
+    // Kategoria CPV ze statystyk: dotyczy tylko bieżącej sesji, w przeciwieństwie do zapamiętywanych filtrów
+    const [selectedCpvCategory, setSelectedCpvCategory] = useState<CpvCategoryKey | null>(null);
     const [sortOrder, setSortOrder] = useState<SortOrder>(initialFilters.sortOrder);
     const { favorites, isFavorite, actionError } = useUserPreferences();
     // expanded state for CPV cards is now managed inside TenderCard
@@ -304,13 +309,14 @@ const Tenders: React.FC = () => {
         selectedBuyers,
         selectedCities,
         selectedCpvs,
+        selectedCpvCategory,
         isFiltered,
         searchQuery,
         statusFilters,
         sortOrder,
         advertiserDecisions,
         showHiddenAdvertisers
-    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, isFiltered, searchQuery, statusFilters, sortOrder, advertiserDecisions, showHiddenAdvertisers]);
+    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, selectedCpvCategory, isFiltered, searchQuery, statusFilters, sortOrder, advertiserDecisions, showHiddenAdvertisers]);
 
     // Zapisane (gwiazdką) zostają widoczne nawet po ukryciu zamawiającego: ktoś świadomie je wybrał
     const savedFilterOptions = useMemo(() => ({ ...filterOptions, showHiddenAdvertisers: true }), [filterOptions]);
@@ -350,6 +356,7 @@ const Tenders: React.FC = () => {
         selectedBuyers.length > 0 ||
         selectedCities.length > 0 ||
         selectedCpvs.length > 0 ||
+        selectedCpvCategory !== null ||
         selectedSources.length !== ALL_SOURCES.length ||
         selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length;
     const hasActiveFilters = hasActiveStatisticsFilters || Object.values(statusFilters).some(Boolean);
@@ -361,6 +368,7 @@ const Tenders: React.FC = () => {
         setSelectedBuyers([]);
         setSelectedCities([]);
         setSelectedCpvs([]);
+        setSelectedCpvCategory(null);
         setStatusFilters(NO_STATUS_FILTERS);
     };
 
@@ -385,6 +393,9 @@ const Tenders: React.FC = () => {
                 break;
             case 'cpv':
                 setSelectedCpvs([target.code]);
+                break;
+            case 'cpvCategory':
+                setSelectedCpvCategory(target.category);
                 break;
         }
         setActiveTab('tenders');
@@ -449,6 +460,19 @@ const Tenders: React.FC = () => {
     // zakresu. Dzień spoza zakresu doczytujemy dopiero po wybraniu, przetargi tylko tego jednego dnia.
     const isStatisticsTab = activeTab === 'statistics';
     const refreshedDays = useRefreshedDays(isStatisticsTab, todayDay);
+    // Trend nowych ogłoszeń z ostatnich dni: te same filtry i wyłączenie własnych gwiazdek co w statystykach
+    const recent = useRecentTenders(isStatisticsTab, todayDay, TREND_DAYS);
+    const trend = useMemo(
+        () => ({
+            points: countTendersByDay(
+                applyStatisticsFilters(recent.tenders.filter((tender) => !isFavorite(tender.id))),
+                lastDays(todayDay, TREND_DAYS),
+                recent.completeDays
+            ),
+            error: recent.error
+        }),
+        [applyStatisticsFilters, recent.tenders, recent.completeDays, recent.error, isFavorite, todayDay]
+    );
     const [hourlyDay, setHourlyDay] = useState('');
     const hourlyExtraDay = useMemo(() => {
         const day = isStatisticsTab ? displayDateToDay(hourlyDay) : null;
@@ -577,6 +601,8 @@ const Tenders: React.FC = () => {
                                     onSortOrderChange={setSortOrder}
                                     selectedCpvs={selectedCpvs}
                                     onRemoveCpv={(code) => setSelectedCpvs((prev) => prev.filter((item) => item !== code))}
+                                    selectedCpvCategory={selectedCpvCategory}
+                                    onClearCpvCategory={() => setSelectedCpvCategory(null)}
                                     hasActiveFilters={hasActiveFilters}
                                     onClearFilters={handleClearFilters}
                                     hiddenAdvertisersCount={hiddenAdvertisersCount}
@@ -653,6 +679,7 @@ const Tenders: React.FC = () => {
                                 hasActiveFilters={hasActiveStatisticsFilters}
                                 onClearFilters={handleClearFilters}
                                 comparison={comparison}
+                                trend={trend}
                                 hourly={{
                                     days: hourlyDays,
                                     distribution: hourlyDistribution,
