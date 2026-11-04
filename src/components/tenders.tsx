@@ -47,6 +47,11 @@ const GENERIC_REFRESH_ERROR = "Nie udało się odświeżyć przetargów.";
 const LOAD_ERROR_MESSAGE = "Nie udało się wczytać przetargów z bazy.";
 const REFRESHING_MESSAGE = "Pobieranie nowych przetargów";
 
+/** Czy zdarzenie pochodzi z pola, w którym użytkownik pisze (skróty jednoklawiszowe nie mogą mu wtedy przeszkadzać). */
+const isTypingTarget = (target: EventTarget | null): boolean =>
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
 const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznacz przetarg gwiazdką, aby trafił do tej zakładki.";
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -459,6 +464,12 @@ const Tenders: React.FC = () => {
                     searchInputRef.current.select();
                 }
             }
+            // "/" - fokus na wyszukiwarkę, ale nie podczas pisania w polu (tam to zwykły znak)
+            if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+                searchInputRef.current?.select();
+            }
             // (Ctrl+E export was removed)
         };
 
@@ -587,6 +598,9 @@ const Tenders: React.FC = () => {
                 isRefreshing={isRefreshing}
                 canRefresh={canRefreshAny}
                 lastRefreshAt={lastRefreshAt}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchInputRef={searchInputRef}
             />
             <div className={styles.tabsBar}>
                 <div className={styles.tabsContainer}>
@@ -627,9 +641,6 @@ const Tenders: React.FC = () => {
                         {activeTab !== 'statistics' ? (
                             <div className={styles.container}>
                                 <FiltersPanel
-                                    searchQuery={searchQuery}
-                                    onSearchChange={setSearchQuery}
-                                    searchInputRef={searchInputRef}
                                     selectedSources={selectedSources}
                                     onSourceToggle={handleSourceToggle}
                                     selectedOrderTypes={selectedOrderTypes}

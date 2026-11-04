@@ -29,12 +29,22 @@ interface HeaderProps {
     canRefresh: boolean;
     /** Kiedy ktokolwiek ostatnio pobrał nowe przetargi ze źródeł; null, gdy nieznane. */
     lastRefreshAt: Date | null;
+    searchQuery: string;
+    onSearchChange: (query: string) => void;
+    searchInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 const RefreshIcon: React.FC = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M21 12a9 9 0 1 1-2.64-6.36" />
         <path d="M21 3v6h-6" />
+    </svg>
+);
+
+const SearchIcon: React.FC = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" />
+        <path d="M21 21l-4.3-4.3" />
     </svg>
 );
 
@@ -67,7 +77,10 @@ const Header: React.FC<HeaderProps> = ({
     isLoading,
     isRefreshing,
     canRefresh,
-    lastRefreshAt
+    lastRefreshAt,
+    searchQuery,
+    onSearchChange,
+    searchInputRef
 }) => {
     const { theme, toggleTheme } = useTheme();
 
@@ -77,6 +90,37 @@ const Header: React.FC<HeaderProps> = ({
             <div className={styles.brand}>
                 <span className={styles.brandMark} aria-hidden="true">P</span>
                 <h1 className={styles.title}>Przetargi</h1>
+            </div>
+            <div className={styles.search} role="search">
+                <span className={styles.searchIcon}><SearchIcon /></span>
+                <input
+                    ref={searchInputRef}
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder={PLACEHOLDER_TEXTS.SEARCH}
+                    aria-label="Szukaj w przetargach (tytuł, zamawiający, miasto, numer, CPV)"
+                    value={searchQuery}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Delete' && searchQuery) {
+                            e.preventDefault();
+                            onSearchChange("");
+                        }
+                    }}
+                />
+                {searchQuery ? (
+                    <button
+                        type="button"
+                        className={styles.clearSearchButton}
+                        onClick={() => onSearchChange("")}
+                        aria-label="Wyczyść wyszukiwanie"
+                        title="Wyczyść wyszukiwanie"
+                    >
+                        ✕
+                    </button>
+                ) : (
+                    <kbd className={styles.searchKey} aria-hidden="true">/</kbd>
+                )}
             </div>
             <div className={styles.tenderInfo}>
                 <div className={styles.tenderCounts}>

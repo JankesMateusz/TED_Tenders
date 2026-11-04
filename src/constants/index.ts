@@ -18,7 +18,7 @@ export const SCROLL_THRESHOLD = 200;
 export const DATE_FORMAT = "dd-MM-yyyy";
 
 export const PLACEHOLDER_TEXTS = {
-    SEARCH: "Szukaj w przetargach (tytuł, zamawiający, miasto, numer, CPV)...",
+    SEARCH: "Szukaj: laptop, serwer, CPV…",
     DATE_PICKER: "Wybierz datę",
     DATE_FROM: "Od",
     DATE_TO: "Do"

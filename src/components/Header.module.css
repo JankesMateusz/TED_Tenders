@@ -44,6 +44,93 @@
     letter-spacing: -0.01em;
 }
 
+/* Wyszukiwarka w pasku; znaczek "/" przypomina o skrócie */
+.search {
+    position: relative;
+    flex: 1 1 240px;
+    max-width: 460px;
+    min-width: 0;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    display: flex;
+    color: var(--text-secondary);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.searchIcon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.searchInput {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 44px 0 38px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font: inherit;
+    font-size: 14px;
+}
+
+.searchInput::placeholder {
+    color: var(--text-secondary);
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.searchKey {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    padding: 3px 6px;
+    border: 1px solid var(--border-color);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font: 600 12px/1 ui-monospace, Consolas, monospace;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.clearSearchButton {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.clearSearchButton:hover {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
 /* Liczniki źródeł i ostatnia aktualizacja: spokojny, mały tekst */
 .tenderInfo {
     flex: 1 1 260px;
@@ -353,14 +440,28 @@
         padding: 10px 12px;
     }
 
+    .search {
+        flex-basis: 100%;
+        max-width: none;
+        order: 2;
+    }
+
     .tenderInfo {
         flex-basis: 100%;
-        order: 3;
+        order: 5;
     }
 
     .controls,
     .userMenu {
         width: 100%;
+    }
+
+    .controls {
+        order: 3;
+    }
+
+    .userMenu {
+        order: 4;
     }
 
     .userMenu {

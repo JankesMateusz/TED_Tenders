@@ -1,7 +1,7 @@
 import React from 'react';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
-import { DEFAULT_ORDER_TYPES, PLACEHOLDER_TEXTS } from '../constants';
+import { DEFAULT_ORDER_TYPES } from '../constants';
 import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
 import { ALL_SOURCES } from '../utils/persistedFilters';
 import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
@@ -23,9 +23,6 @@ const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
 ];
 
 interface FiltersPanelProps {
-    searchQuery: string;
-    onSearchChange: (query: string) => void;
-    searchInputRef: React.RefObject<HTMLInputElement | null>;
     selectedSources: TenderSource[];
     onSourceToggle: (source: TenderSource) => void;
     selectedOrderTypes: OrderType[];
@@ -48,9 +45,6 @@ interface FiltersPanelProps {
 }
 
 export const FiltersPanel: React.FC<FiltersPanelProps> = ({
-    searchQuery,
-    onSearchChange,
-    searchInputRef,
     selectedSources,
     onSourceToggle,
     selectedOrderTypes,
@@ -105,35 +99,6 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
     return (
         <>
-            <div className={styles.searchSection}>
-                <div className={styles.searchInputWrapper}>
-                    <input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder={PLACEHOLDER_TEXTS.SEARCH}
-                        value={searchQuery}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Delete' && searchQuery) {
-                                e.preventDefault();
-                                onSearchChange("");
-                            }
-                        }}
-                        className={styles.searchInput}
-                    />
-                    {searchQuery && (
-                        <button
-                            className={styles.clearSearchButton}
-                            onClick={() => onSearchChange("")}
-                            aria-label="Wyczyść wyszukiwanie"
-                            title="Wyczyść wyszukiwanie"
-                        >
-                            ✕
-                        </button>
-                    )}
-                </div>
-            </div>
-
             <div className={styles.toolbar}>
                 <FilterPopover
                     label="Status"
