@@ -147,3 +147,17 @@ describe('commentFromDoc', () => {
         expect(comment.createdAt.getTime()).toBeGreaterThanOrEqual(before);
     });
 });
+
+describe('fetchedAt', () => {
+    it('zamienia czas pobrania z bazy na Date, a brak zostawia pusty', () => {
+        const fetchedAt = new Date(2026, 10, 4, 9, 30);
+        expect(tenderFromDoc({ source: 'BAZA_KONKURENCYJNOSCI', fetchedAt: { toDate: () => fetchedAt } }, 'x').fetchedAt).toEqual(fetchedAt);
+        expect(tenderFromDoc({ source: 'TED' }, 'x').fetchedAt).toBeUndefined();
+    });
+
+    it('przeżywa zapis i odczyt kopii w ulubionych', () => {
+        const fetchedAt = new Date(2026, 10, 4, 9, 30);
+        const tender = tenderFromDoc({ source: 'BAZA_KONKURENCYJNOSCI', fetchedAt: { toDate: () => fetchedAt } }, 'x');
+        expect(favoriteFromDoc(favoriteToDoc(tender), 'x').fetchedAt).toEqual(fetchedAt);
+    });
+});

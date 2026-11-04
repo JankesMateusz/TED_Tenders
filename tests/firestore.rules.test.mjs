@@ -361,3 +361,69 @@ describe('presence', () => {
         await assertFails(getDoc(doc(anon('g1'), 'presence/g1')));
     });
 });
+
+describe('advertisers (ręczne ukrywanie zamawiających)', () => {
+    const NIP = '1234567890';
+    const decision = (overrides = {}) => ({
+        decision: 'hidden',
+        name: 'Firma Testowa Sp. z o.o.',
+        updatedBy: 'member1',
+        updatedByEmail: 'member@example.com',
+        updatedAt: serverTimestamp(),
+        ...overrides
+    });
+    const member = () => dbFor('member1', { role: 'member', email: 'member@example.com' });
+
+    it('członek ukrywa zamawiającego i zmienia decyzję na przywrócenie', async () => {
+        await assertSucceeds(setDoc(doc(member(), `advertisers/${NIP}`), decision()));
+        await assertSucceeds(setDoc(doc(member(), `advertisers/${NIP}`), decision({ decision: 'visible' })));
+    });
+
+    it('członkowie czytają decyzje, niezalogowany nie', async () => {
+        await env.withSecurityRulesDisabled((context) =>
+            setDoc(doc(context.firestore(), `advertisers/${NIP}`), decision({ updatedAt: Timestamp.now() })));
+        await assertSucceeds(getDoc(doc(dbFor('member2', { role: 'member' }), `advertisers/${NIP}`)));
+        await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), `advertisers/${NIP}`)));
+    });
+
+    it('niezalogowany nie zapisuje decyzji', async () => {
+        await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), `advertisers/${NIP}`), decision()));
+    });
+
+    it('identyfikatorem musi być NIP (10 cyfr)', async () => {
+        for (const id of ['123', '12345678901', 'abcdefghij', '123-456-78-90']) {
+            await assertFails(setDoc(doc(member(), `advertisers/${id}`), decision()));
+        }
+    });
+
+    it('decyzja tylko hidden lub visible, a nazwa niepusta i nie za długa', async () => {
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), decision({ decision: 'ngo' })));
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), decision({ name: '' })));
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), decision({ name: 'x'.repeat(301) })));
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), decision({ name: 123 })));
+    });
+
+    it('autor i czas pochodzą z tokenu i serwera, nie z klienta', async () => {
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), decision({ updatedBy: 'member2' })));
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), decision({ updatedByEmail: 'other@example.com' })));
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), decision({ updatedAt: Timestamp.fromDate(new Date('2020-01-01')) })));
+    });
+
+    it('anonimowy podpisuje się jako Gość', async () => {
+        const guest = dbFor('guest1', {});
+        await assertSucceeds(setDoc(doc(guest, `advertisers/${NIP}`), decision({ updatedBy: 'guest1', updatedByEmail: 'Gość' })));
+        await assertFails(setDoc(doc(guest, 'advertisers/2234567890'), decision({ updatedBy: 'guest1', updatedByEmail: 'ktoś@example.com' })));
+    });
+
+    it('zablokowane są brakujące i dodatkowe pola', async () => {
+        const { name, ...withoutName } = decision();
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), withoutName));
+        await assertFails(setDoc(doc(member(), `advertisers/${NIP}`), decision({ extra: true })));
+    });
+
+    it('nikt nie usuwa decyzji, także admin', async () => {
+        await assertSucceeds(setDoc(doc(member(), `advertisers/${NIP}`), decision()));
+        await assertFails(deleteDoc(doc(member(), `advertisers/${NIP}`)));
+        await assertFails(deleteDoc(doc(dbFor('admin1', { role: 'admin' }), `advertisers/${NIP}`)));
+    });
+});

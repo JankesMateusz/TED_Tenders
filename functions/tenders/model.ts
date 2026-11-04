@@ -1,4 +1,9 @@
-export type TenderSource = 'TED' | 'E_ZAMOWIENIA';
+import type { BuyerSector } from './sector';
+
+export type TenderSource = 'TED' | 'E_ZAMOWIENIA' | 'BAZA_KONKURENCYJNOSCI';
+
+/** Wszystkie źródła; kolejność = kolejność w odpowiedzi odświeżania. */
+export const TENDER_SOURCES: readonly TenderSource[] = ['TED', 'E_ZAMOWIENIA', 'BAZA_KONKURENCYJNOSCI'];
 
 export type OrderType = 'Delivery' | 'Services' | 'Works';
 
@@ -22,6 +27,10 @@ export interface TenderRecord {
   documentsUrl: string | null;
   orderType: OrderType | null;
   buyerMainActivity: string | null;
+  /** NIP zamawiającego (10 cyfr); tylko Baza Konkurencyjności, dla pozostałych źródeł brak pola. */
+  buyerNip?: string | null;
+  /** Sektor zamawiającego ustalony automatycznie po nazwie (tylko Baza Konkurencyjności); decyzje ręczne są osobno. */
+  buyerSectorAuto?: BuyerSector | null;
 }
 
 /** Wynik pobierania z jednego źródła; częściowe błędy nie wyrzucają już pobranych przetargów. */

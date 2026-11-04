@@ -1,0 +1,43 @@
+{
+  "status": "OK",
+  "data": {
+    "advertisements": [
+      {
+        "id": 296036,
+        "title": "Dostawa wyposażenia Laboratorium Sieci Komputerowych wraz symulacją okablowania w Uniwersytecie WSB Merito Szczecin",
+        "content": "UWAGA! w kolumnie \"Parametr oferowany\" w Specyfikacji Oferent wpisuje: link do oferowanego produktu lub wskazuje producenta, nazwę, model, symbol oferowanego produktu, pozwalający na jego jednoznaczną identyfikację i oce",
+        "advertiser_name": "Uniwersytet WSB Merito w Poznaniu",
+        "is_mine": false,
+        "publication_date": "2026-11-04",
+        "submission_deadline": "2026-11-06 23:59:59",
+        "fulfillment_place": "Szczecin, zachodniopomorskie",
+        "favorite": null
+      },
+      {
+        "id": 296954,
+        "title": "„Zakup i wdrożenie zabezpieczeń infrastruktury teleinformatycznej i operacyjnej wykorzystywanej do prowadzenia działalności wodociągowo-kanalizacyjnej przez Gminę Zawonia\nw ramach projektu „Cyberbezpieczne Wodociągi” Numer sprawy: RGK.271.9.2026",
+        "content": "Przedmiotem zamówienia jest dostawa, wdrożenie, instalacja, konfiguracja, integracja, uruchomienie\ni przetestowanie zabezpieczeń infrastruktury teleinformatycznej i operacyjnej wykorzystywanej do\nprowadzenia działalności",
+        "advertiser_name": "Gmina Zawonia",
+        "is_mine": false,
+        "publication_date": "2026-11-04",
+        "submission_deadline": "2026-11-18 10:00:00",
+        "fulfillment_place": "Zawonia, dolnośląskie",
+        "favorite": null
+      },
+      {
+        "id": 296206,
+        "title": "17/10/2026/KIF/01.13\nZakup infrastruktury serwerowej wraz z niezbędnym oprogramowaniem, usługą konfiguracji urządzeń, niezbędnymi akcesoriami oraz zapewnieniem wymaganych licencji i bezpieczeństwa danych \nw ramach realizacji projektu „Kształcenie praktyczne kluczem do wysokiej jakości usług fizjoterapeutycznych i wyższej jakości opieki nad pacjentem”.",
+        "content": "1.\tPrzedmiotem zamówienia jest zakup infrastruktury serwerowej wraz z niezbędnym oprogramowaniem, usługą konfiguracji urządzeń, niezbędnymi akcesoriami oraz zapewnieniem wymaganych licencji i bezpieczeństwa danych.\n2.\tZa",
+        "advertiser_name": "Krajowa Izba Fizjoterapeutów",
+        "is_mine": false,
+        "publication_date": "2026-11-04",
+        "submission_deadline": "2026-11-09 12:00:00",
+        "fulfillment_place": "Cała Polska",
+        "favorite": null
+      }
+    ],
+    "meta": {
+      "total": 173
+    }
+  }
+}

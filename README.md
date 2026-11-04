@@ -23,8 +23,8 @@ przeglądarka (React) ──czyta na żywo──> Firestore <──zapisuje─�
 ```
 
 - **Frontend** (`src/`): React 19, TypeScript, CSS Modules, Firebase SDK.
-- **Functions** (`functions/`, Node 22, region `europe-central2`): `refreshTenders`, `scheduledRefresh` (cykliczne odświeżanie co 10 minut, 9:00-23:50), `inviteUser`.
-- **Firestore**: `tenders`, `refreshLog`, `users` (+ `users/{uid}/favorites`), `meta`. Reguły w `firestore.rules`, indeksy i polityki TTL w `firestore.indexes.json`.
+- **Functions** (`functions/`, Node 22, region `europe-central2`): `refreshTenders`, `scheduledRefresh` (cykliczne odświeżanie TED i eZamówień co 10 minut, 9:00-23:50), `scheduledBazaRefresh` (pobieranie z Bazy Konkurencyjności raz dziennie o 8:00; Bazę można też odświeżyć ręcznym przyciskiem), `inviteUser`.
+- **Firestore**: `tenders`, `refreshLog`, `users` (+ `users/{uid}/favorites`), `advertisers` (ręczne decyzje o ukrywaniu zamawiających z Bazy Konkurencyjności, po NIP), `comments`, `meta`. Reguły w `firestore.rules`, indeksy i polityki TTL w `firestore.indexes.json`.
 - **Dostęp** daje wyłącznie custom claim `role` (`admin` lub `member`); samo zalogowanie nie wystarcza.
 
 Szczegóły (model danych, decyzje, odkrycia o API źródeł): `docs/handoff.md` i `docs/plan.md`.
@@ -57,7 +57,7 @@ Wszystkie prace i testy prowadzimy na projekcie testowym lub emulatorach. Polece
 |---|---|
 | `npm run test:unit` | mappery źródeł i daty (po zbudowaniu funkcji) |
 | `npm run test:rules` | reguły Firestore na emulatorze |
-| `npm run test:functions` | `inviteUser` i `refreshTenders` na emulatorach, ze sztucznym serwerem udającym TED i eZamówienia |
+| `npm run test:functions` | `inviteUser` i `refreshTenders` na emulatorach, ze sztucznym serwerem udającym TED, eZamówienia i Bazę Konkurencyjności |
 | `CI=true npx react-scripts test --watchAll=false` | testy frontendu (Jest) |
 | `npx tsc --noEmit -p tsconfig.json` | typy frontendu |
 | `npx eslint src --ext ts,tsx` | lint |

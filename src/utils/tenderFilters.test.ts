@@ -224,3 +224,28 @@ describe('liczniki opcji filtrów', () => {
         expect(countFacets(list, baseOptions).statuses.unmarked).toBe(1);
     });
 });
+
+describe('filtr ukrytych zamawiających', () => {
+    const list = [
+        { ...tender('prywatna'), buyerNip: '1111111111', buyerSectorAuto: 'private' as const },
+        { ...tender('gmina'), buyerNip: '2222222222', buyerSectorAuto: 'public' as const },
+        { ...tender('przywrocona'), buyerNip: '3333333333', buyerSectorAuto: 'private' as const },
+        { ...tender('reczne'), buyerNip: '4444444444', buyerSectorAuto: 'unknown' as const },
+        tender('ted')
+    ];
+    const decisions = { '3333333333': 'visible' as const, '4444444444': 'hidden' as const };
+    const ids = (options: { showHiddenAdvertisers?: boolean; advertiserDecisions?: typeof decisions }) =>
+        filterAndSortTenders(list, { ...baseOptions, ...options }).map((t) => t.id).sort();
+
+    it('domyślnie ukrywa firmy prywatne wg automatu i ręcznie ukrytych, ręcznie przywróconych zostawia', () => {
+        expect(ids({ advertiserDecisions: decisions })).toEqual(['gmina', 'przywrocona', 'ted']);
+    });
+
+    it('bez ręcznych decyzji rozstrzyga sam automat', () => {
+        expect(ids({})).toEqual(['gmina', 'reczne', 'ted']);
+    });
+
+    it('na prośbę pokazuje także ukrytych', () => {
+        expect(ids({ advertiserDecisions: decisions, showHiddenAdvertisers: true })).toEqual(['gmina', 'prywatna', 'przywrocona', 'reczne', 'ted']);
+    });
+});

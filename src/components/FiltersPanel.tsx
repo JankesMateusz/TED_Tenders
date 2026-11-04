@@ -35,6 +35,10 @@ interface FiltersPanelProps {
     onRemoveCpv: (code: string) => void;
     hasActiveFilters: boolean;
     onClearFilters: () => void;
+    /** Ile ogłoszeń ukrywają decyzje o zamawiających (firmy prywatne i NGO); przełącznik pojawia się, gdy są takie ogłoszenia. */
+    hiddenAdvertisersCount: number;
+    showHiddenAdvertisers: boolean;
+    onShowHiddenAdvertisersChange: (show: boolean) => void;
 }
 
 export const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -53,7 +57,10 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     selectedCpvs,
     onRemoveCpv,
     hasActiveFilters,
-    onClearFilters
+    onClearFilters,
+    hiddenAdvertisersCount,
+    showHiddenAdvertisers,
+    onShowHiddenAdvertisersChange
 }) => {
     return (
         <>
@@ -143,7 +150,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     })}
                 </div>
                 
-                {(selectedSources.includes(TenderSource.E_ZAMOWIENIA) || selectedSources.includes(TenderSource.TED)) && (
+                {selectedSources.length > 0 && (
                     <div className={styles.sourceFilters}>
                         <span className={styles.sourceFiltersLabel}>Typy:</span>
                         {DEFAULT_ORDER_TYPES.map((orderType) => {
@@ -207,6 +214,22 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     </button>
                 </div>
             </div>
+
+            {(hiddenAdvertisersCount > 0 || showHiddenAdvertisers) && (
+                <div className={styles.statusFiltersSection}>
+                    <div className={styles.sourceFilters}>
+                        <label className={styles.sourceFilterLabel} title="Firmy prywatne i organizacje pozarządowe są domyślnie ukryte">
+                            <input
+                                type="checkbox"
+                                checked={showHiddenAdvertisers}
+                                onChange={(e) => onShowHiddenAdvertisersChange(e.target.checked)}
+                                className={styles.sourceCheckbox}
+                            />
+                            <span>Pokaż ukrytych zamawiających ({hiddenAdvertisersCount})</span>
+                        </label>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

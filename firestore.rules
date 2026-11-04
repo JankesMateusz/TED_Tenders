@@ -77,6 +77,24 @@ service cloud.firestore {
       allow delete: if hasRole() && resource.data.authorUid == request.auth.uid;
     }
 
+    // Ręczne decyzje o zamawiających (dokument o identyfikatorze równym NIP-owi): `hidden` ukrywa jego ogłoszenia,
+    // `visible` je przywraca, a brak dokumentu oznacza, że decyduje automatyczna klasyfikacja sektora.
+    // Wspólne dla członków; nie usuwamy dokumentów, bo przywrócenie to decyzja `visible`.
+    match /advertisers/{nip} {
+      allow read: if hasRole();
+      allow create, update: if hasRole()
+        && nip.matches('^[0-9]{10}$')
+        && request.resource.data.keys().hasOnly(['decision', 'name', 'updatedBy', 'updatedByEmail', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['decision', 'name', 'updatedBy', 'updatedByEmail', 'updatedAt'])
+        && request.resource.data.decision in ['hidden', 'visible']
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 300
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedByEmail == request.auth.token.get('email', 'Gość')
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
     // Obecność: każdy zalogowany zapisuje tylko własny dokument (puls `lastSeen` co ok. minutę),
     // odczyt ma wyłącznie admin. Dokument wygasa przez TTL na `expireAt`.
     match /presence/{uid} {

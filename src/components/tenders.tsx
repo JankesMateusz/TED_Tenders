@@ -14,6 +14,8 @@ import { ALL_SOURCES, NO_STATUS_FILTERS, loadFilters, saveFilters } from "../uti
 import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { useComments } from "../hooks/useComments";
+import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
+import { isHiddenAdvertiser } from "../utils/advertisers";
 import { usePreviousPeriod } from "../hooks/usePreviousPeriod";
 import { useDayTenders, useRefreshedDays } from "../hooks/useHourlyDays";
 import { describePeriod, getComparisonPeriod } from "../utils/comparison";
@@ -44,10 +46,10 @@ const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznac
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /** Odświeża dzień; jeśli serwer jest zajęty odświeżaniem innej osoby, czeka i ponawia. */
-const refreshDayWithRetry = async (day: string) => {
+const refreshDayWithRetry = async (day: string, sources?: string[]) => {
     for (let attempt = 1; ; attempt++) {
         try {
-            return await refreshTendersForDay(day);
+            return await refreshTendersForDay(day, sources);
         } catch (error) {
             const code = (error as { code?: string })?.code;
             if (code !== REFRESH_IN_PROGRESS_CODE || attempt >= IN_PROGRESS_MAX_ATTEMPTS) {
@@ -118,6 +120,9 @@ const Tenders: React.FC = () => {
     );
 
     const { commentsByTender, commentsError, addComment, deleteComment } = useComments(startDay, endDay);
+    const { advertiserDecisions, advertiserError, setAdvertiserDecision } = useAdvertiserDecisions();
+    // Firmy prywatne i NGO są domyślnie ukryte; przełącznik w filtrach pokazuje je na czas przeglądania
+    const [showHiddenAdvertisers, setShowHiddenAdvertisers] = useState<boolean>(false);
 
     // Nasłuch przetargów z bazy dla wybranego zakresu dat (zmiany od innych użytkowników widać na bieżąco)
     useEffect(() => {
@@ -146,7 +151,9 @@ const Tenders: React.FC = () => {
 
     // Prosi serwer o pobranie nowych przetargów: dla pojedynczego dnia tego dnia, dla zakresu po kolei
     // wszystkich dni, których jeszcze nie pobrano. Wyniki pojawiają się na liście przez nasłuch bazy.
-    const refresh = useCallback(async () => {
+    // `includeBaza`: tylko na ręczną prośbę; Baza Konkurencyjności nie ma oficjalnego API, więc nie odpytujemy jej
+    // przy każdym wejściu do aplikacji (poza tym pobiera ją zadanie raz dziennie).
+    const refresh = useCallback(async (includeBaza: boolean = false) => {
         if (!startDay || !endDay) return;
 
         // Nowe wywołanie (np. zmiana dnia) przerywa poprzednie po zakończeniu bieżącego dnia
@@ -165,7 +172,12 @@ const Tenders: React.FC = () => {
             for (let index = 0; index < days.length; index++) {
                 if (!isCurrentRun()) return;
                 setRefreshProgress({ done: index, total: days.length });
-                const result = await refreshDayWithRetry(days[index]);
+                // Baza szuka ogłoszeń z kilku dni naraz, więc w zakresie pytamy o nią tylko przy ostatnim dniu
+                const withBaza = includeBaza && index === days.length - 1;
+                const result = await refreshDayWithRetry(
+                    days[index],
+                    withBaza ? [TenderSource.TED, TenderSource.E_ZAMOWIENIA, TenderSource.BAZA_KONKURENCYJNOSCI] : undefined
+                );
                 hadPartialFailure = hadPartialFailure || result.errors.length > 0;
             }
 
@@ -225,7 +237,7 @@ const Tenders: React.FC = () => {
     const handleAllTendersClick = () => {
         // Jeśli już jesteśmy w trybie "All tenders", odśwież dane
         if (!isFiltered) {
-            refresh();
+            refresh(true);
         } else {
             setIsFiltered(false);
         }
@@ -237,7 +249,7 @@ const Tenders: React.FC = () => {
     };
 
     const handleRefresh = () => {
-        refresh();
+        refresh(true);
     };
 
     const handleSourceToggle = (source: TenderSource) => {
@@ -295,27 +307,37 @@ const Tenders: React.FC = () => {
         isFiltered,
         searchQuery,
         statusFilters,
-        sortOrder
-    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, isFiltered, searchQuery, statusFilters, sortOrder]);
+        sortOrder,
+        advertiserDecisions,
+        showHiddenAdvertisers
+    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, isFiltered, searchQuery, statusFilters, sortOrder, advertiserDecisions, showHiddenAdvertisers]);
+
+    // Zapisane (gwiazdką) zostają widoczne nawet po ukryciu zamawiającego: ktoś świadomie je wybrał
+    const savedFilterOptions = useMemo(() => ({ ...filterOptions, showHiddenAdvertisers: true }), [filterOptions]);
 
     const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, filterOptions), [filterOptions]);
 
     // Obie listy są filtrowane osobno, by licznik "Przetargi" nie zależał od aktywnej zakładki
     const filteredTenders = useMemo(() => applyFilters(unsavedTenders), [applyFilters, unsavedTenders]);
-    const filteredSavedTenders = useMemo(() => applyFilters(savedTenders), [applyFilters, savedTenders]);
+    const filteredSavedTenders = useMemo(() => filterAndSortTenders(savedTenders, savedFilterOptions), [savedTenders, savedFilterOptions]);
+    const hiddenAdvertisersCount = useMemo(
+        () => unsavedTenders.filter((tender) => isHiddenAdvertiser(tender, advertiserDecisions)).length,
+        [unsavedTenders, advertiserDecisions]
+    );
     const displayedTenders = activeTab === 'saved' ? filteredSavedTenders : filteredTenders;
 
     // Listy w panelu bocznym pomijają własny filtr (żeby dało się dobrać kolejne pozycje), ale uwzględniają resztę
     const activeTabTenders = activeTab === 'saved' ? savedTenders : unsavedTenders;
+    const activeTabOptions = activeTab === 'saved' ? savedFilterOptions : filterOptions;
     const buyerOptionTenders = useMemo(
-        () => filterTenders(activeTabTenders, filterOptions, 'buyer'),
-        [activeTabTenders, filterOptions]
+        () => filterTenders(activeTabTenders, activeTabOptions, 'buyer'),
+        [activeTabTenders, activeTabOptions]
     );
     const cityOptionTenders = useMemo(
-        () => filterTenders(activeTabTenders, filterOptions, 'city'),
-        [activeTabTenders, filterOptions]
+        () => filterTenders(activeTabTenders, activeTabOptions, 'city'),
+        [activeTabTenders, activeTabOptions]
     );
-    const facetCounts = useMemo(() => countFacets(activeTabTenders, filterOptions), [activeTabTenders, filterOptions]);
+    const facetCounts = useMemo(() => countFacets(activeTabTenders, activeTabOptions), [activeTabTenders, activeTabOptions]);
 
     // Filtry z panelu, paska bocznego i statystyk; przełącznik "Wszystkie / IT" w nagłówku to tryb widoku,
     // więc nie jest tu liczony ani czyszczony.
@@ -550,6 +572,9 @@ const Tenders: React.FC = () => {
                                     onRemoveCpv={(code) => setSelectedCpvs((prev) => prev.filter((item) => item !== code))}
                                     hasActiveFilters={hasActiveFilters}
                                     onClearFilters={handleClearFilters}
+                                    hiddenAdvertisersCount={hiddenAdvertisersCount}
+                                    showHiddenAdvertisers={showHiddenAdvertisers}
+                                    onShowHiddenAdvertisersChange={setShowHiddenAdvertisers}
                                 />
                 {activeTab === 'tenders' && isLoading && (
                     <div className={styles.skeletonContainer}>
@@ -574,6 +599,7 @@ const Tenders: React.FC = () => {
                 {activeTab === 'tenders' && refreshError && <p className={styles.message} role="alert">{refreshError}</p>}
                 {actionError && <p className={styles.message} role="alert">{actionError}</p>}
                 {commentsError && <p className={styles.message} role="alert">{commentsError}</p>}
+                {advertiserError && <p className={styles.message} role="alert">{advertiserError}</p>}
                 {activeTab === 'tenders' && isRefreshing && !isLoading && (
                     <p className={styles.message}>
                         {REFRESHING_MESSAGE}
@@ -604,6 +630,8 @@ const Tenders: React.FC = () => {
                                     canComment={liveTendersById.has(tender.id)}
                                     onAddComment={addComment}
                                     onDeleteComment={deleteComment}
+                                    advertiserHidden={isHiddenAdvertiser(tender, advertiserDecisions)}
+                                    onSetAdvertiserDecision={setAdvertiserDecision}
                                 />
                             );
                         })}

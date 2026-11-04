@@ -1,9 +1,13 @@
 // Testy jednostkowe dat i mapperów źródeł. Wymagają zbudowanych funkcji: npm run test:unit
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { addDays, dayFromTedDate, isValidDay, toWarsaw } from '../functions/lib/tenders/dates.js';
+import { mapBazaNotice } from '../functions/lib/tenders/bazakonkurencyjnosci.js';
 import { extractCpvCodes, mapEzamowieniaNotice } from '../functions/lib/tenders/ezamowienia.js';
+import { IT_CPV_CODES_8 } from '../functions/lib/tenders/itCpvCodes.js';
 import { tenderId } from '../functions/lib/tenders/model.js';
+import { classifySector } from '../functions/lib/tenders/sector.js';
 import { mapTedNotice } from '../functions/lib/tenders/ted.js';
 
 describe('dates', () => {
@@ -168,5 +172,137 @@ describe('eZamówienia', () => {
         assert.deepEqual(extractCpvCodes('30213300 (Komputer)'), ['30213300']);
         assert.deepEqual(extractCpvCodes(''), []);
         assert.deepEqual(extractCpvCodes(null), []);
+    });
+});
+
+describe('mapBazaNotice (Baza Konkurencyjności)', () => {
+    const readFixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/baza/${name}`, import.meta.url), 'utf8'));
+    const details = readFixture('details.json');
+
+    it('mapuje szczegóły ogłoszenia na przetarg, z numerem z wyszukiwania', () => {
+        const record = mapBazaNotice(details[1], 296954);
+        assert.equal(record.source, 'BAZA_KONKURENCYJNOSCI');
+        assert.equal(record.publicationNumber, '296954');
+        assert.equal(record.buyerName, 'Gmina Zawonia');
+        assert.equal(record.buyerCity, 'Zawonia');
+        assert.equal(record.country, 'Polska');
+        assert.equal(record.publicationDate, '2026-11-03');
+        assert.equal(record.deadlineDate, '2026-11-18');
+        assert.equal(record.publicationTime, null);
+        assert.equal(record.buyerNip, '9151603787');
+        assert.equal(record.link, 'https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/296954');
+        assert.equal(record.documentsUrl, null, 'dokumentacja jest na stronie ogłoszenia, więc bez osobnego linku');
+        assert.ok(record.cpvCodes.length > 0);
+        assert.ok(record.cpvCodes.every((code) => /^\d{8}-\d$/.test(code)), 'kody CPV z cyfrą kontrolną');
+    });
+
+    it('bierze datę pierwszej publikacji, a nie datę bieżącej wersji ogłoszenia', () => {
+        // Ogłoszenie 296206 opublikowano 2026-10-27, a 2026-11-04 zamawiający opublikował jego nową wersję
+        assert.equal(details[2].publication_date, '2026-11-04');
+        assert.equal(mapBazaNotice(details[2], 296206).publicationDate, '2026-10-27');
+    });
+
+    it('bez daty pierwszej publikacji używa daty bieżącej wersji', () => {
+        const { advertisement, ...withoutOriginal } = details[2];
+        assert.equal(mapBazaNotice(withoutOriginal, 296206).publicationDate, '2026-11-04');
+    });
+
+    it('wybiera rodzaj zamówienia z pierwszeństwem: dostawa, usługa, roboty', () => {
+        const withCategories = (...ids) => ({
+            ...details[0],
+            orders: [{ order_items: ids.map((id) => ({ category: { id }, cpv_items: [] })) }],
+        });
+        assert.equal(mapBazaNotice(withCategories(2, 1, 3), 1).orderType, 'Delivery');
+        assert.equal(mapBazaNotice(withCategories(2, 1), 1).orderType, 'Services');
+        assert.equal(mapBazaNotice(withCategories(2), 1).orderType, 'Works');
+        assert.equal(mapBazaNotice(withCategories(9), 1).orderType, null);
+    });
+
+    it('odrzuca ogłoszenia bez numeru lub daty publikacji', () => {
+        assert.equal(mapBazaNotice(details[0], ''), null);
+        assert.equal(mapBazaNotice({ ...details[0], publication_date: undefined, advertisement: { id: 1 } }, 1), null);
+        assert.equal(mapBazaNotice(undefined, 1), null);
+    });
+
+    it('nie przepisuje danych osobowych z odpowiedzi', () => {
+        const withPersonalData = {
+            ...details[0],
+            contact_persons: [{ first_name: 'Jan', last_name: 'Kowalski', phone: '600700800', email: 'jan@example.com' }],
+            created_by: { first_name: 'Anna', last_name: 'Nowak' },
+            modified_by: { first_name: 'Anna', last_name: 'Nowak' },
+        };
+        const serialized = JSON.stringify(mapBazaNotice(withPersonalData, 1));
+        for (const secret of ['Kowalski', '600700800', 'jan@example.com', 'Nowak']) {
+            assert.equal(serialized.includes(secret), false, secret);
+        }
+    });
+
+    it('nie ustawia NIP-u, gdy identyfikator nie jest NIP-em', () => {
+        const other = { ...details[0], advertiser_address_details: { ...details[0].advertiser_address_details, identification_number_type: 'regon' } };
+        assert.equal(mapBazaNotice(other, 1).buyerNip, null);
+    });
+
+    it('lista kodów IT dla wyszukiwarki zgadza się z IT_CPV_CODES z aplikacji', () => {
+        const frontendSource = readFileSync(new URL('../src/utils/cpvCodes.ts', import.meta.url), 'utf8');
+        const frontendCodes = [...frontendSource.matchAll(/^\s+"(\d{8})":/gm)].map((match) => match[1]);
+        assert.equal(frontendCodes.length, 119);
+        assert.deepEqual([...IT_CPV_CODES_8].sort(), frontendCodes.sort());
+    });
+});
+
+const readFixtureDetails = () => JSON.parse(readFileSync(new URL('./fixtures/baza/details.json', import.meta.url), 'utf8'));
+
+describe('classifySector', () => {
+    const sectorOf = (name) => classifySector(name);
+
+    it('rozpoznaje spółki komunalne mimo formy prawnej firmy (nie są ukrywane)', () => {
+        // Znany błąd prostej heurystyki z research v2: spółki sp. z o.o. bez słowa "gmina" wpadały do prywatnych
+        assert.equal(sectorOf('Przedsiębiorstwo Wodno-Kanalizacyjne Wołów Spółka z o. o.'), 'municipal');
+        assert.equal(sectorOf('Katowickie Wodociągi S.A.'), 'municipal');
+        assert.equal(sectorOf('Zakład Gospodarki Komunalnej w Wieliczce sp. z o.o.'), 'municipal');
+        assert.equal(sectorOf('Bychawskie Przedsiębiorstwo Komunalne Sp. z o.o.'), 'municipal');
+        assert.equal(sectorOf('Zakład Usług Gminnych Gmina Ełk Sp. z o. o.'), 'municipal');
+    });
+
+    it('rozpoznaje podmioty publiczne', () => {
+        for (const name of ['Gmina Zawonia', 'Urząd Miejski w Gnieźnie', 'Powiat Ostrowski', 'Nadleśnictwo Zwierzyniec',
+            'Kancelaria Prezesa Rady Ministra', 'SP ZOZ Szpital Kolejowy w Wilkowicach-Bystrej', 'Szkoła Podstawowa w Żmudzi']) {
+            assert.equal(sectorOf(name), 'public', name);
+        }
+    });
+
+    it('rozpoznaje organizacje pozarządowe', () => {
+        for (const name of ['Fundacja "Merkury"', 'FUNDACJA NIEPODLEGŁOŚCI', 'Stowarzyszenie na Rzecz Edukacji "Pomost"',
+            'Świętokrzyski Związek Pracodawców Prywatnych Lewiatan']) {
+            assert.equal(sectorOf(name), 'ngo', name);
+        }
+    });
+
+    it('rozpoznaje firmy po formie prawnej, także przy skrótach i literówkach', () => {
+        for (const name of ['Centrum Medyczne Tommed Sp. z o.o.', 'CENTERMED Sp. zo.o.', 'Beskidzkie Centrum Medyczne Sp. z o',
+            'Etmus Sp z o.o.', 'BITSTREAM SPÓŁKA AKCYJNA', 'Next Mobile Prosta Spółka Akcyjna', 'Abego S.C. Radosław Czeczotka, Rafał Socha',
+            'CLIMATIC Sp. z o.o. Sp.k.', '"UNI-MED" spółka z ograniczoną odpowiedzialnością']) {
+            assert.equal(sectorOf(name), 'private', name);
+        }
+    });
+
+    it('niejednoznaczne zostawia jako nieznane, czyli widoczne', () => {
+        for (const name of ['Krajowa Izba Fizjoterapeutów', 'Uniwersytet VIZJA', 'Politechnika Śląska', 'Klaster Innowacji Społecznych',
+            'Drewnolit - Cezary Rułka', 'Mały Inżynier Ewa Bednarek', 'Zespół Opolskich Parków Krajobrazowych']) {
+            assert.equal(sectorOf(name), 'unknown', name);
+        }
+        assert.equal(sectorOf(''), 'unknown');
+        assert.equal(sectorOf(null), 'unknown');
+        assert.equal(sectorOf(undefined), 'unknown');
+    });
+
+    it('znacznik publiczny lub komunalny wygrywa z formą prawną i z organizacją pozarządową', () => {
+        assert.equal(sectorOf('Fundacja Szpitala Powiatowego'), 'public');
+        assert.equal(sectorOf('Gminne Przedsiębiorstwo Gospodarki Komunalnej spółka z ograniczoną odpowiedzialnością'), 'municipal');
+    });
+
+    it('mapper Bazy zapisuje sektor automatyczny', () => {
+        const record = mapBazaNotice(readFixtureDetails()[1], 296954);
+        assert.equal(record.buyerSectorAuto, 'public');
     });
 });

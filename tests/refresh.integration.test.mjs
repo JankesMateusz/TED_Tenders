@@ -1,4 +1,4 @@
-// Test integracyjny refreshTenders na emulatorach, z lokalnym serwerem udającym TED i eZamówienia.
+// Test integracyjny refreshTenders na emulatorach, z lokalnym serwerem udającym TED, eZamówienia i Bazę Konkurencyjności.
 // Adresy źródeł pochodzą z functions/.env.demo-tenders. Uruchamiany przez: npm run test:functions
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -75,8 +75,34 @@ const stub = {
         Services: [ezNotice('S00', `${today}T09:00:00Z`)],
         Works: []
     },
-    ezRequests: []
+    ezRequests: [],
+    // Baza Konkurencyjności: identyfikatory z wyszukiwania, ogłoszenia z 404 przy szczegółach i zapisane zapytania
+    bazaFails: false,
+    bazaIds: [900001, 900002],
+    bazaGoneIds: [],
+    // Ogłoszenia zmienione po pierwszej publikacji: wersja z dzisiaj, ale opublikowane wcześniej
+    bazaOriginalDates: { 900002: addDays(today, -5) },
+    bazaSearches: [],
+    bazaDetailRequests: []
 };
+
+const bazaDetail = (id) => ({
+    id: id + 100000,
+    advertisement: { id, publication_date: stub.bazaOriginalDates[id] ?? today },
+    title: `Ogłoszenie Bazy ${id}`,
+    publication_date: today,
+    submission_deadline: `${addDays(today, 7)} 12:00:00`,
+    advertiser_address_details: {
+        name: 'Gmina Testowa',
+        identification_number_type: 'nip',
+        identification_number: '1234567890',
+        address: { country: 'Polska', locality: 'Testowo' }
+    },
+    orders: [{ order_items: [{ category: { id: 3 }, cpv_items: [{ code: '30213300-8' }] }] }],
+    // Dane osobowe, które nie mogą trafić do bazy
+    contact_persons: [{ first_name: 'Jan', last_name: 'Tajny', phone: '600100200', email: 'tajny@example.com' }],
+    created_by: { first_name: 'Anna', last_name: 'Ukryta' }
+});
 
 const readBody = (request) =>
     new Promise((resolve) => {
@@ -109,6 +135,23 @@ const server = http.createServer(async (request, response) => {
         stub.ezRequests.push(Object.fromEntries(url.searchParams));
         if (stub.ezFails) return send(500, { error: 'boom' });
         return send(200, (stub.ezByType[orderType] ?? []).slice((page - 1) * 10, page * 10));
+    }
+
+    if (url.pathname === '/baza/search' && request.method === 'GET') {
+        if (stub.bazaFails) return send(500, { error: 'boom' });
+        stub.bazaSearches.push(url.searchParams);
+        return send(200, {
+            status: 'OK',
+            data: { advertisements: stub.bazaIds.map((id) => ({ id })), meta: { total: stub.bazaIds.length } }
+        });
+    }
+
+    const bazaMatch = url.pathname.match(/^\/baza\/(\d+)$/);
+    if (bazaMatch && request.method === 'GET') {
+        const id = Number(bazaMatch[1]);
+        stub.bazaDetailRequests.push(id);
+        if (stub.bazaGoneIds.includes(id) || !stub.bazaIds.includes(id)) return send(404, {});
+        return send(200, { status: 'OK', data: { advertisement: bazaDetail(id) } });
     }
 
     return send(404, {});
@@ -158,7 +201,7 @@ describe('refreshTenders', () => {
 
         assert.equal(data.date, today);
         assert.deepEqual(data.fetched, { TED: 2, E_ZAMOWIENIA: 12 });
-        assert.deepEqual(data.created, { TED: 2, E_ZAMOWIENIA: 12 });
+        assert.deepEqual(data.created, { TED: 2, E_ZAMOWIENIA: 12, BAZA_KONKURENCYJNOSCI: 0 });
         assert.equal(data.existing, 0);
         assert.deepEqual(data.errors, []);
 
@@ -193,7 +236,7 @@ describe('refreshTenders', () => {
 
         const { data } = await refreshTenders({});
 
-        assert.deepEqual(data.created, { TED: 1, E_ZAMOWIENIA: 0 });
+        assert.deepEqual(data.created, { TED: 1, E_ZAMOWIENIA: 0, BAZA_KONKURENCYJNOSCI: 0 });
         assert.equal(data.existing, 14);
         assert.equal((await db.doc('tenders/TED_100001-2026').get()).data().status, 'toEnter');
         assert.equal((await db.collection('tenders').get()).size, 15);
@@ -206,7 +249,7 @@ describe('refreshTenders', () => {
         const { data } = await refreshTenders({});
 
         assert.deepEqual(data.errors, ['TED']);
-        assert.deepEqual(data.created, { TED: 0, E_ZAMOWIENIA: 1 });
+        assert.deepEqual(data.created, { TED: 0, E_ZAMOWIENIA: 1, BAZA_KONKURENCYJNOSCI: 0 });
         stub.tedFails = false;
     });
 
@@ -295,5 +338,113 @@ describe('refreshTenders', () => {
 
         assert.deepEqual(data.errors, ['TED']);
         assert.equal((await db.doc(`refreshLog/${yesterday}`).get()).exists, false);
+    });
+});
+
+describe('Baza Konkurencyjności', () => {
+    const BAZA = 'BAZA_KONKURENCYJNOSCI';
+    const makeBazaStale = () =>
+        db.doc('meta/bazaRefresh').set({ refreshedAt: admin.firestore.Timestamp.fromMillis(Date.now() - 10 * 60 * 1000) });
+
+    it('odrzuca nieprawidłową listę źródeł', async () => {
+        await expectCode(refreshTenders({ sources: [] }), 'invalid-argument');
+        await expectCode(refreshTenders({ sources: ['NIEZNANE'] }), 'invalid-argument');
+        await expectCode(refreshTenders({ sources: 'TED' }), 'invalid-argument');
+    });
+
+    it('domyślne odświeżenie nie odpytuje Bazy', () => {
+        assert.equal(stub.bazaSearches.length, 0);
+        assert.equal(stub.bazaDetailRequests.length, 0);
+    });
+
+    it('pobiera nowe ogłoszenia z Bazy na żądanie, bez danych osobowych i bez dziennika dnia', async () => {
+        await db.doc(`refreshLog/${today}`).delete();
+
+        const { data } = await refreshTenders({ sources: [BAZA] });
+
+        assert.deepEqual(data.fetched, { [BAZA]: 2 });
+        assert.equal(data.created[BAZA], 2);
+        assert.deepEqual(data.errors, []);
+        assert.deepEqual(data.skipped, []);
+
+        const search = stub.bazaSearches[0];
+        assert.equal(search.get('status[0]'), 'PUBLISHED');
+        assert.equal(search.get('publicationDateRange[from]'), addDays(today, -2));
+        assert.equal(search.get('publicationDateRange[to]'), today);
+        assert.equal([...search.keys()].filter((key) => key.startsWith('cpvItem[')).length, 119);
+
+        const doc = await db.doc('tenders/BAZA_KONKURENCYJNOSCI_900001').get();
+        assert.ok(doc.exists);
+        const record = doc.data();
+        assert.equal(record.source, BAZA);
+        assert.equal(record.buyerNip, '1234567890');
+        assert.equal(record.orderType, 'Delivery');
+        assert.equal(record.deadlineDate, addDays(today, 7));
+        assert.equal(record.publicationDate, today);
+        // Zmienione ogłoszenie ma datę pierwszej publikacji, nie dzisiejszą datę wersji
+        assert.equal((await db.doc('tenders/BAZA_KONKURENCYJNOSCI_900002').get()).data().publicationDate, addDays(today, -5));
+        const serialized = JSON.stringify(record);
+        for (const secret of ['Tajny', '600100200', 'tajny@example.com', 'Ukryta']) {
+            assert.equal(serialized.includes(secret), false, secret);
+        }
+
+        assert.equal((await db.doc('meta/bazaRefresh').get()).exists, true);
+        assert.equal((await db.doc(`refreshLog/${today}`).get()).exists, false, 'dziennik dotyczy TED i eZamówień');
+    });
+
+    it('w ciągu 5 minut pomija Bazę, a TED i eZamówienia odświeża normalnie', async () => {
+        const searches = stub.bazaSearches.length;
+
+        const { data } = await refreshTenders({ sources: ['TED', 'E_ZAMOWIENIA', BAZA] });
+
+        assert.deepEqual(data.skipped, [BAZA]);
+        assert.deepEqual(Object.keys(data.fetched).sort(), ['E_ZAMOWIENIA', 'TED']);
+        assert.equal(stub.bazaSearches.length, searches);
+    });
+
+    it('po upływie 5 minut pobiera szczegóły tylko nowych ogłoszeń', async () => {
+        await makeBazaStale();
+        stub.bazaIds.push(900003);
+        stub.bazaDetailRequests.length = 0;
+
+        const { data } = await refreshTenders({ sources: [BAZA] });
+
+        assert.deepEqual(stub.bazaDetailRequests, [900003]);
+        assert.equal(data.created[BAZA], 1);
+    });
+
+    it('pomija ogłoszenie wycofane między wyszukiwaniem a pobraniem szczegółów (404)', async () => {
+        await makeBazaStale();
+        stub.bazaIds.push(900004);
+        stub.bazaGoneIds.push(900004);
+
+        const { data } = await refreshTenders({ sources: [BAZA] });
+
+        assert.deepEqual(data.errors, []);
+        assert.equal(data.created[BAZA], 0);
+        stub.bazaIds.pop();
+        stub.bazaGoneIds.length = 0;
+    });
+
+    it('awaria Bazy nie psuje TED i eZamówień, ale jest zgłoszona i nie przesuwa znacznika', async () => {
+        await makeBazaStale();
+        const marker = (await db.doc('meta/bazaRefresh').get()).data().refreshedAt.toMillis();
+        stub.bazaFails = true;
+
+        const { data } = await refreshTenders({ sources: ['TED', 'E_ZAMOWIENIA', BAZA] });
+        stub.bazaFails = false;
+
+        assert.deepEqual(data.errors, [BAZA]);
+        assert.equal((await db.doc(`refreshLog/${today}`).get()).exists, true, 'dzień TED i eZamówień jest kompletny mimo błędu Bazy');
+        assert.equal((await db.doc('meta/bazaRefresh').get()).data().refreshedAt.toMillis(), marker);
+    });
+
+    it('sam błąd Bazy to awaria "unavailable", a blokada zostaje zwolniona', async () => {
+        await makeBazaStale();
+        stub.bazaFails = true;
+        await expectCode(refreshTenders({ sources: [BAZA] }), 'unavailable');
+        stub.bazaFails = false;
+
+        assert.equal((await db.doc('meta/refreshLock').get()).exists, false);
     });
 });

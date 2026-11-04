@@ -23,6 +23,7 @@ import { TenderStatus } from '../types/TenderStatus';
 import { RefreshLogEntry } from './refreshPlan';
 import { TenderComment } from '../types/TenderComment';
 import { parseDate, toDayString } from './dateUtils';
+import { AdvertiserDecisions, isAdvertiserDecision } from './advertisers';
 import { commentFromDoc, favoriteFromDoc, favoriteToDoc, tenderFromDoc } from './tenderMapping';
 
 export interface RefreshResult {
@@ -32,13 +33,18 @@ export interface RefreshResult {
     existing: number;
     /** Źródła, które nie odpowiedziały (przetargi z pozostałych zostały zapisane). */
     errors: string[];
+    /** Źródła pominięte przez serwer, bo były pobierane przed chwilą (Baza Konkurencyjności). */
+    skipped?: string[];
 }
 
-const refreshTendersCallable = httpsCallable<{ date: string }, RefreshResult>(functions, 'refreshTenders');
+const refreshTendersCallable = httpsCallable<{ date: string; sources?: string[] }, RefreshResult>(functions, 'refreshTenders');
 
-/** Prosi serwer o pobranie przetargów z danego dnia (RRRR-MM-DD) i dopisanie nowych do bazy. */
-export const refreshTendersForDay = async (day: string): Promise<RefreshResult> =>
-    (await refreshTendersCallable({ date: day })).data;
+/**
+ * Prosi serwer o pobranie przetargów z danego dnia (RRRR-MM-DD) i dopisanie nowych do bazy. Bez `sources`
+ * serwer odświeża TED i eZamówienia; Bazę Konkurencyjności trzeba poprosić jawnie (pobieramy ją rzadko).
+ */
+export const refreshTendersForDay = async (day: string, sources?: string[]): Promise<RefreshResult> =>
+    (await refreshTendersCallable(sources ? { date: day, sources } : { date: day })).data;
 
 /** Wpisy dziennika odświeżeń (które dni były już pobrane) dla dni z podanego zakresu, kluczem jest dzień. */
 export const fetchRefreshLog = async (startDay: string, endDay: string): Promise<Record<string, RefreshLogEntry>> => {
@@ -108,6 +114,40 @@ export const setTenderStatus = async (
         statusAt: serverTimestamp()
     });
 };
+
+/** Nasłuchuje ręcznych decyzji o zamawiających (kolekcja `advertisers`, identyfikatorem jest NIP). */
+export const subscribeToAdvertiserDecisions = (
+    onData: (decisions: AdvertiserDecisions) => void,
+    onError: (error: Error) => void
+): Unsubscribe =>
+    onSnapshot(
+        collection(db, 'advertisers'),
+        (snapshot) => {
+            const decisions: AdvertiserDecisions = {};
+            snapshot.forEach((advertiser) => {
+                const { decision } = advertiser.data();
+                if (isAdvertiserDecision(decision)) decisions[advertiser.id] = decision;
+            });
+            onData(decisions);
+        },
+        onError
+    );
+
+/** Zapisuje decyzję o zamawiającym. Reguły wymagają autora i e-maila zgodnych z kontem oraz czasu serwera. */
+export const setAdvertiserDecision = (
+    nip: string,
+    name: string,
+    decision: 'hidden' | 'visible',
+    user: { uid: string; email: string | null }
+): Promise<void> =>
+    setDoc(doc(db, 'advertisers', nip), {
+        decision,
+        // Reguły dopuszczają najwyżej 300 znaków nazwy
+        name: name.slice(0, 300),
+        updatedBy: user.uid,
+        updatedByEmail: user.email,
+        updatedAt: serverTimestamp()
+    });
 
 /** Nasłuchuje gwiazdek użytkownika (kopii przetargów bez ograniczenia czasowego). */
 export const subscribeToFavorites = (

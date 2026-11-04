@@ -1,0 +1,218 @@
+[
+  {
+    "id": 393920,
+    "advertisement": {
+      "id": 296036,
+      "publication_date": "2026-10-26"
+    },
+    "title": "Dostawa wyposażenia Laboratorium Sieci Komputerowych wraz symulacją okablowania w Uniwersytecie WSB Merito Szczecin",
+    "publication_date": "2026-11-04",
+    "submission_deadline": "2026-11-06 23:59:59",
+    "status": {
+      "id": 2,
+      "label": "PUBLISHED",
+      "name": "Opublikowane"
+    },
+    "advertiser_address_details": {
+      "name": "Uniwersytet WSB Merito w Poznaniu",
+      "identification_number_type": "nip",
+      "identification_number": "7781028941",
+      "address": {
+        "country": "Polska",
+        "voivodeship": "wielkopolskie",
+        "locality": "Poznań"
+      }
+    },
+    "orders": [
+      {
+        "order_items": [
+          {
+            "category": {
+              "id": 3,
+              "name": "Dostawa"
+            },
+            "cpv_items": [
+              {
+                "code": "31224400-6"
+              },
+              {
+                "code": "31224800-0"
+              },
+              {
+                "code": "32420000-3"
+              },
+              {
+                "code": "32421000-0"
+              },
+              {
+                "code": "32424000-1"
+              },
+              {
+                "code": "32562000-0"
+              },
+              {
+                "code": "32562100-1"
+              },
+              {
+                "code": "38300000-8"
+              },
+              {
+                "code": "38500000-0"
+              },
+              {
+                "code": "38540000-2"
+              },
+              {
+                "code": "38900000-4"
+              },
+              {
+                "code": "44322000-3"
+              },
+              {
+                "code": "45314300-4"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 393963,
+    "advertisement": {
+      "id": 296954,
+      "publication_date": "2026-11-03"
+    },
+    "title": "„Zakup i wdrożenie zabezpieczeń infrastruktury teleinformatycznej i operacyjnej wykorzystywanej do prowadzenia działalności wodociągowo-kanalizacyjnej przez Gminę Zawonia\nw ramach projektu „Cyberbezpieczne Wodociągi” Numer sprawy: RGK.271.9.2026",
+    "publication_date": "2026-11-04",
+    "submission_deadline": "2026-11-18 10:00:00",
+    "status": {
+      "id": 2,
+      "label": "PUBLISHED",
+      "name": "Opublikowane"
+    },
+    "advertiser_address_details": {
+      "name": "Gmina Zawonia",
+      "identification_number_type": "nip",
+      "identification_number": "9151603787",
+      "address": {
+        "country": "Polska",
+        "voivodeship": "dolnośląskie",
+        "locality": "Zawonia"
+      }
+    },
+    "orders": [
+      {
+        "order_items": [
+          {
+            "category": {
+              "id": 1,
+              "name": "Usługa"
+            },
+            "cpv_items": [
+              {
+                "code": "30233000-1"
+              },
+              {
+                "code": "31682530-4"
+              },
+              {
+                "code": "32420000-3"
+              },
+              {
+                "code": "48000000-8"
+              },
+              {
+                "code": "48620000-0"
+              },
+              {
+                "code": "48710000-8"
+              },
+              {
+                "code": "48730000-4"
+              },
+              {
+                "code": "48732000-8"
+              },
+              {
+                "code": "48820000-2"
+              },
+              {
+                "code": "72227000-2"
+              },
+              {
+                "code": "72253200-5"
+              },
+              {
+                "code": "72263000-6"
+              },
+              {
+                "code": "72265000-0"
+              },
+              {
+                "code": "72268000-1"
+              },
+              {
+                "code": "72611000-6"
+              },
+              {
+                "code": "72810000-1"
+              },
+              {
+                "code": "80510000-2"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 393961,
+    "advertisement": {
+      "id": 296206,
+      "publication_date": "2026-10-27"
+    },
+    "title": "17/10/2026/KIF/01.13\nZakup infrastruktury serwerowej wraz z niezbędnym oprogramowaniem, usługą konfiguracji urządzeń, niezbędnymi akcesoriami oraz zapewnieniem wymaganych licencji i bezpieczeństwa danych \nw ramach realizacji projektu „Kształcenie praktyczne kluczem do wysokiej jakości usług fizjoterapeutycznych i wyższej jakości opieki nad pacjentem”.",
+    "publication_date": "2026-11-04",
+    "submission_deadline": "2026-11-09 12:00:00",
+    "status": {
+      "id": 2,
+      "label": "PUBLISHED",
+      "name": "Opublikowane"
+    },
+    "advertiser_address_details": {
+      "name": "Krajowa Izba Fizjoterapeutów",
+      "identification_number_type": "nip",
+      "identification_number": "7010651576",
+      "address": {
+        "country": "Polska",
+        "voivodeship": "mazowieckie",
+        "locality": "Warszawa"
+      }
+    },
+    "orders": [
+      {
+        "order_items": [
+          {
+            "category": {
+              "id": 1,
+              "name": "Usługa"
+            },
+            "cpv_items": [
+              {
+                "code": "30233000-1"
+              },
+              {
+                "code": "30233180-6"
+              },
+              {
+                "code": "32420000-3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

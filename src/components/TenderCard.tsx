@@ -1,10 +1,11 @@
 import React, { useState, memo } from 'react';
 import { Tender } from '../types/Tender';
 import { TenderComment } from '../types/TenderComment';
-import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
+import { getSourceConfig, getOrderTypeConfig, getSourceAttribution, OrderType } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { STATUS_CONFIG, TENDER_STATUSES, statusTooltip } from '../utils/tenderStatus';
 import { useAuth } from '../context/AuthContext';
+import { AdvertiserDecision } from '../utils/advertisers';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import CommentsPopover from './CommentsPopover';
 import styles from './Tenders.module.css';
@@ -19,15 +20,19 @@ type Props = {
     canComment: boolean;
     onAddComment: (tender: Tender, text: string) => Promise<boolean>;
     onDeleteComment: (comment: TenderComment) => void;
+    /** Czy zamawiający tego ogłoszenia jest ukryty (automatycznie lub ręcznie). */
+    advertiserHidden: boolean;
+    onSetAdvertiserDecision: (tender: Tender, decision: AdvertiserDecision) => void;
 };
 
-const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment }) => {
+const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment, advertiserHidden, onSetAdvertiserDecision }) => {
     const { user } = useAuth();
     const { isFavorite, toggleFavorite, toggleStatus } = useUserPreferences();
 
     const [expanded, setExpanded] = useState<boolean>(false);
 
     const srcCfg = getSourceConfig(tender.source);
+    const attribution = getSourceAttribution(tender.source, tender.fetchedAt);
     const orderCfg = tender.orderType ? getOrderTypeConfig(tender.orderType as OrderType) : null;
 
     const fav = isFavorite(tender.id);
@@ -91,6 +96,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                 <span className={styles.sourceBadge} style={{ backgroundColor: srcCfg.backgroundColor, color: srcCfg.color }}>
                     {srcCfg.label}
                 </span>
+                {advertiserHidden && <span className={styles.hiddenAdvertiserBadge}>Ukryty zamawiający</span>}
                 {orderCfg && (
                     <span className={styles.orderTypeBadge} style={{ backgroundColor: orderCfg.backgroundColor, color: orderCfg.color }}>
                         {orderCfg.label}
@@ -123,6 +129,8 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     <span className={styles.infoValue}>{tender.buyerName}</span>
                 </div>
             </div>
+
+            {attribution && <p className={styles.sourceAttribution}>{attribution}</p>}
 
             {cpvCodes.length > 0 && (
                 <div className={styles.cpvSection}>
@@ -158,6 +166,18 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     <a href={tender.documentsUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>
                         Dokumentacja
                     </a>
+                )}
+                {tender.buyerNip && (
+                    <button
+                        type="button"
+                        className={styles.advertiserButton}
+                        onClick={() => onSetAdvertiserDecision(tender, advertiserHidden ? 'visible' : 'hidden')}
+                        title={advertiserHidden
+                            ? 'Pokazuje ogłoszenia tego zamawiającego na liście (dla wszystkich osób)'
+                            : 'Ukrywa wszystkie ogłoszenia tego zamawiającego, także przyszłe (dla wszystkich osób)'}
+                    >
+                        {advertiserHidden ? 'Przywróć zamawiającego' : 'Ukryj zamawiającego'}
+                    </button>
                 )}
             </div>
         </li>

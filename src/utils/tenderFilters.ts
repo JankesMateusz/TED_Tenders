@@ -5,6 +5,7 @@ import { OrderType } from './tenderSources';
 import { filterTendersByCpvCodes, normalizeCpv } from './cpvFilter';
 import { normalizeName } from './stringUtils';
 import { parseDate } from './dateUtils';
+import { AdvertiserDecisions, isHiddenAdvertiser } from './advertisers';
 
 export type SortOrder = 'publication' | 'deadline' | 'buyer';
 
@@ -26,6 +27,10 @@ interface FilterOptions {
     searchQuery: string;
     statusFilters: StatusFilters;
     sortOrder?: SortOrder;
+    /** Ręczne decyzje o zamawiających (po NIP); bez nich rozstrzyga sektor ustalony automatycznie. */
+    advertiserDecisions?: AdvertiserDecisions;
+    /** Czy pokazać także ogłoszenia ukrytych zamawiających (domyślnie są ukryte). */
+    showHiddenAdvertisers?: boolean;
 }
 
 /** Które statusy (lub brak statusu) mają być widoczne; gdy żaden nie jest wybrany, filtr jest wyłączony. */
@@ -49,6 +54,11 @@ export const filterTenders = (
     skip?: FilterDimension
 ): Tender[] => {
     let result = [...tenders];
+
+    // Ukryci zamawiający (firmy prywatne i NGO wg automatu albo ręcznej decyzji) znikają, chyba że poproszono o ich pokazanie
+    if (!options.showHiddenAdvertisers) {
+        result = result.filter(tender => !isHiddenAdvertiser(tender, options.advertiserDecisions));
+    }
 
     // Filtrowanie po źródle
     if (skip !== 'source') {
