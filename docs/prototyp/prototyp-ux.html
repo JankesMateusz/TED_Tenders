@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Przetargi: prototyp UX (dane przykładowe)</title>
+<style>
+:root[data-theme="dark"]{
+  --bg:#0e131d; --surface:#161c2a; --raised:#1d2435; --border:#2a3349; --text:#e7ebf3; --muted:#9aa4ba;
+  --accent:#6aa5ff; --accent-bg:rgba(106,165,255,.14); --on-accent:#0b1220;
+  --st-todo:#6aa5ff; --st-done:#3fd49a; --st-ask:#f5b942; --st-no:#f07178;
+  --shadow:0 1px 2px rgba(0,0,0,.35); --pop-shadow:0 12px 32px rgba(0,0,0,.5);
+}
+:root[data-theme="light"]{
+  --bg:#f4f6fb; --surface:#ffffff; --raised:#eef1f8; --border:#d8dfec; --text:#18202f; --muted:#576078;
+  --accent:#1f5fe0; --accent-bg:rgba(31,95,224,.10); --on-accent:#ffffff;
+  --st-todo:#1f5fe0; --st-done:#0a8a5c; --st-ask:#a86100; --st-no:#c42f3a;
+  --shadow:0 1px 2px rgba(20,30,60,.08); --pop-shadow:0 12px 32px rgba(20,30,60,.18);
+}
+*{box-sizing:border-box}
+html{font-size:15px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* Pasek aplikacji */
+.appbar{position:sticky;top:0;z-index:30;background:var(--surface);border-bottom:1px solid var(--border)}
+.appbar-in{max-width:1440px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;letter-spacing:-.01em}
+.brand-mark{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:.8rem;font-weight:800}
+.search{flex:1;max-width:560px;position:relative}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.search input{width:100%;height:40px;padding:0 44px 0 38px;background:var(--raised);border:1px solid var(--border);border-radius:10px}
+.search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.search kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%)}
+kbd{font:600 .72rem/1 ui-monospace,Consolas,monospace;padding:3px 6px;border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;color:var(--muted);background:var(--surface)}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 12px;border:1px solid var(--border);background:var(--surface);border-radius:9px;color:var(--text)}
+.btn:hover{background:var(--raised)}
+.btn.icon{width:38px;padding:0;justify-content:center}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn.small{height:32px;padding:0 10px;font-size:.88rem}
+.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.meta-line{font-size:.8rem;color:var(--muted);white-space:nowrap}
+.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:.9rem;user-select:none}
+.switch input{position:absolute;opacity:0}
+.track{width:36px;height:20px;border-radius:20px;background:var(--border);position:relative;transition:background .15s}
+.track::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked + .track{background:var(--accent)}
+.switch input:checked + .track::after{transform:translateX(16px)}
+.switch input:focus-visible + .track{outline:2px solid var(--accent);outline-offset:2px}
+.online{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--st-done)}
+
+/* Szkielet strony */
+.wrap{max-width:1440px;margin:0 auto;padding:0 24px}
+.banner{margin:12px 0 0;padding:8px 12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-size:.82rem}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-top:12px}
+.tab{border:0;background:none;padding:12px 16px;color:var(--muted);font-weight:500;border-bottom:3px solid transparent;margin-bottom:-1px;display:flex;gap:8px;align-items:center}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.count{font-size:.78rem;padding:1px 8px;border-radius:20px;background:var(--raised);color:var(--muted);font-weight:600}
+.tab[aria-selected="true"] .count{background:var(--accent-bg);color:var(--accent)}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;padding:20px 0 80px;align-items:start}
+.layout.full{grid-template-columns:minmax(0,1fr)}
+
+/* Sidebar */
+.side[hidden]{display:none}
+.side{position:sticky;top:72px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;max-height:calc(100vh - 96px);display:flex;flex-direction:column}
+.seg{display:flex;background:var(--raised);border-radius:8px;padding:3px;gap:2px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:none;padding:6px 8px;border-radius:6px;color:var(--muted);font-size:.85rem;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.side input[type=search]{width:100%;height:34px;padding:0 10px;margin-bottom:8px;background:var(--raised);border:1px solid var(--border);border-radius:8px}
+.side-list{overflow:auto;display:flex;flex-direction:column;gap:2px;margin:0 -4px;padding:0 4px}
+.side-item{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;text-align:left;border:0;background:none;padding:7px 8px;border-radius:7px;font-size:.88rem}
+.side-item:hover{background:var(--raised)}
+.side-item[aria-pressed="true"]{background:var(--accent-bg);color:var(--accent);font-weight:600}
+.side-item .n{font-size:.78rem;color:var(--muted);font-weight:600;min-width:20px;text-align:right}
+.side-more{margin-top:8px;border:1px dashed var(--border);background:none;border-radius:8px;padding:7px;color:var(--muted);font-size:.84rem}
+.side-more:hover{color:var(--text);background:var(--raised)}
+
+/* Pasek filtrów */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pop{position:relative}
+.pop-btn[aria-expanded="true"]{border-color:var(--accent);background:var(--accent-bg)}
+.pop-btn .badge{background:var(--accent);color:var(--on-accent);border-radius:20px;font-size:.72rem;font-weight:700;padding:0 6px;min-width:18px;text-align:center}
+.pop-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:20;min-width:250px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--pop-shadow);padding:6px}
+.pop-panel[hidden]{display:none}
+.opt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:.92rem}
+.opt:hover{background:var(--raised)}
+.opt input{width:16px;height:16px;accent-color:var(--accent)}
+.opt .n{margin-left:auto;color:var(--muted);font-size:.82rem;font-weight:600}
+.opt.zero{opacity:.5}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.sep{height:1px;background:var(--border);margin:6px 4px}
+.select{height:38px;padding:0 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 0;min-height:28px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 6px 3px 10px;border-radius:20px;background:var(--accent-bg);color:var(--accent);font-size:.82rem;font-weight:600}
+.chip button{border:0;background:none;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;color:inherit;padding:0}
+.chip button:hover{background:var(--accent);color:var(--on-accent)}
+.chip button svg{width:12px;height:12px}
+.linkbtn{border:0;background:none;color:var(--muted);text-decoration:underline;font-size:.84rem;padding:4px}
+.linkbtn:hover{color:var(--text)}
+.queue{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 10px;gap:12px;flex-wrap:wrap}
+.queue h2{margin:0;font-size:1rem}
+.queue .hint{color:var(--muted);font-size:.82rem}
+
+/* Karta */
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);position:relative}
+.card[data-status]{border-left-color:var(--c)}
+.card.active{outline:2px solid var(--accent);outline-offset:1px}
+.card.hiddenbuyer{opacity:.62}
+.card-top{display:flex;align-items:center;gap:8px}
+.tag{font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:var(--raised);color:var(--muted)}
+.tag.src-TED{background:rgba(106,165,255,.16);color:var(--accent)}
+.tag.src-EZ{background:rgba(63,212,154,.15);color:var(--st-done)}
+.tag.src-BK{background:rgba(245,185,66,.16);color:var(--st-ask)}
+.tag.warn{background:rgba(245,185,66,.16);color:var(--st-ask)}
+.card-top .grow{flex:1}
+.date{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-right:4px}
+.iconbtn{display:inline-grid;place-items:center;width:34px;height:34px;border:0;border-radius:8px;background:none;color:var(--muted);position:relative}
+.iconbtn:hover{background:var(--raised);color:var(--text)}
+.iconbtn.on{color:#f5b942}
+.iconbtn.on svg{fill:currentColor}
+.iconbtn .cnt{position:absolute;top:2px;right:0;font-size:.65rem;font-weight:700;background:var(--accent);color:var(--on-accent);border-radius:10px;padding:0 4px}
+.title{font-size:1.04rem;font-weight:650;line-height:1.35;margin:10px 0 4px;letter-spacing:-.005em}
+.buyer{color:var(--muted);font-size:.9rem}
+.buyer b{color:var(--text);font-weight:600}
+.cpv{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+.cpv-chip{display:inline-flex;align-items:center;gap:5px;font-size:.82rem;padding:3px 9px;border-radius:7px;background:var(--raised);border:1px solid var(--border)}
+.cpv-chip code{font-size:.72rem;color:var(--muted)}
+.cpv-more{border:0;background:none;color:var(--accent);font-size:.82rem;font-weight:600;padding:3px 4px}
+.cpv-all{margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px;font-size:.82rem;color:var(--muted)}
+.cpv-all div code{color:var(--text)}
+.card-bot{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.card-bot .grow{flex:1}
+.link{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--border);color:var(--text);text-decoration:none;font-size:.88rem;font-weight:500}
+.link:hover{background:var(--raised)}
+.link svg{width:14px;height:14px}
+.statusbtn{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 10px 0 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-weight:600;font-size:.88rem}
+.statusbtn:hover{background:var(--raised)}
+.statusbtn[data-status]{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--surface));color:var(--c)}
+.statusbtn svg{width:14px;height:14px}
+.who{font-size:.78rem;color:var(--muted);margin-top:8px}
+.pubno{font-size:.74rem;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
+.menu{position:absolute;z-index:25;min-width:230px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--pop-shadow);padding:6px}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;text-align:left;padding:8px 10px;border-radius:8px;font-size:.9rem}
+.menu button:hover,.menu button:focus-visible{background:var(--raised)}
+.menu kbd{margin-left:auto}
+.menu .danger{color:var(--st-no)}
+.empty{text-align:center;padding:48px 16px;color:var(--muted);border:1px dashed var(--border);border-radius:12px}
+.empty b{display:block;color:var(--text);font-size:1.05rem;margin-bottom:4px}
+.kbd-hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:30px;padding:6px 14px;font-size:.78rem;color:var(--muted);box-shadow:var(--pop-shadow);display:flex;gap:12px;z-index:15;white-space:nowrap}
+.toast{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 16px;border-radius:10px;font-size:.88rem;z-index:50}
+
+/* Statystyki */
+.stats{display:grid;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.panel h3{margin:0 0 12px;font-size:.95rem}
+.panel .sub{color:var(--muted);font-size:.82rem;margin:-8px 0 12px}
+.progress-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.progress-head b{font-size:1.5rem;letter-spacing:-.02em}
+.bar{height:12px;border-radius:12px;background:var(--raised);overflow:hidden;display:flex}
+.bar i{display:block;height:100%;background:var(--c)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:.84rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.kpis{display:grid;grid-template-columns:1.3fr repeat(4,1fr);gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;border-top:3px solid var(--c,var(--border));text-align:left}
+.kpi.main{background:var(--accent-bg);border-top-color:var(--accent)}
+.kpi .v{font-size:2rem;font-weight:750;letter-spacing:-.03em;line-height:1.1;color:var(--c,var(--text))}
+.kpi .l{font-size:.78rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.kpi.zero{opacity:.6}
+.kpi.zero .v{font-size:1.5rem;color:var(--muted)}
+button.kpi{cursor:pointer}
+button.kpi:hover{background:var(--raised)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.row{display:grid;grid-template-columns:minmax(90px,38%) 1fr 34px;gap:10px;align-items:center;padding:5px 0;font-size:.88rem;width:100%;border:0;background:none;text-align:left;border-radius:6px}
+button.row:hover{background:var(--raised)}
+.row .track2{height:8px;border-radius:8px;background:var(--raised);overflow:hidden}
+.row .track2 i{display:block;height:100%;background:var(--accent);border-radius:8px}
+.row .n{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.row .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note{font-size:.78rem;color:var(--muted);margin-top:8px}
+svg.chart{width:100%;height:auto;display:block;stroke-width:1}
+.chart text{fill:var(--muted);font-size:10px;stroke:none}
+.trend-line{fill:none;stroke:var(--accent);stroke-width:2}
+.trend-area{fill:var(--accent-bg);stroke:none}
+.hbar{fill:var(--accent)}
+.hbar.peak{fill:var(--st-done)}
+
+@media (max-width:1000px){
+  .layout{grid-template-columns:1fr}
+  .side{position:static;max-height:none}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .appbar-in{flex-wrap:wrap}
+  .meta-line,.kbd-hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="appbar-in">
+    <div class="brand"><span class="brand-mark">P</span> Przetargi</div>
+    <div class="search" role="search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" type="search" placeholder="Szukaj: laptop, serwer, CPV…" aria-label="Szukaj w przetargach">
+      <kbd aria-hidden="true">/</kbd>
+    </div>
+    <span class="spacer"></span>
+    <label class="switch" title="Pokazuj tylko ogłoszenia dopasowane do kodów CPV z obszaru IT">
+      <input type="checkbox" id="onlyIT" checked><span class="track"></span><span>Tylko IT</span>
+    </label>
+    <button class="btn" id="dateBtn" title="Zmień dzień (w prototypie bez efektu)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> 04.11.2026
+    </button>
+    <button class="btn" id="refreshBtn" aria-label="Pobierz nowe przetargi">
+      <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+      <span class="meta-line" id="lastRefresh">dziś 17:50</span>
+    </button>
+    <button class="btn icon" id="themeBtn" aria-label="Przełącz motyw jasny/ciemny" title="Motyw"></button>
+    <button class="btn" id="usersBtn"><span class="online"></span> 1 online</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner">Prototyp z danymi przykładowymi (nie łączy się z Firebase). Zmiany statusów i gwiazdki działają tylko do odświeżenia strony. Skróty: <kbd>J</kbd>/<kbd>K</kbd> kolejne ogłoszenie, <kbd>1</kbd>–<kbd>4</kbd> status, <kbd>0</kbd> usuń status, <kbd>S</kbd> gwiazdka, <kbd>/</kbd> szukaj.</div>
+
+  <div class="tabs" role="tablist" aria-label="Widoki">
+    <button class="tab" role="tab" id="tab-list" aria-selected="true" data-tab="list">Przetargi <span class="count" id="cnt-list">0</span></button>
+    <button class="tab" role="tab" id="tab-saved" aria-selected="false" data-tab="saved">Zapisane <span class="count" id="cnt-saved">0</span></button>
+    <button class="tab" role="tab" id="tab-stats" aria-selected="false" data-tab="stats">Statystyki</button>
+  </div>
+
+  <div class="layout" id="layout">
+    <aside class="side" id="side" aria-label="Filtr zamawiających"></aside>
+    <section id="content" role="tabpanel"></section>
+  </div>
+</main>
+
+<div class="kbd-hint" id="kbdHint"><span><kbd>J</kbd> <kbd>K</kbd> nawigacja</span><span><kbd>1</kbd>–<kbd>4</kbd> status</span><span><kbd>S</kbd> zapisz</span></div>
+
+<script>
+/* ---------- Dane przykładowe ---------- */
+const USER = 'Mateusz';
+const STATUSES = [
+  {key:'todo', label:'Do wpisania',  c:'var(--st-todo)', icon:'<path d="M12 5v14M5 12h14"/>'},
+  {key:'done', label:'Wpisany',      c:'var(--st-done)', icon:'<path d="m5 12 5 5 9-10"/>'},
+  {key:'ask',  label:'Do wyjaśnienia', c:'var(--st-ask)', icon:'<path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>'},
+  {key:'no',   label:'Nie do wpisania', c:'var(--st-no)', icon:'<path d="M6 6l12 12M18 6 6 18"/>'}
+];
+const SRC = {TED:'TED', EZ:'e-Zamówienia', BK:'Baza Konkurencyjności'};
+const TYPES = ['Dostawa','Usługa','Roboty budowlane'];
+
+const t = (id,o)=>Object.assign({id,it:true,fav:false,comments:0,status:null,by:null,at:null,hidden:false,docs:true,day:'04.11.2026'},o);
+const TENDERS = [
+ t(1,{src:'EZ',type:'Dostawa',time:'16:03',title:'Dostawa wyposażenia dydaktycznego, sprzętu komputerowego oraz oprogramowania na potrzeby pracowni Centrum Rozwoju Edukacji Województwa Łódzkiego w Łodzi, z podziałem na części',buyer:'Centrum Rozwoju Edukacji Województwa Łódzkiego',city:'Łódź',sector:'Edukacja',pub:'2026/BZP 00523132/01',
+   cpv:[['30213100','Komputery przenośne',1],['30231300','Monitory ekranowe',1],['48000000','Pakiety oprogramowania',1],['39162000','Pomoce dydaktyczne',0],['39160000','Meble szkolne',0],['39162100','Pomoce nauczycielskie',0],['32322000','Urządzenia multimedialne',1]]}),
+ t(2,{src:'EZ',type:'Dostawa',time:'16:03',title:'Dostawa wraz z montażem wyposażenia sal sensorycznych w specjalistyczny sprzęt, a także dostawa pomocy edukacyjnych i sensorycznych do placówek Zespołu Żłobków m.st. Warszawy (uzupełnienie)',buyer:'Zespół Żłobków m.st. Warszawy',city:'Warszawa',sector:'Samorząd',pub:'2026/BZP 00523077/01',docs:false,
+   cpv:[['39162100','Pomoce nauczycielskie',0],['39162000','Pomoce dydaktyczne',0],['30200000','Urządzenia komputerowe',1]]}),
+ t(3,{src:'TED',type:'Dostawa',time:'15:40',title:'Dostawa serwerów i macierzy dyskowych wraz z instalacją dla Politechniki Gdańskiej',buyer:'Politechnika Gdańska',city:'Gdańsk',sector:'Nauka',pub:'2026/S 214-598301',status:'done',by:'Anna',at:'wczoraj 14:20',comments:2,
+   cpv:[['48820000','Serwery',1],['30233000','Urządzenia do przechowywania danych',1]]}),
+ t(4,{src:'BK',type:'Usługa',time:'14:12',title:'Usługa wsparcia technicznego i serwisu infrastruktury sieciowej w jednostkach organizacyjnych Gminy Lublin',buyer:'Gmina Lublin',city:'Lublin',sector:'Samorząd',pub:'BK-2026-11-00481',
+   cpv:[['50312000','Konserwacja i naprawa sprzętu komputerowego',1],['72700000','Usługi sieci komputerowej',1]]}),
+ t(5,{src:'EZ',type:'Dostawa',time:'13:55',title:'Zakup przełączników sieciowych oraz punktów dostępowych Wi-Fi dla szkół podstawowych',buyer:'Gmina Lublin',city:'Lublin',sector:'Samorząd',pub:'2026/BZP 00522870/01',status:'todo',by:'Anna',at:'dziś 09:12',
+   cpv:[['32420000','Urządzenia sieciowe',1],['32424000','Infrastruktura sieciowa',1]]}),
+ t(6,{src:'EZ',type:'Dostawa',time:'13:20',title:'Dostawa laptopów dla uczniów i nauczycieli w ramach programu Cyfrowa Szkoła',buyer:'Gmina Lublin',city:'Lublin',sector:'Samorząd',pub:'2026/BZP 00522811/01',comments:1,
+   cpv:[['30213100','Komputery przenośne',1],['30213000','Komputery osobiste',1],['30237000','Części i akcesoria komputerowe',1]]}),
+ t(7,{src:'TED',type:'Dostawa',time:'12:48',title:'Dostawa drukarek wielofunkcyjnych oraz materiałów eksploatacyjnych na potrzeby Akademii Górniczo-Hutniczej',buyer:'Akademia Górniczo-Hutnicza im. Stanisława Staszica',city:'Kraków',sector:'Nauka',pub:'2026/S 214-597112',status:'ask',by:'Mateusz',at:'wczoraj 17:05',
+   cpv:[['30232110','Drukarki laserowe',1],['30125110','Tonery do drukarek laserowych',1]]}),
+ t(8,{src:'BK',type:'Dostawa',time:'12:10',title:'Dostawa zestawów komputerowych wraz z oprogramowaniem biurowym',buyer:'Instytut Książki',city:'Kraków',sector:'Administracja',pub:'BK-2026-11-00477',
+   cpv:[['30213300','Komputery biurkowe',1],['48900000','Różne pakiety oprogramowania',1]]}),
+ t(9,{src:'EZ',type:'Usługa',time:'11:36',title:'Wdrożenie elektronicznego systemu zarządzania dokumentacją (EZD) wraz ze szkoleniami',buyer:'Urząd Miasta Gdańska',city:'Gdańsk',sector:'Samorząd',pub:'2026/BZP 00522340/01',
+   cpv:[['72260000','Usługi związane z oprogramowaniem',1],['48310000','Pakiety oprogramowania do tworzenia dokumentów',1]]}),
+ t(10,{src:'EZ',type:'Dostawa',time:'11:02',title:'Dostawa sprzętu audiowizualnego: monitorów interaktywnych do pracowni szkolnych',buyer:'Gmina Kobiele Wielkie',city:'Kobiele Wielkie',sector:'Samorząd',pub:'2026/BZP 00522105/01',
+   cpv:[['32322000','Urządzenia multimedialne',1],['38652100','Projektory',0]]}),
+ t(11,{src:'TED',type:'Dostawa',time:'10:30',title:'Dostawa licencji oprogramowania Microsoft 365 wraz z usługami wdrożeniowymi',buyer:'Instytut Maszyn Przepływowych PAN im. Roberta Szewalskiego',city:'Gdańsk',sector:'Nauka',pub:'2026/S 214-596420',
+   cpv:[['48000000','Pakiety oprogramowania i systemy informatyczne',1],['72268000','Usługi dostawy oprogramowania',1]]}),
+ t(12,{src:'BK',type:'Dostawa',time:'10:05',title:'Zakup komputerów przenośnych dla pracowników spółki',buyer:'Remondis Aqua sp. z o.o.',city:'Trzemeszno',sector:'Prywatny',pub:'BK-2026-11-00469',hidden:true,
+   cpv:[['30213100','Komputery przenośne',1]]}),
+ t(13,{src:'BK',type:'Dostawa',time:'09:41',title:'Zakup sprzętu komputerowego dla pracowni fundacji',buyer:'Fundacja Rozwoju Cyfrowego',city:'Poznań',sector:'NGO',pub:'BK-2026-11-00466',hidden:true,
+   cpv:[['30200000','Urządzenia komputerowe',1]]}),
+ t(14,{src:'EZ',type:'Usługa',time:'09:15',title:'Usługa zarządzanego środowiska wydruku wraz z serwisem urządzeń',buyer:'Wojewódzki Szpital Zespolony',city:'Szczecin',sector:'Zdrowie',pub:'2026/BZP 00521900/01',
+   cpv:[['30120000','Fotokopiarki i sprzęt poligraficzny',1],['50313200','Konserwacja kserokopiarek',1]]}),
+ t(15,{src:'EZ',type:'Dostawa',time:'08:40',title:'Zakup stacji roboczych i monitorów dla Wydziału Informatyki Urzędu Miasta Gdańska',buyer:'Urząd Miasta Gdańska',city:'Gdańsk',sector:'Samorząd',pub:'2026/BZP 00521555/01',
+   cpv:[['30213300','Komputery biurkowe',1],['30231300','Monitory ekranowe',1]]}),
+ t(16,{src:'EZ',type:'Roboty budowlane',time:'08:20',it:false,title:'Remont dachu budynku szkoły podstawowej wraz z wymianą instalacji odgromowej',buyer:'Gmina Radzanów',city:'Radzanów',sector:'Samorząd',pub:'2026/BZP 00521401/01',
+   cpv:[['45261000','Wykonywanie pokryć dachowych',0]]}),
+ t(17,{src:'EZ',type:'Dostawa',time:'08:05',it:false,title:'Dostawa mebli biurowych do siedziby urzędu gminy',buyer:'Gmina Rajcza',city:'Rajcza',sector:'Samorząd',pub:'2026/BZP 00521377/01',
+   cpv:[['39130000','Meble biurowe',0]]})
+];
+const TREND = [38,44,51,47,29,22,55,61,58,49,52,36,24,45]; // 14 dni, ostatni = dziś (niepełny)
+const HOURS = {7:3,8:6,9:9,10:12,11:14,12:17,13:15,14:21,15:16,16:11,17:7,18:3,19:1}; // średnia z 14 dni
+
+/* ---------- Stan ---------- */
+const S = {
+  tab:'list', q:'', sort:'pub', onlyIT:true, showHidden:false,
+  fStatus:new Set(['none']), fSrc:new Set(Object.keys(SRC)), fType:new Set(TYPES),
+  side:'buyer', sideQ:'', sideAll:false, sel:null, active:null, expanded:new Set()
+};
+const $ = (s,r=document)=>r.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ico = (d,cls='')=>`<svg viewBox="0 0 24 24" class="${cls}" aria-hidden="true">${d}</svg>`;
+const I = {
+  search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  star:'<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  msg:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  ext:'<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  down:'<path d="m6 9 6 6 6-6"/>', check:'<path d="m5 12 5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  filter:'<path d="M3 5h18l-7 8v6l-4-2v-4z"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>'
+};
+const stOf = k=>STATUSES.find(s=>s.key===k);
+
+/* ---------- Filtrowanie ---------- */
+function baseVisible(){            // po przełączniku „Tylko IT” i ukrytych zamawiających
+  return TENDERS.filter(x=>(!S.onlyIT||x.it)&&(S.showHidden||!x.hidden));
+}
+function matches(x, ignore){
+  if(ignore!=='status' && !S.fStatus.has(x.status||'none')) return false;
+  if(ignore!=='src' && !S.fSrc.has(x.src)) return false;
+  if(ignore!=='type' && !S.fType.has(x.type)) return false;
+  if(S.sel){ if(S.side==='buyer' ? x.buyer!==S.sel : x.city!==S.sel) return false; }
+  if(S.q){
+    const hay=(x.title+' '+x.buyer+' '+x.city+' '+x.pub+' '+x.cpv.map(c=>c[0]+' '+c[1]).join(' ')).toLowerCase();
+    if(!S.q.toLowerCase().split(/\s+/).every(w=>hay.includes(w))) return false;
+  }
+  return true;
+}
+function listed(){
+  let r = baseVisible().filter(x=>matches(x));
+  if(S.tab==='saved') r = baseVisible().filter(x=>x.fav);
+  const cmp = {pub:(a,b)=>b.time.localeCompare(a.time)||a.id-b.id, buyer:(a,b)=>a.buyer.localeCompare(b.buyer,'pl')};
+  return r.sort(cmp[S.sort]);
+}
+const facet = (key,fn)=>{            // liczniki z uwzględnieniem pozostałych filtrów
+  const o={}; baseVisible().filter(x=>matches(x,key)).forEach(x=>{const k=fn(x);o[k]=(o[k]||0)+1}); return o;
+};
+
+/* ---------- Render: sidebar ---------- */
+function renderSide(){
+  const el=$('#side');
+  if(S.tab==='stats'){ el.hidden=true; $('#layout').classList.add('full'); return; }
+  el.hidden=false; $('#layout').classList.remove('full');
+  const field=S.side==='buyer'?'buyer':'city';
+  const counts={}; baseVisible().filter(x=>matches(x,'__none')&&(S.sel?true:true)).forEach(x=>{ if(!S.q||true) counts[x[field]]=(counts[x[field]]||0)+1; });
+  let items=Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'pl'));
+  const total=items.length, single=items.filter(i=>i[1]<2).length;
+  const sq=S.sideQ.toLowerCase();
+  if(sq) items=items.filter(i=>i[0].toLowerCase().includes(sq));
+  else if(!S.sideAll) items=items.filter(i=>i[1]>=2||i[0]===S.sel);
+  el.innerHTML=`
+    <div class="seg" role="group" aria-label="Grupuj po">
+      <button aria-pressed="${S.side==='buyer'}" data-side="buyer">Zamawiający</button>
+      <button aria-pressed="${S.side==='city'}" data-side="city">Miasta</button>
+    </div>
+    <input type="search" id="sideQ" placeholder="Szukaj…" value="${esc(S.sideQ)}" aria-label="Szukaj w liście">
+    <div class="side-list">
+      ${items.map(([n,c])=>`<button class="side-item" aria-pressed="${S.sel===n}" data-sel="${esc(n)}"><span>${esc(n)}</span><span class="n">${c}</span></button>`).join('')||'<div class="note">Brak wyników.</div>'}
+    </div>
+    ${!sq&&single>0?`<button class="side-more" id="sideAll">${S.sideAll?'Pokaż tylko powtarzających się':`Pokaż pozostałych (${single}) z jednym ogłoszeniem`}</button>`:''}
+    ${!sq&&!S.sideAll?`<div class="note">Domyślnie widać tych, którzy ogłosili ≥ 2 zamówienia: to oni wracają.</div>`:''}`;
+  const si=$('#sideQ'); if(document.activeElement && document.activeElement.id==='sideQ'){ si.focus(); si.setSelectionRange(si.value.length,si.value.length); }
+}
+
+/* ---------- Render: lista ---------- */
+function popFilter(id,label,opts,set,counts){
+  const n = opts.length - set.size ? set.size : 0;
+  return `<div class="pop"><button class="btn pop-btn" aria-expanded="false" aria-haspopup="true" data-pop="${id}">${label}${n?` <span class="badge">${n}</span>`:''} ${ico(I.down)}</button>
+  <div class="pop-panel" hidden>${opts.map(o=>`<label class="opt ${(counts[o.key]||0)===0?'zero':''}"><input type="checkbox" data-f="${id}" value="${o.key}" ${set.has(o.key)?'checked':''}>${o.c?`<span class="dot" style="--c:${o.c}"></span>`:''}<span>${esc(o.label)}</span><span class="n">${counts[o.key]||0}</span></label>`).join('')}
+  ${id==='status'?'<div class="sep"></div><button class="linkbtn" data-all="status">Pokaż wszystkie statusy</button>':''}</div></div>`;
+}
+function activeChips(){
+  const c=[];
+  const allSt=['none',...STATUSES.map(s=>s.key)];
+  if(!(S.fStatus.size===1&&S.fStatus.has('none'))) {
+    if(S.fStatus.size===allSt.length) c.push(['status-all','Wszystkie statusy']);
+    else S.fStatus.forEach(k=>c.push(['status:'+k,'Status: '+(k==='none'?'Nieoznaczone':stOf(k).label)]));
+  }
+  if(S.fSrc.size<3) S.fSrc.forEach(k=>c.push(['src:'+k,SRC[k]]));
+  if(S.fType.size<TYPES.length) S.fType.forEach(k=>c.push(['type:'+k,k]));
+  if(S.sel) c.push(['sel',(S.side==='buyer'?'Zamawiający: ':'Miasto: ')+S.sel]);
+  if(S.q) c.push(['q','„'+S.q+'”']);
+  return c;
+}
+function cardHTML(x){
+  const st=x.status?stOf(x.status):null;
+  const shown=x.cpv.slice(0,2);
+  const hiddenCnt=x.cpv.length-shown.length;
+  const exp=S.expanded.has(x.id);
+  return `<li class="card ${S.active===x.id?'active':''} ${x.hidden?'hiddenbuyer':''}" data-id="${x.id}" ${st?`data-status="${st.key}" style="--c:${st.c}"`:''}>
+    <div class="card-top">
+      <span class="tag src-${x.src}">${SRC[x.src]}</span><span class="tag">${x.type}</span>
+      ${x.hidden?'<span class="tag warn">Ukryty zamawiający</span>':''}
+      ${!x.it?'<span class="tag warn">Poza IT</span>':''}
+      <span class="grow"></span>
+      <span class="date" title="Data publikacji">${x.day.slice(0,5)} ${x.time}</span>
+      <button class="iconbtn ${x.fav?'on':''}" data-act="fav" aria-pressed="${x.fav}" aria-label="${x.fav?'Usuń z zapisanych':'Zapisz'}" title="Zapisz na moją listę (prywatnie)">${ico(I.star)}</button>
+      <button class="iconbtn" data-act="comments" aria-label="Komentarze" title="Komentarze (wspólne)">${ico(I.msg)}${x.comments?`<span class="cnt">${x.comments}</span>`:''}</button>
+      <button class="iconbtn" data-act="more" aria-label="Więcej akcji" aria-haspopup="true">${ico(I.more)}</button>
+    </div>
+    <h3 class="title">${esc(x.title)}</h3>
+    <div class="buyer"><b>${esc(x.buyer)}</b> · ${esc(x.city)}</div>
+    <div class="cpv" aria-label="Przedmiot zamówienia (kody CPV)">
+      ${shown.map(c=>`<span class="cpv-chip" title="${c[0]}">${esc(c[1])}</span>`).join('')}
+      ${hiddenCnt>0?`<button class="cpv-more" data-act="cpv" aria-expanded="${exp}">${exp?'Zwiń':`+${hiddenCnt} więcej`}</button>`:''}
+    </div>
+    ${exp?`<div class="cpv-all">${x.cpv.map(c=>`<div><code>${c[0]}</code> ${esc(c[1])}</div>`).join('')}</div>`:''}
+    <div class="card-bot">
+      <a class="link" href="#" onclick="return false">Zobacz ogłoszenie ${ico(I.ext)}</a>
+      ${x.docs?`<a class="link" href="#" onclick="return false">Dokumentacja ${ico(I.ext)}</a>`:''}
+      <span class="grow"></span>
+      <button class="statusbtn" data-act="status" aria-haspopup="menu" ${st?`data-status="${st.key}" style="--c:${st.c}"`:''}>
+        ${st?ico(st.icon)+st.label:'Oceń'} ${ico(I.down)}
+      </button>
+    </div>
+    ${x.by?`<div class="who">${esc(x.by)} · ${esc(x.at)}</div>`:''}
+    <div class="who pubno">Nr ${esc(x.pub)}</div>
+  </li>`;
+}
+function renderList(){
+  const sc=facet('src',x=>x.src), tc=facet('type',x=>x.type), stc=facet('status',x=>x.status||'none');
+  const rows=listed();
+  const unmarked=baseVisible().filter(x=>!x.status).length;
+  const hiddenN=TENDERS.filter(x=>x.hidden&&(!S.onlyIT||x.it)).length;
+  const chips=activeChips();
+  const saved=S.tab==='saved';
+  $('#content').innerHTML=`
+    ${saved?'':`<div class="toolbar">
+      ${popFilter('status','Status',[{key:'none',label:'Nieoznaczone',c:'var(--muted)'},...STATUSES.map(s=>({key:s.key,label:s.label,c:s.c}))],S.fStatus,stc)}
+      ${popFilter('src','Źródło',Object.entries(SRC).map(([k,v])=>({key:k,label:v})),S.fSrc,sc)}
+      ${popFilter('type','Typ',TYPES.map(k=>({key:k,label:k})),S.fType,tc)}
+      <label class="switch" style="margin-left:6px" title="Firmy prywatne i organizacje pozarządowe są domyślnie ukryte"><input type="checkbox" id="showHidden" ${S.showHidden?'checked':''}><span class="track"></span><span>Pokaż ukrytych zamawiających (${hiddenN})</span></label>
+      <span class="spacer"></span>
+      <label class="sr" for="sort">Sortuj</label>
+      <select class="select" id="sort"><option value="pub" ${S.sort==='pub'?'selected':''}>Najnowsze</option><option value="buyer" ${S.sort==='buyer'?'selected':''}>Zamawiający A–Z</option></select>
+    </div>
+    <div class="chips" aria-live="polite">${chips.map(c=>`<span class="chip">${esc(c[1])}<button data-rm="${esc(c[0])}" aria-label="Usuń filtr ${esc(c[1])}">${ico(I.x)}</button></span>`).join('')}${chips.length?'<button class="linkbtn" data-clear>Wyczyść filtry</button>':''}</div>`}
+    <div class="queue"><h2>${saved?'Zapisane przeze mnie':`${rows.length} ${rows.length===1?'ogłoszenie':'ogłoszeń'} · do przejrzenia: ${unmarked}`}</h2><span class="hint">${saved?'Gwiazdka jest prywatna. Status jest wspólny dla zespołu.':'Domyślnie widzisz kolejkę: ogłoszenia, których nikt jeszcze nie ocenił.'}</span></div>
+    ${rows.length?`<ul class="list">${rows.map(cardHTML).join('')}</ul>`:
+      `<div class="empty"><b>${saved?'Nie masz zapisanych ogłoszeń':'Kolejka jest pusta'}</b>${saved?'Gwiazdką oznacz ogłoszenia, do których chcesz wrócić. To lista prywatna, w odróżnieniu od statusu.':'Wszystkie pasujące ogłoszenia są już ocenione. Zmień filtr statusu, żeby zobaczyć ocenione.'}</div>`}`;
+}
+
+/* ---------- Render: statystyki ---------- */
+function bars(entries,max,cls=''){
+  return entries.map(([l,n,key])=>`<${key?'button':'div'} class="row" ${key?`data-drill="${esc(key)}"`:''}><span class="lbl" title="${esc(l)}">${esc(l)}</span><span class="track2"><i style="width:${max?Math.round(n/max*100):0}%"></i></span><span class="n">${n}</span></${key?'button':'div'}>`).join('');
+}
+function renderStats(){
+  const all=baseVisible(), N=all.length;
+  const by={none:0,todo:0,done:0,ask:0,no:0};
+  all.forEach(x=>by[x.status||'none']++);
+  const reviewed=N-by.none, pct=N?Math.round(reviewed/N*100):0;
+  const group=(fn)=>{const o={};all.forEach(x=>{const k=fn(x);o[k]=(o[k]||0)+1});return Object.entries(o).sort((a,b)=>b[1]-a[1])};
+  const cpv={}; all.forEach(x=>x.cpv.forEach(c=>{cpv[c[1]]=(cpv[c[1]]||0)+1}));
+  const cpvE=Object.entries(cpv).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const who={}; all.forEach(x=>{if(x.by) who[x.by]=(who[x.by]||0)+1});
+  const whoE=Object.entries(who).sort((a,b)=>b[1]-a[1]);
+  const srcE=group(x=>SRC[x.src]), typE=group(x=>x.type), secE=group(x=>x.sector);
+  const rep=group(x=>x.buyer).filter(e=>e[1]>=2);
+  const kpi=(k,label,v,c,main)=>`<button class="kpi ${main?'main':''} ${v===0&&!main?'zero':''}" ${c?`style="--c:${c}"`:''} data-kpi="${k}"><div class="v">${v}</div><div class="l">${label}</div></button>`;
+  // trend
+  const W=560,H=150,P=24,max=Math.max(...TREND)*1.1,step=(W-2*P)/(TREND.length-1);
+  const pts=TREND.map((v,i)=>[P+i*step,H-P-(v/max)*(H-2*P)]);
+  const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const trend=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Nowe ogłoszenia IT dziennie, ostatnie 14 dni">
+    <path class="trend-area" d="${line} L${pts[pts.length-1][0]} ${H-P} L${pts[0][0]} ${H-P}Z"/>
+    <path class="trend-line" d="${pts.slice(0,-1).map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ')}"/>
+    <path class="trend-line" stroke-dasharray="4 4" d="M${pts[pts.length-2][0]} ${pts[pts.length-2][1]} L${pts[pts.length-1][0]} ${pts[pts.length-1][1]}"/>
+    ${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i===pts.length-1?4:2.5}" fill="var(--accent)" stroke="none"/>`).join('')}
+    <text x="${P}" y="${H-6}">21.10</text><text x="${W-P}" y="${H-6}" text-anchor="end">dziś (niepełny)</text>
+    <text x="${pts[pts.length-1][0]-8}" y="${pts[pts.length-1][1]-8}" text-anchor="end">${TREND[TREND.length-1]}</text></svg>`;
+  // godziny
+  const hs=Object.keys(HOURS).map(Number), hmax=Math.max(...Object.values(HOURS));
+  const HW=560,HH=140,bw=(HW-2*P)/hs.length;
+  const hour=`<svg class="chart" viewBox="0 0 ${HW} ${HH}" role="img" aria-label="Średnia liczba ogłoszeń eZamówień w poszczególnych godzinach">
+    ${hs.map((h,i)=>{const v=HOURS[h],bh=(v/hmax)*(HH-2*P-6);return `<rect class="hbar ${v===hmax?'peak':''}" x="${P+i*bw+3}" y="${HH-P-bh}" width="${bw-6}" height="${bh}" rx="3"><title>${h}:00 — średnio ${v}</title></rect><text x="${P+i*bw+bw/2}" y="${HH-8}" text-anchor="middle">${h}</text>`}).join('')}</svg>`;
+  $('#content').innerHTML=`<div class="stats">
+    <div class="panel">
+      <div class="progress-head"><div><b>${reviewed}</b> z ${N} ocenionych <span class="meta-line">(${pct}%)</span></div><div class="meta-line">Dotyczy ogłoszeń bez ukrytych zamawiających${S.onlyIT?', tylko IT':''}</div></div>
+      <div class="bar" role="progressbar" aria-valuenow="${reviewed}" aria-valuemin="0" aria-valuemax="${N}" aria-label="Postęp przeglądania">
+        ${STATUSES.map(s=>`<i style="--c:${s.c};width:${N?by[s.key]/N*100:0}%" title="${s.label}: ${by[s.key]}"></i>`).join('')}</div>
+      <div class="legend">${STATUSES.map(s=>`<span><span class="dot" style="--c:${s.c}"></span>${s.label} ${by[s.key]}</span>`).join('')}<span><span class="dot" style="--c:var(--border)"></span>Do przejrzenia ${by.none}</span></div>
+    </div>
+    <div class="kpis">
+      ${kpi('none','Do przejrzenia',by.none,'',true)}
+      ${STATUSES.map(s=>kpi(s.key,s.label,by[s.key],s.c)).join('')}
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Co jest zamawiane</h3><div class="sub">Najczęstsze kody CPV w ogłoszeniach</div>${bars(cpvE.map(e=>[e[0],e[1]]),cpvE[0]?cpvE[0][1]:0)}</div>
+      <div class="panel"><h3>Kto ocenia</h3><div class="sub">Liczba ocenionych ogłoszeń na osobę</div>${whoE.length?bars(whoE.map(e=>[e[0],e[1]]),whoE[0][1]):'<div class="note">Nikt jeszcze nic nie ocenił.</div>'}
+        <h3 style="margin-top:18px">Powtarzający się zamawiający</h3>${rep.length?bars(rep.map(e=>[e[0],e[1],e[0]]),rep[0][1]):'<div class="note">Brak.</div>'}<div class="note">Kliknięcie filtruje listę przetargów.</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Nowe ogłoszenia IT dziennie</h3><div class="sub">Ostatnie 14 dni. Dziś jeszcze trwa, więc liczba może rosnąć.</div>${trend}</div>
+      <div class="panel"><h3>O której zwykle pojawiają się ogłoszenia (eZamówienia)</h3><div class="sub">Średnia z 14 dni, tylko godziny aktywne. Najlepszy czas na przegląd zaznaczono na zielono.</div>${hour}</div>
+    </div>
+    <div class="grid3">
+      <div class="panel"><h3>Źródło</h3>${bars(srcE,srcE[0]?srcE[0][1]:0)}<div class="note">Podstawa: ${N}</div></div>
+      <div class="panel"><h3>Typ zamówienia</h3>${bars(typE,typE[0]?typE[0][1]:0)}<div class="note">Podstawa: ${N}</div></div>
+      <div class="panel"><h3>Sektor zamawiającego</h3>${bars(secE,secE[0]?secE[0][1]:0)}<div class="note">Podstawa: ${N}, wszystkie źródła</div></div>
+    </div></div>`;
+}
+
+/* ---------- Render: całość ---------- */
+function render(){
+  $('#cnt-list').textContent=baseVisible().filter(x=>matches(x)).length;
+  $('#cnt-saved').textContent=TENDERS.filter(x=>x.fav).length;
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.tab));
+  $('#kbdHint').style.display=S.tab==='stats'?'none':'';
+  renderSide();
+  S.tab==='stats'?renderStats():renderList();
+  const th=document.documentElement.dataset.theme;
+  $('#themeBtn').innerHTML=ico(th==='dark'?I.sun:I.moon);
+}
+
+/* ---------- Zdarzenia ---------- */
+function toast(m){const e=document.createElement('div');e.className='toast';e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),1800)}
+function setStatus(id,key){
+  const x=TENDERS.find(t=>t.id===id); if(!x) return;
+  x.status=key; x.by=key?USER:null; x.at=key?'przed chwilą':null;
+  render(); if(S.active) {const c=$(`.card[data-id="${S.active}"]`); c&&c.scrollIntoView({block:'nearest'});}
+  toast(key?`Status: ${stOf(key).label}`:'Usunięto status');
+}
+function closeMenus(){document.querySelectorAll('.menu').forEach(m=>m.remove());document.querySelectorAll('.pop-panel').forEach(p=>{p.hidden=true});document.querySelectorAll('[data-pop]').forEach(b=>b.setAttribute('aria-expanded','false'))}
+function openMenu(btn,items){
+  closeMenus();
+  const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu');
+  m.innerHTML=items.map(i=>i==='-'?'<div class="sep"></div>':`<button role="menuitem" data-m="${i.k}" class="${i.cls||''}">${i.ic?ico(i.ic):''}${esc(i.l)}${i.kbd?`<kbd>${i.kbd}</kbd>`:''}</button>`).join('');
+  const r=btn.getBoundingClientRect();
+  document.body.appendChild(m);
+  m.style.top=(r.bottom+window.scrollY+6)+'px';
+  m.style.left=Math.max(8,Math.min(window.innerWidth-m.offsetWidth-8,r.right-m.offsetWidth)+window.scrollX)+'px';
+  m.querySelector('button').focus();
+  return m;
+}
+document.addEventListener('click',e=>{
+  const T=e.target;
+  if(!T.closest('.menu')&&!T.closest('.pop')) closeMenus();
+  const tab=T.closest('.tab'); if(tab){S.tab=tab.dataset.tab;S.active=null;render();return}
+  const sd=T.closest('[data-side]'); if(sd){S.side=sd.dataset.side;S.sel=null;render();return}
+  const sel=T.closest('[data-sel]'); if(sel){S.sel=S.sel===sel.dataset.sel?null:sel.dataset.sel;S.tab='list';render();return}
+  if(T.closest('#sideAll')){S.sideAll=!S.sideAll;render();return}
+  const pop=T.closest('[data-pop]'); if(pop){const open=pop.getAttribute('aria-expanded')==='true';closeMenus();if(!open){pop.setAttribute('aria-expanded','true');pop.nextElementSibling.hidden=false}return}
+  const all=T.closest('[data-all]'); if(all){S.fStatus=new Set(['none',...STATUSES.map(s=>s.key)]);render();return}
+  const rm=T.closest('[data-rm]'); if(rm){
+    const [k,v]=rm.dataset.rm.split(':');
+    if(k==='status') {S.fStatus.delete(v); if(!S.fStatus.size) S.fStatus.add('none');}
+    else if(k==='status-all') S.fStatus=new Set(['none']);
+    else if(k==='src') {S.fSrc.delete(v); if(!S.fSrc.size) S.fSrc=new Set(Object.keys(SRC));}
+    else if(k==='type') {S.fType.delete(v); if(!S.fType.size) S.fType=new Set(TYPES);}
+    else if(k==='sel') S.sel=null; else if(k==='q'){S.q='';$('#q').value=''}
+    render();return}
+  if(T.closest('[data-clear]')){S.fStatus=new Set(['none']);S.fSrc=new Set(Object.keys(SRC));S.fType=new Set(TYPES);S.sel=null;S.q='';$('#q').value='';render();return}
+  const kpi=T.closest('[data-kpi]'); if(kpi){S.fStatus=new Set([kpi.dataset.kpi]);S.sel=null;S.q='';$('#q').value='';S.tab='list';render();return}
+  const dr=T.closest('[data-drill]'); if(dr){S.side='buyer';S.sel=dr.dataset.drill;S.fStatus=new Set(['none',...STATUSES.map(s=>s.key)]);S.tab='list';render();return}
+  const card=T.closest('.card');
+  if(card){
+    const id=+card.dataset.id, x=TENDERS.find(t=>t.id===id); S.active=id;
+    const act=T.closest('[data-act]')?.dataset.act;
+    if(act==='fav'){x.fav=!x.fav;render();return}
+    if(act==='comments'){toast('Tu otworzy się panel komentarzy (bez zmian względem obecnego)');return}
+    if(act==='cpv'){S.expanded.has(id)?S.expanded.delete(id):S.expanded.add(id);render();return}
+    if(act==='status'){
+      const m=openMenu(T.closest('[data-act]'),[...STATUSES.map((s,i)=>({k:'s:'+s.key,l:s.label,ic:s.icon,kbd:String(i+1)})),'-',{k:'s:',l:'Usuń status',ic:I.x,kbd:'0'}]);
+      m.dataset.id=id;return}
+    if(act==='more'){
+      const m=openMenu(T.closest('[data-act]'),[{k:'copy',l:'Kopiuj numer publikacji',ic:I.copy},{k:'hide',l:x.hidden?'Przywróć zamawiającego':'Ukryj zamawiającego',ic:I.eye,cls:x.hidden?'':'danger'}]);
+      m.dataset.id=id;return}
+    render(); return;
+  }
+  const mi=T.closest('.menu [data-m]'); if(mi){
+    const m=mi.closest('.menu'),id=+m.dataset.id,k=mi.dataset.m; const x=TENDERS.find(t=>t.id===id);
+    closeMenus();
+    if(k.startsWith('s:')) setStatus(id,k.slice(2)||null);
+    else if(k==='copy'){navigator.clipboard&&navigator.clipboard.writeText(x.pub);toast('Skopiowano: '+x.pub)}
+    else if(k==='hide'){const b=x.buyer;TENDERS.forEach(t=>{if(t.buyer===b)t.hidden=!x.hidden});render();toast('Zmiana dotyczy wszystkich ogłoszeń tego zamawiającego, także przyszłych (dla wszystkich osób)')}
+  }
+});
+document.addEventListener('change',e=>{
+  const T=e.target;
+  if(T.dataset.f){const set={status:S.fStatus,src:S.fSrc,type:S.fType}[T.dataset.f];T.checked?set.add(T.value):set.delete(T.value);
+    if(!set.size){ if(T.dataset.f==='status') set.add('none'); else (T.dataset.f==='src'?Object.keys(SRC):TYPES).forEach(v=>set.add(v)); }
+    const open=T.closest('.pop').querySelector('[data-pop]').dataset.pop; render(); const b=document.querySelector(`[data-pop="${open}"]`); b.setAttribute('aria-expanded','true'); b.nextElementSibling.hidden=false; return}
+  if(T.id==='sort'){S.sort=T.value;render()}
+  if(T.id==='showHidden'){S.showHidden=T.checked;render()}
+  if(T.id==='onlyIT'){S.onlyIT=T.checked;render()}
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='q'){S.q=e.target.value.trim();if(S.tab==='stats')S.tab='list';render()}
+  if(e.target.id==='sideQ'){S.sideQ=e.target.value;renderSide()}
+});
+$('#themeBtn').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';render()};
+$('#dateBtn').onclick=()=>toast('W prototypie dane są z jednego dnia');
+$('#usersBtn').onclick=()=>toast('Tu otworzy się lista użytkowników i zaproszenia (bez zmian)');
+$('#refreshBtn').onclick=function(){this.classList.add('spin');setTimeout(()=>{this.classList.remove('spin');$('#lastRefresh').textContent='przed chwilą';toast('Pobrano nowe przetargi (symulacja)')},1200)};
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') closeMenus();
+  const tag=(document.activeElement||{}).tagName;
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  if(e.key==='/'&&tag!=='INPUT'){e.preventDefault();$('#q').focus();return}
+  if(tag==='INPUT'||tag==='SELECT'||S.tab==='stats') return;
+  const rows=listed().map(x=>x.id); if(!rows.length) return;
+  const i=rows.indexOf(S.active);
+  if(e.key==='j'||e.key==='ArrowDown'&&e.shiftKey){S.active=rows[Math.min(rows.length-1,i+1)];render();$(`.card[data-id="${S.active}"]`)?.scrollIntoView({block:'center',behavior:'smooth'})}
+  else if(e.key==='k'||e.key==='ArrowUp'&&e.shiftKey){S.active=rows[Math.max(0,i<0?0:i-1)];render();$(`.card[data-id="${S.active}"]`)?.scrollIntoView({block:'center',behavior:'smooth'})}
+  else if(S.active&&'1234'.includes(e.key)&&e.key.length===1){
+    const idx=rows.indexOf(S.active), next=rows[idx+1];
+    setStatus(S.active,STATUSES[+e.key-1].key);
+    // po ocenie w kolejce karta znika z listy; aktywna zostaje następna
+    const still=listed().map(x=>x.id); if(!still.includes(S.active)) {S.active=next&&still.includes(next)?next:still[Math.min(idx,still.length-1)]??null;render()}
+  }
+  else if(S.active&&e.key==='0'){setStatus(S.active,null)}
+  else if(S.active&&(e.key==='s'||e.key==='S')){const x=TENDERS.find(t=>t.id===S.active);x.fav=!x.fav;render()}
+});
+render();
+</script>
+</body>
+</html>
