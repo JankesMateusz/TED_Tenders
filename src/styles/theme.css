@@ -16,11 +16,11 @@ body {
 }
 
 body[data-theme="light"] {
-    background-color: #f8fafc;
+    background-color: #f4f6fb;
 }
 
 body[data-theme="dark"] {
-    background-color: #111827;
+    background-color: #0e131d;
 }
 
 :root {
@@ -30,14 +30,6 @@ body[data-theme="dark"] {
     --danger-bg-strong: rgba(231, 76, 60, 0.15);
     --danger-ring: rgba(231, 76, 60, 0.3);
     --star-color: #f1c40f;
-    --accent-bg: rgba(52, 152, 219, 0.12);
-    --accent-ring: rgba(52, 152, 219, 0.1);
-    --accent-shadow: rgba(52, 152, 219, 0.3);
-    --accent: #3498db;
-    --accent-dark: #2980b9;
-    --accent-tint: rgba(52, 152, 219, 0.1);
-    --accent-tint-soft: rgba(52, 152, 219, 0.08);
-    --accent-border: rgba(52, 152, 219, 0.3);
     --warning-bg: rgba(243, 156, 18, 0.12);
     --warning-border: rgba(243, 156, 18, 0.4);
     /* Kolory serii na wykresach: jedno źródło danych = jeden kolor */
@@ -45,38 +37,65 @@ body[data-theme="dark"] {
     --series-ezam: #3498db;
     --series-baza: #9b59b6;
     --tooltip-bg: rgba(0, 0, 0, 0.9);
+    --radius-card: 12px;
+    --radius-control: 9px;
 }
 
+/* Powierzchnie: --bg-primary = karty, pasek i menu (--surface),
+   --bg-secondary = pola i elementy podniesione (--raised); tło strony ustawia body. */
 :root[data-theme="light"] {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f0f2f5;
-    --text-primary: #2c3e50;
-    --text-secondary: #4a5568;
-    --border-color: #e2e8f0;
+    --surface: #ffffff;
+    --raised: #eef1f8;
+    --bg-primary: var(--surface);
+    --bg-secondary: var(--raised);
+    --text-primary: #18202f;
+    --text-secondary: #576078;
+    --border-color: #d8dfec;
+    --accent: #1f5fe0;
+    --accent-dark: #1a4fbc;
+    --accent-bg: rgba(31, 95, 224, 0.12);
+    --accent-ring: rgba(31, 95, 224, 0.1);
+    --accent-shadow: rgba(31, 95, 224, 0.3);
+    --accent-tint: rgba(31, 95, 224, 0.1);
+    --accent-tint-soft: rgba(31, 95, 224, 0.08);
+    --accent-border: rgba(31, 95, 224, 0.3);
     --header-gradient-start: #2c3e50;
     --header-gradient-end: #3b5168;
     --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     --card-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    --button-primary: #3498db;
-    --button-primary-hover: #2980b9;
-    --cpv-bg: #f0f2f5;
-    --cpv-bg-hover: #e4e7eb;
+    --pop-shadow: 0 12px 32px rgba(24, 32, 47, 0.16);
+    /* Wypełnione przyciski mają biały tekst, więc tło musi być ciemne w obu motywach */
+    --button-primary: #1f5fe0;
+    --button-primary-hover: #1a4fbc;
+    --cpv-bg: var(--raised);
+    --cpv-bg-hover: #e1e6f1;
 }
 
 :root[data-theme="dark"] {
-    --bg-primary: #1a202c;
-    --bg-secondary: #2d3748;
-    --text-primary: #e2e8f0;
-    --text-secondary: #a0aec0;
-    --border-color: #4a5568;
-    --header-gradient-start: #1a202c;
-    --header-gradient-end: #26364d;
+    --surface: #161c2a;
+    --raised: #1d2435;
+    --bg-primary: var(--surface);
+    --bg-secondary: var(--raised);
+    --text-primary: #e7ebf3;
+    --text-secondary: #9aa4ba;
+    --border-color: #2a3349;
+    --accent: #6aa5ff;
+    --accent-dark: #4f8ef0;
+    --accent-bg: rgba(106, 165, 255, 0.14);
+    --accent-ring: rgba(106, 165, 255, 0.12);
+    --accent-shadow: rgba(106, 165, 255, 0.3);
+    --accent-tint: rgba(106, 165, 255, 0.12);
+    --accent-tint-soft: rgba(106, 165, 255, 0.08);
+    --accent-border: rgba(106, 165, 255, 0.35);
+    --header-gradient-start: #161c2a;
+    --header-gradient-end: #1f2d45;
     --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     --card-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-    --button-primary: #4299e1;
-    --button-primary-hover: #2b6cb0;
-    --cpv-bg: #2d3748;
-    --cpv-bg-hover: #4a5568;
+    --pop-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    --button-primary: #2f6fdb;
+    --button-primary-hover: #2559b5;
+    --cpv-bg: var(--raised);
+    --cpv-bg-hover: #2a3349;
 }
 
 /* Theme transition */
