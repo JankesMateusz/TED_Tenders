@@ -2,14 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Statistics } from '../utils/calculateStatistics';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig } from '../utils/tenderSources';
-import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
+import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
 import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { CpvCategoryKey } from '../utils/cpvCategories';
 import { TREND_DAYS, TrendPoint } from '../utils/recentTrend';
 import { dayToDisplayDate } from '../utils/dateUtils';
-import { buildStatusFunnel } from '../utils/statusFunnel';
 import { formatDelta } from '../utils/comparison';
 import styles from './StatisticsTab.module.css';
 
@@ -82,17 +81,6 @@ export interface HourlyChartData {
     onSelectDay: (day: string) => void;
 }
 
-const FUNNEL_COLLAPSED_KEY = 'statistics.funnelCollapsed';
-
-const readFunnelCollapsed = (): boolean => {
-    try {
-        return window.localStorage.getItem(FUNNEL_COLLAPSED_KEY) === 'true';
-    } catch {
-        // localStorage bywa zablokowany (tryb prywatny); sekcja jest wtedy po prostu rozwinięta
-        return false;
-    }
-};
-
 export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     statistics,
     isDateRange,
@@ -120,20 +108,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     };
     const reviewedCount = statistics.total - statistics.byStatus.unmarked;
     const reviewedPercent = statistics.total > 0 ? Math.round((reviewedCount / statistics.total) * 100) : 0;
-    const [funnelCollapsed, setFunnelCollapsed] = useState<boolean>(readFunnelCollapsed);
-    const toggleFunnel = () => {
-        const next = !funnelCollapsed;
-        setFunnelCollapsed(next);
-        try {
-            window.localStorage.setItem(FUNNEL_COLLAPSED_KEY, String(next));
-        } catch {
-            // brak możliwości zapisu: zwinięcie działa tylko do odświeżenia strony
-        }
-    };
-    const funnelRows = useMemo(
-        () => buildStatusFunnel(statistics.total, statistics.byStatus),
-        [statistics.total, statistics.byStatus]
-    );
     const hourlyDates = hourly.days;
     // Domyślnie najnowszy dzień z wybranego zakresu; inne dni z bazy użytkownik wybiera sam
     const newestRangeDate = useMemo(
@@ -236,16 +210,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
             )}
 
             <div className={styles.statsGrid}>
-                <button
-                    type="button"
-                    className={`${styles.statCard} ${styles.statCardPrimary} ${styles.clickable} ${statistics.byStatus.unmarked === 0 ? styles.statCardZero : ''}`}
-                    onClick={() => onDrillDown({ kind: 'status', status: 'unmarked' })}
-                >
-                    <div className={styles.statValue}>{statistics.byStatus.unmarked}</div>
-                    {renderDelta(statistics.byStatus.unmarked, previous?.byStatus.unmarked)}
-                    <div className={styles.statLabel}>Do przejrzenia</div>
-                </button>
-
                 <div className={styles.statCard}>
                     <div className={styles.statValue}>{statistics.total}</div>
                     {renderDelta(statistics.total, previous?.total)}
@@ -266,62 +230,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         <div className={styles.statLabel}>{STATUS_CONFIG[status].label}</div>
                     </button>
                 ))}
-            </div>
-            
-            <div className={`${styles.section} ${styles.fullWidthSection} ${styles.desktopOnly}`}>
-                <div className={styles.collapsibleHeader}>
-                    <h3 className={styles.sectionTitle}>Postęp przeglądania</h3>
-                    <button
-                        type="button"
-                        className={styles.collapseButton}
-                        onClick={toggleFunnel}
-                        aria-expanded={!funnelCollapsed}
-                        aria-label={funnelCollapsed ? 'Rozwiń sekcję Postęp przeglądania' : 'Zwiń sekcję Postęp przeglądania'}
-                        title={funnelCollapsed ? 'Rozwiń' : 'Zwiń'}
-                    >
-                        {funnelCollapsed ? '+' : '−'}
-                    </button>
-                </div>
-                {!funnelCollapsed && (
-                <>
-                <p className={styles.chartSubtitle}>
-                    Ile przetargów z listy ma już status, a ile czeka na przejrzenie. Udziały liczone względem wszystkich przetargów.
-                </p>
-                <div className={styles.funnel}>
-                    {funnelRows.map(({ key, count, percent }) => {
-                        const isStatus = key !== 'total' && key !== 'reviewed';
-                        const label = key === 'total' ? 'Wszystkie przetargi'
-                            : key === 'reviewed' ? 'Ze statusem'
-                            : key === 'unmarked' ? 'Bez statusu (do przejrzenia)'
-                            : STATUS_CONFIG[key].label;
-                        const color = key === 'total' || key === 'reviewed' ? 'var(--button-primary)'
-                            : key === 'unmarked' ? UNMARKED_COLOR
-                            : STATUS_CONFIG[key].color;
-                        const content = (
-                            <>
-                                <span className={styles.funnelLabel}>{label}</span>
-                                <span className={styles.funnelTrack}>
-                                    <span className={styles.funnelBar} style={{ width: `${percent}%`, backgroundColor: color }} />
-                                </span>
-                                <span className={styles.funnelValue}>{count} <small>({percent}%)</small></span>
-                            </>
-                        );
-                        return isStatus ? (
-                            <button
-                                key={key}
-                                type="button"
-                                className={`${styles.funnelRow} ${styles.clickable}`}
-                                onClick={() => onDrillDown({ kind: 'status', status: key })}
-                            >
-                                {content}
-                            </button>
-                        ) : (
-                            <div key={key} className={styles.funnelRow}>{content}</div>
-                        );
-                    })}
-                </div>
-                </>
-                )}
             </div>
 
             <div className={styles.sectionsGrid}>
@@ -376,81 +284,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     </div>
                 )}
 
-            </div>
-
-            {statistics.byCpvCategory.length > 0 && (
-                <div className={`${styles.section} ${styles.fullWidthSection}`}>
-                    <h3 className={styles.sectionTitle}>Co jest zamawiane</h3>
-                    <p className={styles.chartSubtitle}>
-                        Liczba przetargów z kodem CPV z danej kategorii. Przetarg może mieć kody z kilku kategorii, więc sumy się nie dodają.
-                    </p>
-                    <ul className={styles.list}>
-                        {statistics.byCpvCategory.map(({ key, label, count }) => (
-                            <li key={key} className={styles.listItem}>
-                                <button
-                                    type="button"
-                                    className={`${styles.listButton} ${styles.clickable}`}
-                                    onClick={() => onDrillDown({ kind: 'cpvCategory', category: key })}
-                                >
-                                    <span className={styles.listName}>{label}</span>
-                                    <span className={styles.listCount}>{count}</span>
-                                    <ShareBar count={count} total={statistics.total} />
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-
-            {statistics.byReviewer.length > 0 && (
-                <div className={`${styles.section} ${styles.fullWidthSection}`}>
-                    <h3 className={styles.sectionTitle}>Kto ocenia</h3>
-                    <p className={styles.chartSubtitle}>
-                        Przetargi według osoby, która ustawiła obecny status (przy zmianie statusu liczy się ostatnia osoba).
-                    </p>
-                    <ul className={styles.list}>
-                        {statistics.byReviewer.map(({ reviewer, count }) => (
-                            <li key={reviewer} className={styles.listItem}>
-                                <div className={styles.listRow}>
-                                    <span className={styles.listName}>{reviewer}</span>
-                                    <span className={styles.listCount}>{count}</span>
-                                    <ShareBar count={count} total={reviewedTotal} />
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-
-            <div className={`${styles.section} ${styles.fullWidthSection}`}>
-                <h3 className={styles.sectionTitle}>Nowe ogłoszenia, ostatnie {TREND_DAYS} dni</h3>
-                <p className={styles.chartSubtitle}>
-                    Liczba ogłoszeń opublikowanych każdego dnia, bez względu na wybrany zakres dat. Kreskowany słupek oznacza dzień, którego dane mogą być niekompletne.
-                </p>
-                {trend.error ? (
-                    <p className={styles.chartSubtitle}>{trend.error}</p>
-                ) : (
-                    <ol className={styles.trendChart} aria-label={`Nowe ogłoszenia w ostatnich ${TREND_DAYS} dniach`}>
-                        {trend.points.map(({ day, count, complete }) => {
-                            const label = dayToDisplayDate(day);
-                            const height = maxTrendValue > 0 ? (count / maxTrendValue) * TREND_BAR_MAX_HEIGHT : 0;
-                            return (
-                                <li
-                                    key={day}
-                                    className={styles.trendColumn}
-                                    title={`${label}: ${count}${complete ? '' : ' (dane mogą być niekompletne)'}`}
-                                >
-                                    <span className={styles.trendCount}>{count > 0 ? count : ''}</span>
-                                    <span
-                                        className={`${styles.trendBar} ${complete ? '' : styles.trendBarIncomplete}`}
-                                        style={{ height: `${Math.max(height, 2)}px` }}
-                                    />
-                                    <span className={styles.trendDay}>{label.slice(0, 2)}</span>
-                                </li>
-                            );
-                        })}
-                    </ol>
-                )}
             </div>
 
             {hasHourlyData && (
@@ -548,6 +381,81 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                <h3 className={styles.sectionTitle}>Nowe ogłoszenia, ostatnie {TREND_DAYS} dni</h3>
+                <p className={styles.chartSubtitle}>
+                    Liczba ogłoszeń opublikowanych każdego dnia, bez względu na wybrany zakres dat. Kreskowany słupek oznacza dzień, którego dane mogą być niekompletne.
+                </p>
+                {trend.error ? (
+                    <p className={styles.chartSubtitle}>{trend.error}</p>
+                ) : (
+                    <ol className={styles.trendChart} aria-label={`Nowe ogłoszenia w ostatnich ${TREND_DAYS} dniach`}>
+                        {trend.points.map(({ day, count, complete }) => {
+                            const label = dayToDisplayDate(day);
+                            const height = maxTrendValue > 0 ? (count / maxTrendValue) * TREND_BAR_MAX_HEIGHT : 0;
+                            return (
+                                <li
+                                    key={day}
+                                    className={styles.trendColumn}
+                                    title={`${label}: ${count}${complete ? '' : ' (dane mogą być niekompletne)'}`}
+                                >
+                                    <span className={styles.trendCount}>{count > 0 ? count : ''}</span>
+                                    <span
+                                        className={`${styles.trendBar} ${complete ? '' : styles.trendBarIncomplete}`}
+                                        style={{ height: `${Math.max(height, 2)}px` }}
+                                    />
+                                    <span className={styles.trendDay}>{label.slice(0, 2)}</span>
+                                </li>
+                            );
+                        })}
+                    </ol>
+                )}
+            </div>
+
+            {statistics.byCpvCategory.length > 0 && (
+                <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                    <h3 className={styles.sectionTitle}>Co jest zamawiane</h3>
+                    <p className={styles.chartSubtitle}>
+                        Liczba przetargów z kodem CPV z danej kategorii. Przetarg może mieć kody z kilku kategorii, więc sumy się nie dodają.
+                    </p>
+                    <ul className={styles.list}>
+                        {statistics.byCpvCategory.map(({ key, label, count }) => (
+                            <li key={key} className={styles.listItem}>
+                                <button
+                                    type="button"
+                                    className={`${styles.listButton} ${styles.clickable}`}
+                                    onClick={() => onDrillDown({ kind: 'cpvCategory', category: key })}
+                                >
+                                    <span className={styles.listName}>{label}</span>
+                                    <span className={styles.listCount}>{count}</span>
+                                    <ShareBar count={count} total={statistics.total} />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {statistics.byReviewer.length > 0 && (
+                <div className={`${styles.section} ${styles.fullWidthSection}`}>
+                    <h3 className={styles.sectionTitle}>Kto ocenia</h3>
+                    <p className={styles.chartSubtitle}>
+                        Przetargi według osoby, która ustawiła obecny status (przy zmianie statusu liczy się ostatnia osoba).
+                    </p>
+                    <ul className={styles.list}>
+                        {statistics.byReviewer.map(({ reviewer, count }) => (
+                            <li key={reviewer} className={styles.listItem}>
+                                <div className={styles.listRow}>
+                                    <span className={styles.listName}>{reviewer}</span>
+                                    <span className={styles.listCount}>{count}</span>
+                                    <ShareBar count={count} total={reviewedTotal} />
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
 
