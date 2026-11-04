@@ -7,7 +7,7 @@ import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
 import { TenderComment } from "../types/TenderComment";
 import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
-import { toDayString } from "../utils/dateUtils";
+import { dayToDisplayDate, displayDateToDay, parseDate, toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
 import { SortOrder, countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
 import { ALL_SOURCES, NO_STATUS_FILTERS, loadFilters, saveFilters } from "../utils/persistedFilters";
@@ -15,6 +15,7 @@ import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscrib
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { useComments } from "../hooks/useComments";
 import { usePreviousPeriod } from "../hooks/usePreviousPeriod";
+import { useDayTenders, useRefreshedDays } from "../hooks/useHourlyDays";
 import { describePeriod, getComparisonPeriod } from "../utils/comparison";
 import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
@@ -415,6 +416,31 @@ const Tenders: React.FC = () => {
         () => calculateStatistics(applyFilters(previousPeriod.tenders.filter((tender) => !isFavorite(tender.id)))),
         [applyFilters, previousPeriod.tenders, isFavorite]
     );
+    // Wykres godzinowy: dropdown ma dni z całej bazy (według dziennika odświeżeń), a nie tylko z wybranego
+    // zakresu. Dzień spoza zakresu doczytujemy dopiero po wybraniu, przetargi tylko tego jednego dnia.
+    const isStatisticsTab = activeTab === 'statistics';
+    const refreshedDays = useRefreshedDays(isStatisticsTab, todayDay);
+    const [hourlyDay, setHourlyDay] = useState('');
+    const hourlyExtraDay = useMemo(() => {
+        const day = isStatisticsTab ? displayDateToDay(hourlyDay) : null;
+        if (!day) return null;
+        return startDay && endDay && day >= startDay && day <= endDay ? null : day;
+    }, [isStatisticsTab, hourlyDay, startDay, endDay]);
+    const extraDay = useDayTenders(hourlyExtraDay);
+    const isExtraDayLoaded = hourlyExtraDay !== null && extraDay.loadedDay === hourlyExtraDay;
+    const hourlyDistribution = useMemo(() => {
+        // Te same filtry i wyłączenie własnych gwiazdek co w statystykach z wybranego zakresu
+        const extra = isExtraDayLoaded
+            ? calculateStatistics(applyFilters(extraDay.tenders.filter((tender) => !isFavorite(tender.id))))
+                .ezamowieniaHourlyDistribution
+            : {};
+        return { ...extra, ...statistics.ezamowieniaHourlyDistribution };
+    }, [isExtraDayLoaded, extraDay.tenders, applyFilters, isFavorite, statistics.ezamowieniaHourlyDistribution]);
+    const hourlyDays = useMemo(() => {
+        const days = new Set([...Object.keys(statistics.ezamowieniaHourlyDistribution), ...refreshedDays.map(dayToDisplayDate)]);
+        return Array.from(days).sort((a, b) => parseDate(b).getTime() - parseDate(a).getTime());
+    }, [statistics.ezamowieniaHourlyDistribution, refreshedDays]);
+
     let comparison: StatisticsComparison | null = null;
     if (comparisonPeriod && endDay) {
         if (!comparisonPeriod.ok) {
@@ -592,6 +618,13 @@ const Tenders: React.FC = () => {
                                 hasActiveFilters={hasActiveFilters}
                                 onClearFilters={handleClearFilters}
                                 comparison={comparison}
+                                hourly={{
+                                    days: hourlyDays,
+                                    distribution: hourlyDistribution,
+                                    isLoading: hourlyExtraDay !== null && !isExtraDayLoaded && !extraDay.error,
+                                    error: extraDay.error,
+                                    onSelectDay: setHourlyDay
+                                }}
                             />
                         )}
                     </div>

@@ -73,6 +73,18 @@ interface StatisticsTabProps {
     onClearFilters: () => void;
     /** `null`, gdy nie ma wybranego zakresu dat. */
     comparison: StatisticsComparison | null;
+    hourly: HourlyChartData;
+}
+
+/** Dane wykresu godzinowego eZamówień: dni do wyboru (DD-MM-RRRR, od najnowszego) i rozkład godzin po dniach. */
+export interface HourlyChartData {
+    days: string[];
+    distribution: Record<string, number[]>;
+    /** Wybrany dzień jest spoza zakresu dat i jego przetargi są jeszcze wczytywane. */
+    isLoading: boolean;
+    error: string | null;
+    /** Woła komponent po każdej zmianie wybranego dnia, żeby rodzic doczytał dzień spoza zakresu. */
+    onSelectDay: (day: string) => void;
 }
 
 const FUNNEL_COLLAPSED_KEY = 'statistics.funnelCollapsed';
@@ -92,7 +104,8 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     onDrillDown,
     hasActiveFilters,
     onClearFilters,
-    comparison
+    comparison,
+    hourly
 }) => {
     const previous = comparison?.status === 'ready' ? comparison.statistics : null;
     const renderDelta = (current: number, previousValue: number | undefined) =>
@@ -115,33 +128,33 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     );
     const buyerActivityEntries = Object.entries(statistics.byBuyerActivity);
     const hasBuyerActivity = buyerActivityEntries.length > 0;
-    const hourlyEntries = useMemo(
-        () => Object.entries(statistics.ezamowieniaHourlyDistribution)
-            .sort((a, b) => parseStatisticDate(b[0]) - parseStatisticDate(a[0])),
+    const hourlyDates = hourly.days;
+    // Domyślnie najnowszy dzień z wybranego zakresu; inne dni z bazy użytkownik wybiera sam
+    const newestRangeDate = useMemo(
+        () => Object.keys(statistics.ezamowieniaHourlyDistribution)
+            .sort((a, b) => parseStatisticDate(b) - parseStatisticDate(a))[0] || '',
         [statistics.ezamowieniaHourlyDistribution]
     );
-    const hourlyDates = useMemo(() => hourlyEntries.map(([date]) => date), [hourlyEntries]);
-    const [selectedHourlyDate, setSelectedHourlyDate] = useState<string>(hourlyDates[0] || '');
+    const [selectedHourlyDate, setSelectedHourlyDate] = useState<string>(newestRangeDate);
     const [hoveredHour, setHoveredHour] = useState<number | null>(null);
     const [hoveredDay, setHoveredDay] = useState<string | null>(null);
     useEffect(() => {
-        setSelectedHourlyDate(current => {
-            if (hourlyDates.length === 0) {
-                return '';
-            }
-            return hourlyDates.includes(current) ? current : hourlyDates[0];
-        });
-    }, [hourlyDates]);
+        setSelectedHourlyDate(current => (hourlyDates.includes(current) ? current : newestRangeDate));
+    }, [hourlyDates, newestRangeDate]);
+    const { onSelectDay } = hourly;
+    useEffect(() => {
+        onSelectDay(selectedHourlyDate);
+    }, [onSelectDay, selectedHourlyDate]);
     const hourlyData = useMemo(() => {
         if (!selectedHourlyDate) {
             return [];
         }
-        const raw = statistics.ezamowieniaHourlyDistribution[selectedHourlyDate] || [];
+        const raw = hourly.distribution[selectedHourlyDate] || [];
         return Array.from({ length: 24 }, (_, hour) => raw[hour] || 0);
-    }, [statistics.ezamowieniaHourlyDistribution, selectedHourlyDate]);
+    }, [hourly.distribution, selectedHourlyDate]);
     const maxHourlyValue = useMemo(() => hourlyData.reduce((max, value) => Math.max(max, value), 0), [hourlyData]);
     const totalHourlyValue = useMemo(() => hourlyData.reduce((sum, value) => sum + value, 0), [hourlyData]);
-    const hasHourlyData = hourlyEntries.length > 0;
+    const hasHourlyData = hourlyDates.length > 0;
     
     // Daily distribution by source
     const dailyEntries = useMemo(
@@ -356,7 +369,11 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     </div>
                     <div className={styles.chartSummary}>
                         <span>Wybrany dzień: <strong>{selectedHourlyDate}</strong></span>
-                        <span>Łącznie {totalHourlyValue} ogłoszeń</span>
+                        <span>
+                            {hourly.isLoading
+                                ? 'Wczytywanie…'
+                                : hourly.error ?? `Łącznie ${totalHourlyValue} ogłoszeń`}
+                        </span>
                     </div>
                     <div className={styles.hourlyRows}>
                         {hourlyData.map((count, hour) => (
