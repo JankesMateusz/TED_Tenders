@@ -12,6 +12,12 @@ export const formatDay = (day: unknown, fallback: string): string => {
     return match ? `${match[3]}-${match[2]}-${match[1]}` : fallback;
 };
 
+/** Data z pola Firestore (Timestamp, a w kopii ulubionych także Date); brak lub błędna wartość to undefined. */
+const dateFromTimestamp = (value: any): Date | undefined => {
+    if (typeof value?.toDate === 'function') return value.toDate();
+    return value instanceof Date ? value : undefined;
+};
+
 /** Pola statusu z dokumentu; nieznana wartość jest ignorowana. `statusAt` bywa chwilowo puste, zanim serwer nada czas. */
 const statusFromDoc = (data: Record<string, any>): Pick<Tender, 'status' | 'statusByEmail' | 'statusAt'> => {
     if (!isTenderStatus(data.status)) return {};
@@ -39,6 +45,7 @@ export const tenderFromDoc = (data: Record<string, any>, id: string): Tender => 
     orderType: data.orderType ?? undefined,
     country: data.country,
     buyerMainActivity: data.buyerMainActivity ?? undefined,
+    fetchedAt: dateFromTimestamp(data.fetchedAt),
     changeNoticeVersionIdentifier: null,
     ...statusFromDoc(data)
 });
@@ -69,6 +76,7 @@ export const favoriteFromDoc = (data: Record<string, any>, id: string): Tender =
     orderType: data.orderType,
     country: data.country,
     buyerMainActivity: data.buyerMainActivity,
+    fetchedAt: dateFromTimestamp(data.fetchedAt),
     changeNoticeVersionIdentifier: null
 });
 

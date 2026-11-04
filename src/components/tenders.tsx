@@ -44,10 +44,10 @@ const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznac
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /** Odświeża dzień; jeśli serwer jest zajęty odświeżaniem innej osoby, czeka i ponawia. */
-const refreshDayWithRetry = async (day: string) => {
+const refreshDayWithRetry = async (day: string, sources?: string[]) => {
     for (let attempt = 1; ; attempt++) {
         try {
-            return await refreshTendersForDay(day);
+            return await refreshTendersForDay(day, sources);
         } catch (error) {
             const code = (error as { code?: string })?.code;
             if (code !== REFRESH_IN_PROGRESS_CODE || attempt >= IN_PROGRESS_MAX_ATTEMPTS) {
@@ -146,7 +146,9 @@ const Tenders: React.FC = () => {
 
     // Prosi serwer o pobranie nowych przetargów: dla pojedynczego dnia tego dnia, dla zakresu po kolei
     // wszystkich dni, których jeszcze nie pobrano. Wyniki pojawiają się na liście przez nasłuch bazy.
-    const refresh = useCallback(async () => {
+    // `includeBaza`: tylko na ręczną prośbę; Baza Konkurencyjności nie ma oficjalnego API, więc nie odpytujemy jej
+    // przy każdym wejściu do aplikacji (poza tym pobiera ją zadanie raz dziennie).
+    const refresh = useCallback(async (includeBaza: boolean = false) => {
         if (!startDay || !endDay) return;
 
         // Nowe wywołanie (np. zmiana dnia) przerywa poprzednie po zakończeniu bieżącego dnia
@@ -165,7 +167,12 @@ const Tenders: React.FC = () => {
             for (let index = 0; index < days.length; index++) {
                 if (!isCurrentRun()) return;
                 setRefreshProgress({ done: index, total: days.length });
-                const result = await refreshDayWithRetry(days[index]);
+                // Baza szuka ogłoszeń z kilku dni naraz, więc w zakresie pytamy o nią tylko przy ostatnim dniu
+                const withBaza = includeBaza && index === days.length - 1;
+                const result = await refreshDayWithRetry(
+                    days[index],
+                    withBaza ? [TenderSource.TED, TenderSource.E_ZAMOWIENIA, TenderSource.BAZA_KONKURENCYJNOSCI] : undefined
+                );
                 hadPartialFailure = hadPartialFailure || result.errors.length > 0;
             }
 
@@ -225,7 +232,7 @@ const Tenders: React.FC = () => {
     const handleAllTendersClick = () => {
         // Jeśli już jesteśmy w trybie "All tenders", odśwież dane
         if (!isFiltered) {
-            refresh();
+            refresh(true);
         } else {
             setIsFiltered(false);
         }
@@ -237,7 +244,7 @@ const Tenders: React.FC = () => {
     };
 
     const handleRefresh = () => {
-        refresh();
+        refresh(true);
     };
 
     const handleSourceToggle = (source: TenderSource) => {

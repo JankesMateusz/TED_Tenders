@@ -28,6 +28,19 @@ export const getSourceConfig = (source: TenderSource): TenderSourceConfig => {
     return tenderSourceConfig[source] || tenderSourceConfig[TenderSource.TED];
 };
 
+const pad2 = (value: number): string => String(value).padStart(2, "0");
+
+/**
+ * Wymagana atrybucja danych z Bazy Konkurencyjności (regulamin serwisu, rozdz. II pkt 5): pełna nazwa
+ * ministerstwa, data pozyskania i informacja o przetworzeniu. Dla pozostałych źródeł, a także gdy nie znamy
+ * daty pobrania, zwraca null.
+ */
+export const getSourceAttribution = (source: TenderSource, fetchedAt?: Date): string | null => {
+    if (source !== TenderSource.BAZA_KONKURENCYJNOSCI || !fetchedAt) return null;
+    const day = `${pad2(fetchedAt.getDate())}-${pad2(fetchedAt.getMonth() + 1)}-${fetchedAt.getFullYear()}`;
+    return `Źródło: Baza Konkurencyjności, Ministerstwo Funduszy i Polityki Regionalnej. Dane pobrano ${day} i przetworzono (wybór ogłoszeń, mapowanie pól).`;
+};
+
 export interface OrderTypeConfig {
     label: string;
     color: string;

@@ -1,7 +1,7 @@
 import React, { useState, memo } from 'react';
 import { Tender } from '../types/Tender';
 import { TenderComment } from '../types/TenderComment';
-import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
+import { getSourceConfig, getOrderTypeConfig, getSourceAttribution, OrderType } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { STATUS_CONFIG, TENDER_STATUSES, statusTooltip } from '../utils/tenderStatus';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +28,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
     const [expanded, setExpanded] = useState<boolean>(false);
 
     const srcCfg = getSourceConfig(tender.source);
+    const attribution = getSourceAttribution(tender.source, tender.fetchedAt);
     const orderCfg = tender.orderType ? getOrderTypeConfig(tender.orderType as OrderType) : null;
 
     const fav = isFavorite(tender.id);
@@ -123,6 +124,8 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     <span className={styles.infoValue}>{tender.buyerName}</span>
                 </div>
             </div>
+
+            {attribution && <p className={styles.sourceAttribution}>{attribution}</p>}
 
             {cpvCodes.length > 0 && (
                 <div className={styles.cpvSection}>

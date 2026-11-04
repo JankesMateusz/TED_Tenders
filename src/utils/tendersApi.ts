@@ -32,13 +32,18 @@ export interface RefreshResult {
     existing: number;
     /** Źródła, które nie odpowiedziały (przetargi z pozostałych zostały zapisane). */
     errors: string[];
+    /** Źródła pominięte przez serwer, bo były pobierane przed chwilą (Baza Konkurencyjności). */
+    skipped?: string[];
 }
 
-const refreshTendersCallable = httpsCallable<{ date: string }, RefreshResult>(functions, 'refreshTenders');
+const refreshTendersCallable = httpsCallable<{ date: string; sources?: string[] }, RefreshResult>(functions, 'refreshTenders');
 
-/** Prosi serwer o pobranie przetargów z danego dnia (RRRR-MM-DD) i dopisanie nowych do bazy. */
-export const refreshTendersForDay = async (day: string): Promise<RefreshResult> =>
-    (await refreshTendersCallable({ date: day })).data;
+/**
+ * Prosi serwer o pobranie przetargów z danego dnia (RRRR-MM-DD) i dopisanie nowych do bazy. Bez `sources`
+ * serwer odświeża TED i eZamówienia; Bazę Konkurencyjności trzeba poprosić jawnie (pobieramy ją rzadko).
+ */
+export const refreshTendersForDay = async (day: string, sources?: string[]): Promise<RefreshResult> =>
+    (await refreshTendersCallable(sources ? { date: day, sources } : { date: day })).data;
 
 /** Wpisy dziennika odświeżeń (które dni były już pobrane) dla dni z podanego zakresu, kluczem jest dzień. */
 export const fetchRefreshLog = async (startDay: string, endDay: string): Promise<Record<string, RefreshLogEntry>> => {

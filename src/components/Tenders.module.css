@@ -606,6 +606,12 @@
     font-weight: 400;
 }
 
+.sourceAttribution {
+    margin: 8px 0 0;
+    color: var(--text-secondary);
+    font-size: 0.8em;
+}
+
 .cpvSection {
     margin: 16px 0;
 }
