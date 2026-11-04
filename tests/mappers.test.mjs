@@ -1,8 +1,11 @@
 // Testy jednostkowe dat i mapperów źródeł. Wymagają zbudowanych funkcji: npm run test:unit
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { addDays, dayFromTedDate, isValidDay, toWarsaw } from '../functions/lib/tenders/dates.js';
+import { mapBazaNotice } from '../functions/lib/tenders/bazakonkurencyjnosci.js';
 import { extractCpvCodes, mapEzamowieniaNotice } from '../functions/lib/tenders/ezamowienia.js';
+import { IT_CPV_CODES_8 } from '../functions/lib/tenders/itCpvCodes.js';
 import { tenderId } from '../functions/lib/tenders/model.js';
 import { mapTedNotice } from '../functions/lib/tenders/ted.js';
 
@@ -168,5 +171,69 @@ describe('eZamówienia', () => {
         assert.deepEqual(extractCpvCodes('30213300 (Komputer)'), ['30213300']);
         assert.deepEqual(extractCpvCodes(''), []);
         assert.deepEqual(extractCpvCodes(null), []);
+    });
+});
+
+describe('mapBazaNotice (Baza Konkurencyjności)', () => {
+    const readFixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/baza/${name}`, import.meta.url), 'utf8'));
+    const details = readFixture('details.json');
+
+    it('mapuje szczegóły ogłoszenia na przetarg, z numerem z wyszukiwania', () => {
+        const record = mapBazaNotice(details[1], 296954);
+        assert.equal(record.source, 'BAZA_KONKURENCYJNOSCI');
+        assert.equal(record.publicationNumber, '296954');
+        assert.equal(record.buyerName, 'Gmina Zawonia');
+        assert.equal(record.buyerCity, 'Zawonia');
+        assert.equal(record.country, 'Polska');
+        assert.equal(record.publicationDate, '2026-11-04');
+        assert.equal(record.deadlineDate, '2026-11-18');
+        assert.equal(record.publicationTime, null);
+        assert.equal(record.buyerNip, '9151603787');
+        assert.equal(record.link, 'https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/296954');
+        assert.equal(record.documentsUrl, null, 'dokumentacja jest na stronie ogłoszenia, więc bez osobnego linku');
+        assert.ok(record.cpvCodes.length > 0);
+        assert.ok(record.cpvCodes.every((code) => /^\d{8}-\d$/.test(code)), 'kody CPV z cyfrą kontrolną');
+    });
+
+    it('wybiera rodzaj zamówienia z pierwszeństwem: dostawa, usługa, roboty', () => {
+        const withCategories = (...ids) => ({
+            ...details[0],
+            orders: [{ order_items: ids.map((id) => ({ category: { id }, cpv_items: [] })) }],
+        });
+        assert.equal(mapBazaNotice(withCategories(2, 1, 3), 1).orderType, 'Delivery');
+        assert.equal(mapBazaNotice(withCategories(2, 1), 1).orderType, 'Services');
+        assert.equal(mapBazaNotice(withCategories(2), 1).orderType, 'Works');
+        assert.equal(mapBazaNotice(withCategories(9), 1).orderType, null);
+    });
+
+    it('odrzuca ogłoszenia bez numeru lub daty publikacji', () => {
+        assert.equal(mapBazaNotice(details[0], ''), null);
+        assert.equal(mapBazaNotice({ ...details[0], publication_date: undefined }, 1), null);
+        assert.equal(mapBazaNotice(undefined, 1), null);
+    });
+
+    it('nie przepisuje danych osobowych z odpowiedzi', () => {
+        const withPersonalData = {
+            ...details[0],
+            contact_persons: [{ first_name: 'Jan', last_name: 'Kowalski', phone: '600700800', email: 'jan@example.com' }],
+            created_by: { first_name: 'Anna', last_name: 'Nowak' },
+            modified_by: { first_name: 'Anna', last_name: 'Nowak' },
+        };
+        const serialized = JSON.stringify(mapBazaNotice(withPersonalData, 1));
+        for (const secret of ['Kowalski', '600700800', 'jan@example.com', 'Nowak']) {
+            assert.equal(serialized.includes(secret), false, secret);
+        }
+    });
+
+    it('nie ustawia NIP-u, gdy identyfikator nie jest NIP-em', () => {
+        const other = { ...details[0], advertiser_address_details: { ...details[0].advertiser_address_details, identification_number_type: 'regon' } };
+        assert.equal(mapBazaNotice(other, 1).buyerNip, null);
+    });
+
+    it('lista kodów IT dla wyszukiwarki zgadza się z IT_CPV_CODES z aplikacji', () => {
+        const frontendSource = readFileSync(new URL('../src/utils/cpvCodes.ts', import.meta.url), 'utf8');
+        const frontendCodes = [...frontendSource.matchAll(/^\s+"(\d{8})":/gm)].map((match) => match[1]);
+        assert.equal(frontendCodes.length, 119);
+        assert.deepEqual([...IT_CPV_CODES_8].sort(), frontendCodes.sort());
     });
 });
