@@ -185,7 +185,7 @@ describe('mapBazaNotice (Baza Konkurencyjności)', () => {
         assert.equal(record.buyerName, 'Gmina Zawonia');
         assert.equal(record.buyerCity, 'Zawonia');
         assert.equal(record.country, 'Polska');
-        assert.equal(record.publicationDate, '2026-11-04');
+        assert.equal(record.publicationDate, '2026-11-03');
         assert.equal(record.deadlineDate, '2026-11-18');
         assert.equal(record.publicationTime, null);
         assert.equal(record.buyerNip, '9151603787');
@@ -193,6 +193,17 @@ describe('mapBazaNotice (Baza Konkurencyjności)', () => {
         assert.equal(record.documentsUrl, null, 'dokumentacja jest na stronie ogłoszenia, więc bez osobnego linku');
         assert.ok(record.cpvCodes.length > 0);
         assert.ok(record.cpvCodes.every((code) => /^\d{8}-\d$/.test(code)), 'kody CPV z cyfrą kontrolną');
+    });
+
+    it('bierze datę pierwszej publikacji, a nie datę bieżącej wersji ogłoszenia', () => {
+        // Ogłoszenie 296206 opublikowano 2026-10-27, a 2026-11-04 zamawiający opublikował jego nową wersję
+        assert.equal(details[2].publication_date, '2026-11-04');
+        assert.equal(mapBazaNotice(details[2], 296206).publicationDate, '2026-10-27');
+    });
+
+    it('bez daty pierwszej publikacji używa daty bieżącej wersji', () => {
+        const { advertisement, ...withoutOriginal } = details[2];
+        assert.equal(mapBazaNotice(withoutOriginal, 296206).publicationDate, '2026-11-04');
     });
 
     it('wybiera rodzaj zamówienia z pierwszeństwem: dostawa, usługa, roboty', () => {
@@ -208,7 +219,7 @@ describe('mapBazaNotice (Baza Konkurencyjności)', () => {
 
     it('odrzuca ogłoszenia bez numeru lub daty publikacji', () => {
         assert.equal(mapBazaNotice(details[0], ''), null);
-        assert.equal(mapBazaNotice({ ...details[0], publication_date: undefined }, 1), null);
+        assert.equal(mapBazaNotice({ ...details[0], publication_date: undefined, advertisement: { id: 1 } }, 1), null);
         assert.equal(mapBazaNotice(undefined, 1), null);
     });
 

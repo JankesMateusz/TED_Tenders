@@ -64,12 +64,16 @@ const dayPart = (value: unknown): string | null => {
  * Mapuje szczegóły ogłoszenia z Bazy Konkurencyjności na przetarg. `id` to numer z wyszukiwania i adresu strony
  * (szczegóły mają też własny, wewnętrzny `id`, którego nie używamy). Zwraca null bez numeru lub daty publikacji.
  *
+ * Data publikacji to data PIERWSZEJ publikacji ogłoszenia (`advertisement.publication_date`). Pole `publication_date`
+ * na wierzchu szczegółów (i w wynikach wyszukiwania) dotyczy bieżącej wersji, więc po każdej zmianie ogłoszenia
+ * przez zamawiającego wskazuje dzień aktualizacji, a nie publikacji.
+ *
  * Czytamy tylko jawnie wymienione pola. Odpowiedź zawiera dane osobowe (`contact_persons`, `created_by`,
  * `modified_by`), których nie przepisujemy do bazy ani nie logujemy.
  */
 export const mapBazaNotice = (raw: any, id: number | string): TenderRecord | null => {
   const publicationNumber = String(id ?? '').trim();
-  const publicationDate = dayPart(raw?.publication_date);
+  const publicationDate = dayPart(raw?.advertisement?.publication_date) ?? dayPart(raw?.publication_date);
   if (!publicationNumber || !publicationDate) return null;
 
   const buyer = raw?.advertiser_address_details;

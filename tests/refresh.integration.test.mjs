@@ -80,13 +80,15 @@ const stub = {
     bazaFails: false,
     bazaIds: [900001, 900002],
     bazaGoneIds: [],
+    // Ogłoszenia zmienione po pierwszej publikacji: wersja z dzisiaj, ale opublikowane wcześniej
+    bazaOriginalDates: { 900002: addDays(today, -5) },
     bazaSearches: [],
     bazaDetailRequests: []
 };
 
 const bazaDetail = (id) => ({
     id: id + 100000,
-    advertisement: { id },
+    advertisement: { id, publication_date: stub.bazaOriginalDates[id] ?? today },
     title: `Ogłoszenie Bazy ${id}`,
     publication_date: today,
     submission_deadline: `${addDays(today, 7)} 12:00:00`,
@@ -378,6 +380,9 @@ describe('Baza Konkurencyjności', () => {
         assert.equal(record.buyerNip, '1234567890');
         assert.equal(record.orderType, 'Delivery');
         assert.equal(record.deadlineDate, addDays(today, 7));
+        assert.equal(record.publicationDate, today);
+        // Zmienione ogłoszenie ma datę pierwszej publikacji, nie dzisiejszą datę wersji
+        assert.equal((await db.doc('tenders/BAZA_KONKURENCYJNOSCI_900002').get()).data().publicationDate, addDays(today, -5));
         const serialized = JSON.stringify(record);
         for (const secret of ['Tajny', '600100200', 'tajny@example.com', 'Ukryta']) {
             assert.equal(serialized.includes(secret), false, secret);
