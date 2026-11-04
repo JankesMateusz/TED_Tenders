@@ -7,6 +7,7 @@ import { mapBazaNotice } from '../functions/lib/tenders/bazakonkurencyjnosci.js'
 import { extractCpvCodes, mapEzamowieniaNotice } from '../functions/lib/tenders/ezamowienia.js';
 import { IT_CPV_CODES_8 } from '../functions/lib/tenders/itCpvCodes.js';
 import { tenderId } from '../functions/lib/tenders/model.js';
+import { classifySector } from '../functions/lib/tenders/sector.js';
 import { mapTedNotice } from '../functions/lib/tenders/ted.js';
 
 describe('dates', () => {
@@ -246,5 +247,62 @@ describe('mapBazaNotice (Baza Konkurencyjności)', () => {
         const frontendCodes = [...frontendSource.matchAll(/^\s+"(\d{8})":/gm)].map((match) => match[1]);
         assert.equal(frontendCodes.length, 119);
         assert.deepEqual([...IT_CPV_CODES_8].sort(), frontendCodes.sort());
+    });
+});
+
+const readFixtureDetails = () => JSON.parse(readFileSync(new URL('./fixtures/baza/details.json', import.meta.url), 'utf8'));
+
+describe('classifySector', () => {
+    const sectorOf = (name) => classifySector(name);
+
+    it('rozpoznaje spółki komunalne mimo formy prawnej firmy (nie są ukrywane)', () => {
+        // Znany błąd prostej heurystyki z research v2: spółki sp. z o.o. bez słowa "gmina" wpadały do prywatnych
+        assert.equal(sectorOf('Przedsiębiorstwo Wodno-Kanalizacyjne Wołów Spółka z o. o.'), 'municipal');
+        assert.equal(sectorOf('Katowickie Wodociągi S.A.'), 'municipal');
+        assert.equal(sectorOf('Zakład Gospodarki Komunalnej w Wieliczce sp. z o.o.'), 'municipal');
+        assert.equal(sectorOf('Bychawskie Przedsiębiorstwo Komunalne Sp. z o.o.'), 'municipal');
+        assert.equal(sectorOf('Zakład Usług Gminnych Gmina Ełk Sp. z o. o.'), 'municipal');
+    });
+
+    it('rozpoznaje podmioty publiczne', () => {
+        for (const name of ['Gmina Zawonia', 'Urząd Miejski w Gnieźnie', 'Powiat Ostrowski', 'Nadleśnictwo Zwierzyniec',
+            'Kancelaria Prezesa Rady Ministra', 'SP ZOZ Szpital Kolejowy w Wilkowicach-Bystrej', 'Szkoła Podstawowa w Żmudzi']) {
+            assert.equal(sectorOf(name), 'public', name);
+        }
+    });
+
+    it('rozpoznaje organizacje pozarządowe', () => {
+        for (const name of ['Fundacja "Merkury"', 'FUNDACJA NIEPODLEGŁOŚCI', 'Stowarzyszenie na Rzecz Edukacji "Pomost"',
+            'Świętokrzyski Związek Pracodawców Prywatnych Lewiatan']) {
+            assert.equal(sectorOf(name), 'ngo', name);
+        }
+    });
+
+    it('rozpoznaje firmy po formie prawnej, także przy skrótach i literówkach', () => {
+        for (const name of ['Centrum Medyczne Tommed Sp. z o.o.', 'CENTERMED Sp. zo.o.', 'Beskidzkie Centrum Medyczne Sp. z o',
+            'Etmus Sp z o.o.', 'BITSTREAM SPÓŁKA AKCYJNA', 'Next Mobile Prosta Spółka Akcyjna', 'Abego S.C. Radosław Czeczotka, Rafał Socha',
+            'CLIMATIC Sp. z o.o. Sp.k.', '"UNI-MED" spółka z ograniczoną odpowiedzialnością']) {
+            assert.equal(sectorOf(name), 'private', name);
+        }
+    });
+
+    it('niejednoznaczne zostawia jako nieznane, czyli widoczne', () => {
+        for (const name of ['Krajowa Izba Fizjoterapeutów', 'Uniwersytet VIZJA', 'Politechnika Śląska', 'Klaster Innowacji Społecznych',
+            'Drewnolit - Cezary Rułka', 'Mały Inżynier Ewa Bednarek', 'Zespół Opolskich Parków Krajobrazowych']) {
+            assert.equal(sectorOf(name), 'unknown', name);
+        }
+        assert.equal(sectorOf(''), 'unknown');
+        assert.equal(sectorOf(null), 'unknown');
+        assert.equal(sectorOf(undefined), 'unknown');
+    });
+
+    it('znacznik publiczny lub komunalny wygrywa z formą prawną i z organizacją pozarządową', () => {
+        assert.equal(sectorOf('Fundacja Szpitala Powiatowego'), 'public');
+        assert.equal(sectorOf('Gminne Przedsiębiorstwo Gospodarki Komunalnej spółka z ograniczoną odpowiedzialnością'), 'municipal');
+    });
+
+    it('mapper Bazy zapisuje sektor automatyczny', () => {
+        const record = mapBazaNotice(readFixtureDetails()[1], 296954);
+        assert.equal(record.buyerSectorAuto, 'public');
     });
 });

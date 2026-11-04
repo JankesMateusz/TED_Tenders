@@ -3,6 +3,7 @@ import { addDays } from './dates';
 import { requestWithRetry } from './http';
 import { IT_CPV_CODES_8 } from './itCpvCodes';
 import { OrderType, SourceResult, TenderRecord, tenderId } from './model';
+import { classifySector } from './sector';
 import { findExistingIds } from './store';
 
 // Adres można podmienić w testach (functions/.env.demo-tenders). Endpointy /api/* są nieudokumentowane i bez logowania.
@@ -98,6 +99,7 @@ export const mapBazaNotice = (raw: any, id: number | string): TenderRecord | nul
     orderType: extractOrderType(orders),
     buyerMainActivity: null,
     buyerNip: nip,
+    buyerSectorAuto: classifySector(text(buyer?.name)),
   };
 };
 
