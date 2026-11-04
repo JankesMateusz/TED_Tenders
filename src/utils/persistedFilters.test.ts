@@ -1,5 +1,5 @@
 import { TenderSource } from '../types/TenderSource';
-import { NO_STATUS_FILTERS, defaultFilters, parsePersistedFilters, storageKey } from './persistedFilters';
+import { DEFAULT_STATUS_FILTERS, NO_STATUS_FILTERS, defaultFilters, isQueueStatusFilter, parsePersistedFilters, storageKey } from './persistedFilters';
 
 describe('odczyt zapisanych filtrów', () => {
     it('bez zapisu lub z uszkodzonym zapisem zwraca domyślne filtry', () => {
@@ -60,5 +60,13 @@ describe('odczyt zapisanych filtrów', () => {
 
     it('używa klucza v2, żeby stare zapisy bez kolejki pracy nie przesłaniały nowego domyślnego widoku', () => {
         expect(storageKey('abc')).toBe('tenders.filters.v2.abc');
+    });
+});
+
+describe('widok kolejki', () => {
+    it('rozpoznaje tylko filtr "Nieoznaczone"', () => {
+        expect(isQueueStatusFilter(DEFAULT_STATUS_FILTERS)).toBe(true);
+        expect(isQueueStatusFilter(NO_STATUS_FILTERS)).toBe(false);
+        expect(isQueueStatusFilter({ ...DEFAULT_STATUS_FILTERS, entered: true })).toBe(false);
     });
 });

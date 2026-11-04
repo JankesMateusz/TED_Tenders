@@ -14,7 +14,7 @@ import { useRecentTenders } from "../hooks/useRecentTenders";
 import TabBar, { panelId, tabId } from "./TabBar";
 import { TREND_DAYS, countTendersByDay, lastDays } from "../utils/recentTrend";
 import { SortOrder, countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
-import { ALL_SOURCES, NO_STATUS_FILTERS, loadFilters, saveFilters } from "../utils/persistedFilters";
+import { ALL_SOURCES, NO_STATUS_FILTERS, isQueueStatusFilter, loadFilters, saveFilters } from "../utils/persistedFilters";
 import { fetchRefreshLog, refreshTendersForDay, subscribeToLastRefresh, subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, daysToRefresh, listDays } from "../utils/refreshPlan";
 import { useComments } from "../hooks/useComments";
@@ -25,6 +25,7 @@ import { useDayTenders, useRefreshedDays } from "../hooks/useHourlyDays";
 import { describePeriod, getComparisonPeriod } from "../utils/comparison";
 import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
+import { pluralizeTenders } from "../utils/pluralPl";
 import { ActiveFilterChip, buildActiveFilterChips } from "../utils/activeFilters";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
@@ -363,6 +364,11 @@ const Tenders: React.FC = () => {
         selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length;
     const hasActiveFilters = hasActiveStatisticsFilters || Object.values(statusFilters).some(Boolean);
 
+    // Kolejka jest pusta, gdy są ogłoszenia pasujące do pozostałych filtrów, ale wszystkie mają już status
+    const isQueueEmpty =
+        isQueueStatusFilter(statusFilters) &&
+        Object.values(facetCounts.statuses).some((count) => (count ?? 0) > 0);
+
     const handleClearFilters = () => {
         setSearchQuery("");
         setSelectedSources([...ALL_SOURCES]);
@@ -644,6 +650,23 @@ const Tenders: React.FC = () => {
                                     showHiddenAdvertisers={showHiddenAdvertisers}
                                     onShowHiddenAdvertisersChange={setShowHiddenAdvertisers}
                                 />
+                {(activeTab === 'saved' || (activeTab === 'tenders' && !isLoading)) && (
+                    <div className={styles.queueHeader}>
+                        {activeTab === 'saved' ? (
+                            <span className={styles.queueHint}>{MESSAGES.SAVED_HINT}</span>
+                        ) : (
+                            <>
+                                <span>
+                                    <strong>{displayedTenders.length} {pluralizeTenders(displayedTenders.length)}</strong>
+                                    {' · '}do przejrzenia: <strong>{facetCounts.statuses.unmarked ?? 0}</strong>
+                                </span>
+                                {isQueueStatusFilter(statusFilters) && (
+                                    <span className={styles.queueHint}>{MESSAGES.QUEUE_HINT}</span>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
                 {activeTab === 'tenders' && isLoading && (
                     <div className={styles.skeletonContainer}>
                         {[...Array(3)].map((_, index) => (
@@ -678,7 +701,9 @@ const Tenders: React.FC = () => {
                 )}
                 {activeTab === 'tenders' && displayedTenders.length === 0 && !isLoading && !isRefreshing && !loadError && (
                     <p className={styles.message}>
-                        {isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}
+                        {isQueueEmpty
+                            ? MESSAGES.QUEUE_EMPTY
+                            : isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}
                     </p>
                 )}
                 {activeTab === 'saved' && favorites.length === 0 && (

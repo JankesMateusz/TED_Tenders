@@ -181,6 +181,23 @@
     box-shadow: 0 0 0 2px var(--danger-ring);
 }
 
+/* Linia nad listą: liczba ogłoszeń, kolejka do przejrzenia i krótka podpowiedź */
+.queueHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 16px;
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.queueHint {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
 .message {
     text-align: center;
     padding: 20px;

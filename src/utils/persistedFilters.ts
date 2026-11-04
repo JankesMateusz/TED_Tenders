@@ -32,6 +32,12 @@ export const NO_STATUS_FILTERS: StatusFilters = {
 /** Domyślny widok to kolejka pracy: ogłoszenia, których nikt jeszcze nie ocenił. */
 export const DEFAULT_STATUS_FILTERS: StatusFilters = { ...NO_STATUS_FILTERS, unmarked: true };
 
+/** Czy filtr statusu to domyślna kolejka pracy (same "Nieoznaczone"). */
+export const isQueueStatusFilter = (filters: StatusFilters): boolean =>
+    (Object.keys(DEFAULT_STATUS_FILTERS) as Array<keyof StatusFilters>).every(
+        (key) => filters[key] === DEFAULT_STATUS_FILTERS[key]
+    );
+
 export const defaultFilters = (): PersistedFilters => ({
     selectedSources: [...ALL_SOURCES],
     selectedOrderTypes: [...DEFAULT_ORDER_TYPES],
