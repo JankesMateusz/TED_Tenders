@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import styles from './Tenders.module.css';
 
 export interface FilterPopoverOption {
@@ -29,7 +29,19 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({ label, options, on
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
     const panelId = useId();
+    // Na wąskim ekranie panel wyrównany do lewej krawędzi przycisku mógłby wyjść poza ekran: wtedy kotwiczymy go z prawej
+    const [alignRight, setAlignRight] = useState(false);
+
+    useLayoutEffect(() => {
+        if (!open) {
+            setAlignRight(false);
+            return;
+        }
+        const rect = panelRef.current?.getBoundingClientRect();
+        if (rect && rect.right > window.innerWidth - 8) setAlignRight(true);
+    }, [open]);
 
     useEffect(() => {
         if (!open) return;
@@ -66,7 +78,13 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({ label, options, on
             </button>
 
             {open && (
-                <div id={panelId} className={styles.popoverPanel} role="group" aria-label={label}>
+                <div
+                    ref={panelRef}
+                    id={panelId}
+                    className={`${styles.popoverPanel} ${alignRight ? styles.popoverPanelRight : ''}`}
+                    role="group"
+                    aria-label={label}
+                >
                     {options.map((option) => (
                         <label
                             key={option.key}

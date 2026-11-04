@@ -151,6 +151,7 @@ const Header: React.FC<HeaderProps> = ({
                                 selected={startDate}
                                 onChange={(date) => setStartDate(date)}
                                 selectsStart
+                            popperPlacement="bottom-start"
                                 startDate={startDate}
                                 endDate={endDate}
                                 dateFormat={DATE_FORMAT}
@@ -162,6 +163,7 @@ const Header: React.FC<HeaderProps> = ({
                                 selected={endDate}
                                 onChange={(date) => setEndDate(date)}
                                 selectsEnd
+                                popperPlacement="bottom-end"
                                 startDate={startDate}
                                 endDate={endDate}
                                 minDate={startDate || undefined}
@@ -176,6 +178,7 @@ const Header: React.FC<HeaderProps> = ({
                             onChange={(date) => setStartDate(date)}
                             dateFormat={DATE_FORMAT}
                             placeholderText={PLACEHOLDER_TEXTS.DATE_PICKER}
+                                popperPlacement="bottom-start"
                             className={styles.dateInput}
                         />
                     )}

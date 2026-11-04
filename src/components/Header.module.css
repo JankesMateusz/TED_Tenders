@@ -448,20 +448,22 @@
 
     .tenderInfo {
         flex-basis: 100%;
-        order: 5;
-    }
-
-    .controls,
-    .userMenu {
-        width: 100%;
+        order: 4;
     }
 
     .controls {
+        width: 100%;
         order: 3;
     }
 
+    /* Konto w jednym rzędzie z tytułem, żeby pasek zajmował mniej miejsca */
     .userMenu {
-        order: 4;
+        order: 1;
+        margin-left: auto;
+    }
+
+    .userEmail {
+        max-width: 120px;
     }
 
     .userMenu {

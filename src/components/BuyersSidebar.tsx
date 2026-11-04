@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useId, useMemo, useState, useRef } from "react";
 import styles from "./BuyersSidebar.module.css";
 import { normalizeName } from "../utils/stringUtils";
 import { Tender } from "../types/Tender";
@@ -69,6 +69,9 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
     // Domyślnie lista pokazuje tylko tych, którzy się powtarzają; reszta jest pod przyciskiem
     const [showAll, setShowAll] = useState<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    // Na wąskim ekranie panel jest zwinięty pod przyciskiem (na szerokim ten stan nic nie zmienia)
+    const [isOpenOnNarrow, setIsOpenOnNarrow] = useState<boolean>(false);
+    const sidebarId = useId();
 
     const buyersList = useMemo(
         () => buildOptions(buyerOptionTenders, tender => tender.buyerName, "Brak danych", selectedBuyers),
@@ -122,8 +125,21 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
 
     const subject = activeView === "buyers" ? "zamawiających" : "miast";
 
+    const selectedCount = selectedBuyers.length + selectedCities.length;
+
     return (
-        <aside className={styles.sidebar}>
+        <>
+        <button
+            type="button"
+            className={`${styles.narrowToggle} ${isOpenOnNarrow ? styles.narrowToggleOpen : ''}`}
+            onClick={() => setIsOpenOnNarrow(prev => !prev)}
+            aria-expanded={isOpenOnNarrow}
+            aria-controls={sidebarId}
+        >
+            <span>Zamawiający i miasta{selectedCount > 0 ? ` (${selectedCount})` : ''}</span>
+            <span aria-hidden="true">▾</span>
+        </button>
+        <aside id={sidebarId} className={`${styles.sidebar} ${isOpenOnNarrow ? styles.sidebarOpen : ''}`}>
             <div className={styles.headerRow}>
                 <TabBar
                     idPrefix="sidebar"
@@ -213,6 +229,7 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
             )}
             </div>
         </aside>
+        </>
     );
 };
 

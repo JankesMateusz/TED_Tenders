@@ -1099,6 +1099,11 @@
     box-shadow: var(--pop-shadow);
 }
 
+.popoverPanelRight {
+    left: auto;
+    right: 0;
+}
+
 .popoverOption {
     display: flex;
     align-items: center;
@@ -1170,4 +1175,21 @@
     height: 18px;
     margin: 0;
     accent-color: var(--button-primary);
+}
+
+/* Cele dotykowe na wąskim ekranie: przyciski i odnośniki min. 40 px wysokości */
+@media (max-width: 768px) {
+    .tab,
+    .link,
+    .advertiserButton,
+    .cpvMore,
+    .clearFiltersButton,
+    .plainCheckbox {
+        min-height: 40px;
+    }
+
+    .link {
+        display: inline-flex;
+        align-items: center;
+    }
 }
