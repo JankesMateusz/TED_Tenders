@@ -1,4 +1,4 @@
-import { formatRelativeTime } from './dateUtils';
+import { dayToDisplayDate, displayDateToDay, formatRelativeTime } from './dateUtils';
 
 const NOW = new Date(2026, 9, 29, 15, 0);
 
@@ -14,5 +14,18 @@ describe('formatRelativeTime', () => {
 
     it('starsze odświeżenie opisuje datą i godziną', () => {
         expect(formatRelativeTime(new Date(2026, 9, 27, 8, 0), NOW)).toBe('27.10 08:00');
+    });
+});
+
+describe('dayToDisplayDate / displayDateToDay', () => {
+    it('zamienia dzień na datę interfejsu i z powrotem', () => {
+        expect(dayToDisplayDate('2026-11-04')).toBe('04-11-2026');
+        expect(displayDateToDay('04-11-2026')).toBe('2026-11-04');
+    });
+
+    it('nie przyjmuje tekstów, które nie są datą', () => {
+        expect(displayDateToDay('')).toBeNull();
+        expect(displayDateToDay('Brak daty')).toBeNull();
+        expect(displayDateToDay('2026-11-04')).toBeNull();
     });
 });

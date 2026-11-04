@@ -37,6 +37,15 @@ export const addDays = (day: string, offset: number): string => {
     return toDayString(new Date(year, month - 1, date + offset));
 };
 
+/** Zamienia dzień RRRR-MM-DD na datę w formacie interfejsu DD-MM-RRRR. */
+export const dayToDisplayDate = (day: string): string => day.split('-').reverse().join('-');
+
+/** Zamienia datę interfejsu DD-MM-RRRR na dzień RRRR-MM-DD; `null`, gdy to nie jest poprawna data. */
+export const displayDateToDay = (displayDate: string): string | null => {
+    if (!/^\d{2}-\d{2}-\d{4}$/.test(displayDate)) return null;
+    return toDayString(parseDate(displayDate));
+};
+
 /** Krótki opis czasu (np. ostatniego odświeżenia lub komentarza): "dziś 14:32", "wczoraj 14:32" lub "27.10 14:32". */
 export const formatRelativeTime = (date: Date, now: Date = new Date()): string => {
     const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
