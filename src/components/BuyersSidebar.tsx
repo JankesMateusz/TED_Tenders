@@ -3,6 +3,7 @@ import styles from "./BuyersSidebar.module.css";
 import { normalizeName } from "../utils/stringUtils";
 import { Tender } from "../types/Tender";
 import { MESSAGES } from "../constants";
+import { MIN_REPEAT_COUNT, splitRepeatOptions } from "../utils/repeatOptions";
 import TabBar, { panelId } from "./TabBar";
 
 type ViewType = "buyers" | "cities";
@@ -65,6 +66,8 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
 }) => {
     const [activeView, setActiveView] = useState<ViewType>("buyers");
     const [searchQuery, setSearchQuery] = useState<string>("");
+    // Domyślnie lista pokazuje tylko tych, którzy się powtarzają; reszta jest pod przyciskiem
+    const [showAll, setShowAll] = useState<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const buyersList = useMemo(
@@ -100,18 +103,24 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
         }
     };
 
-    // Filtrowana lista na podstawie wyszukiwania
-    const filteredList = useMemo(() => {
-        const list = activeView === "buyers" ? buyersList : citiesList;
-        if (!searchQuery.trim()) {
-            return list;
-        }
+    const list = activeView === "buyers" ? buyersList : citiesList;
+    const hasQuery = searchQuery.trim() !== "";
+    const { repeating, others } = useMemo(
+        () => splitRepeatOptions(list, name => {
+            const key = normalizeName(name);
+            return currentSelected.some(selected => normalizeName(selected) === key);
+        }),
+        [list, currentSelected]
+    );
 
+    // Podczas wyszukiwania szukamy we wszystkich pozycjach, także tych z jednym ogłoszeniem
+    const filteredList = useMemo(() => {
+        if (!hasQuery) return showAll ? list : repeating;
         const query = normalizeName(searchQuery);
-        return list.filter(item =>
-            normalizeName(item.name).includes(query)
-        );
-    }, [activeView, buyersList, citiesList, searchQuery]);
+        return list.filter(item => normalizeName(item.name).includes(query));
+    }, [hasQuery, showAll, list, repeating, searchQuery]);
+
+    const subject = activeView === "buyers" ? "zamawiających" : "miast";
 
     return (
         <aside className={styles.sidebar}>
@@ -185,6 +194,22 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
                         : (activeView === "buyers" ? MESSAGES.NO_BUYERS : MESSAGES.NO_CITIES)
                     }
                 </p>
+            )}
+            {!hasQuery && others.length > 0 && (
+                <>
+                    <button
+                        type="button"
+                        className={styles.moreButton}
+                        onClick={() => setShowAll(prev => !prev)}
+                    >
+                        {showAll
+                            ? "Pokaż tylko powtarzających się"
+                            : `Pokaż pozostałych (${others.length}) z jednym ogłoszeniem`}
+                    </button>
+                    <p className={styles.repeatNote}>
+                        Domyślnie widać {subject} z co najmniej {MIN_REPEAT_COUNT} ogłoszeniami: to oni wracają.
+                    </p>
+                </>
             )}
             </div>
         </aside>

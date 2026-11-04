@@ -195,6 +195,33 @@
     padding: 20px 0;
 }
 
+/* Przycisk i notatka pod listą: reszta pozycji z jednym ogłoszeniem */
+.moreButton {
+    flex-shrink: 0;
+    min-height: 40px;
+    margin-top: 8px;
+    padding: 0 10px;
+    background: none;
+    color: var(--text-secondary);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.moreButton:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.repeatNote {
+    flex-shrink: 0;
+    margin: 8px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .sidebar {
