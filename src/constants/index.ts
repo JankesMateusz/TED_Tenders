@@ -32,6 +32,8 @@ export const MESSAGES = {
     NO_CITIES: "Brak miast",
     QUEUE_EMPTY: "Kolejka jest pusta: wszystkie pasujące ogłoszenia są ocenione. Zmień filtr statusu, żeby je zobaczyć.",
     QUEUE_HINT: "Domyślnie widzisz kolejkę: ogłoszenia, których nikt jeszcze nie ocenił.",
+    SHORTCUTS_HINT: "Skróty: J/K — poprzednie/następne, 1–4 — status, 0 — usuń status, S — gwiazdka, / — szukaj.",
+    SHORTCUTS_TITLE: "Skróty: J/K, 1–4, 0, S, /",
     SAVED_HINT: "Gwiazdka jest prywatna, status jest wspólny dla zespołu."
 } as const;
 

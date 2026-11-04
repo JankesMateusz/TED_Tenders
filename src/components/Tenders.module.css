@@ -135,6 +135,11 @@
     font-size: 13px;
 }
 
+/* Podpowiedź o skrótach zajmuje własny wiersz pod licznikiem */
+.queueHintFull {
+    flex-basis: 100%;
+}
+
 .message {
     text-align: center;
     padding: 20px;
@@ -311,6 +316,12 @@
 /* Kolor paska z lewej zależy od wspólnego statusu; ustawia go komponent przez zmienną --status-color */
 .tenderCardStatus {
     border-left-color: var(--status-color);
+}
+
+/* Aktywna karta (skróty klawiszowe) */
+.tenderCardActive {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
 }
 
 .cardHeader {

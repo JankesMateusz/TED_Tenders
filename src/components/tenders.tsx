@@ -26,6 +26,8 @@ import { describePeriod, getComparisonPeriod } from "../utils/comparison";
 import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
 import { pluralizeTenders } from "../utils/pluralPl";
+import { afterRemoval, nextActiveId } from "../utils/cardNavigation";
+import { TENDER_STATUSES } from "../utils/tenderStatus";
 import { ActiveFilterChip, buildActiveFilterChips } from "../utils/activeFilters";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
@@ -51,6 +53,10 @@ const REFRESHING_MESSAGE = "Pobieranie nowych przetargów";
 const isTypingTarget = (target: EventTarget | null): boolean =>
     target instanceof HTMLElement &&
     (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
+/** Czy otwarte jest menu lub okienko (status, filtry, komentarze); rozwijanie kodów CPV (`data-disclosure`) się nie liczy. */
+const isPopupOpen = (): boolean =>
+    document.querySelector('button[aria-expanded="true"]:not([data-disclosure])') !== null;
 
 const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznacz przetarg gwiazdką, aby trafił do tej zakładki.";
 
@@ -111,11 +117,14 @@ const Tenders: React.FC = () => {
     // Kategoria CPV ze statystyk: dotyczy tylko bieżącej sesji, w przeciwieństwie do zapamiętywanych filtrów
     const [selectedCpvCategory, setSelectedCpvCategory] = useState<CpvCategoryKey | null>(null);
     const [sortOrder, setSortOrder] = useState<SortOrder>(initialFilters.sortOrder);
-    const { favorites, isFavorite, actionError } = useUserPreferences();
+    const { favorites, isFavorite, toggleFavorite, toggleStatus, actionError } = useUserPreferences();
     // expanded state for CPV cards is now managed inside TenderCard
     const [statusFilters, setStatusFilters] = useState(initialFilters.statusFilters);
     const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
     const searchInputRef = useRef<HTMLInputElement>(null);
+    // Karta, której dotyczą skróty klawiszowe (J/K, 1-4, 0, S)
+    const [activeTenderId, setActiveTenderId] = useState<string | null>(null);
+    const previousIdsRef = useRef<string[]>([]);
 
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
     const startDay = startDate ? toDayString(startDate) : null;
@@ -477,6 +486,54 @@ const Tenders: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Gdy aktywna karta zniknęła z listy (np. po ocenie w kolejce), aktywna zostaje następna albo ostatnia
+    useEffect(() => {
+        const ids = displayedTenders.map((tender) => tender.id);
+        setActiveTenderId((current) => {
+            if (current === null || ids.includes(current)) return current;
+            const successor = afterRemoval(previousIdsRef.current, current);
+            return successor !== null && ids.includes(successor) ? successor : null;
+        });
+        previousIdsRef.current = ids;
+    }, [displayedTenders]);
+
+    // Skróty do oceny: J/K, 1-4, 0, S. Nie działają w polach tekstowych, przy otwartym menu ani z Ctrl/Alt/Meta.
+    useEffect(() => {
+        if (activeTab === 'statistics') return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+            if (isTypingTarget(e.target) || isPopupOpen()) return;
+
+            const key = e.key.toLowerCase();
+            const ids = displayedTenders.map((tender) => tender.id);
+            if (key === 'j' || key === 'k') {
+                e.preventDefault();
+                setActiveTenderId((current) => nextActiveId(ids, current, key === 'j' ? 'next' : 'prev'));
+                return;
+            }
+
+            const tender = displayedTenders.find((item) => item.id === activeTenderId);
+            if (!tender) return;
+            if (key === 's') {
+                e.preventDefault();
+                toggleFavorite(tender);
+                return;
+            }
+            // Status da się ustawić tylko dla ogłoszeń, które są jeszcze w bazie wspólnej (jak canSetStatus na karcie)
+            if (!liveTendersById.has(tender.id)) return;
+            if (key === '0') {
+                e.preventDefault();
+                if (tender.status) toggleStatus(tender, tender.status);
+            } else if (/^[1-4]$/.test(key)) {
+                e.preventDefault();
+                toggleStatus(tender, TENDER_STATUSES[Number(key) - 1]);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [activeTab, displayedTenders, activeTenderId, liveTendersById, toggleFavorite, toggleStatus]);
+
     useEffect(() => {
         // Liczenie przetargów per źródło
         const counts: Record<TenderSource, number> = {
@@ -674,6 +731,7 @@ const Tenders: React.FC = () => {
                                 {isQueueStatusFilter(statusFilters) && (
                                     <span className={styles.queueHint}>{MESSAGES.QUEUE_HINT}</span>
                                 )}
+                                <span className={`${styles.queueHint} ${styles.queueHintFull}`}>{MESSAGES.SHORTCUTS_HINT}</span>
                             </>
                         )}
                     </div>
@@ -736,6 +794,8 @@ const Tenders: React.FC = () => {
                                     onDeleteComment={deleteComment}
                                     advertiserHidden={isHiddenAdvertiser(tender, advertiserDecisions)}
                                     onSetAdvertiserDecision={setAdvertiserDecision}
+                                    isActive={tender.id === activeTenderId}
+                                    onActivate={setActiveTenderId}
                                 />
                             );
                         })}

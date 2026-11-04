@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TenderStatus } from '../types/TenderStatus';
 import { STATUS_CONFIG, TENDER_STATUSES, statusAuthorCaption } from '../utils/tenderStatus';
+import { MESSAGES } from '../constants';
 import styles from './StatusMenu.module.css';
 
 type Props = {
@@ -84,6 +85,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                 onClick={() => setOpen((prev) => !prev)}
                 aria-haspopup="menu"
                 aria-expanded={open}
+                title={MESSAGES.SHORTCUTS_TITLE}
             >
                 {config && <span className={styles.dot} aria-hidden="true" />}
                 {config ? config.label : 'Oceń'}

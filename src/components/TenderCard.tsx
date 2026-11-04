@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useEffect, useRef, useState, memo } from 'react';
 import { Tender } from '../types/Tender';
 import { TenderComment } from '../types/TenderComment';
 import { getSourceConfig, getOrderTypeConfig, getSourceAttribution, OrderType } from '../utils/tenderSources';
@@ -25,16 +25,25 @@ type Props = {
     /** Czy zamawiający tego ogłoszenia jest ukryty (automatycznie lub ręcznie). */
     advertiserHidden: boolean;
     onSetAdvertiserDecision: (tender: Tender, decision: AdvertiserDecision) => void;
+    /** Aktywna karta jest celem skrótów klawiszowych (J/K, 1–4, 0, S). */
+    isActive: boolean;
+    onActivate: (tenderId: string) => void;
 };
 
 /** Tyle nazw CPV widać od razu pod tytułem; reszta kodów jest pod przyciskiem "+N". */
 const VISIBLE_CPV_CHIPS = 2;
 
-const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment, advertiserHidden, onSetAdvertiserDecision }) => {
+const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment, advertiserHidden, onSetAdvertiserDecision, isActive, onActivate }) => {
     const { user } = useAuth();
     const { isFavorite, toggleFavorite, toggleStatus } = useUserPreferences();
 
     const [expanded, setExpanded] = useState<boolean>(false);
+    const cardRef = useRef<HTMLLIElement>(null);
+
+    // Po przejściu klawiszami karta ma być widoczna; "nearest" nie przewija, gdy już jest na ekranie
+    useEffect(() => {
+        if (isActive) cardRef.current?.scrollIntoView({ block: 'nearest' });
+    }, [isActive]);
 
     const srcCfg = getSourceConfig(tender.source);
     const attribution = getSourceAttribution(tender.source, tender.fetchedAt);
@@ -50,7 +59,9 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
 
     return (
         <li
-            className={`${styles.tenderCard} ${tender.status ? styles.tenderCardStatus : ''}`}
+            ref={cardRef}
+            onClick={() => onActivate(tender.id)}
+            className={`${styles.tenderCard} ${tender.status ? styles.tenderCardStatus : ''} ${isActive ? styles.tenderCardActive : ''}`}
             style={statusColor ? ({ '--status-color': statusColor } as React.CSSProperties) : undefined}
         >
             <div className={styles.cardHeader}>
@@ -118,6 +129,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                                 className={styles.cpvMore}
                                 onClick={() => setExpanded(prev => !prev)}
                                 aria-expanded={expanded}
+                                data-disclosure
                             >
                                 {expanded ? 'Zwiń kody CPV' : `+${hiddenCpvCount}`}
                             </button>
