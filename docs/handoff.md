@@ -146,6 +146,8 @@ Po etapie 4 użytkownik sprawdził w przeglądarce i zaakceptował: napis o osta
 
 ## 8. Kolejne kroki
 
+**Refaktor wyglądu wg prototypu (S1–S13) jest zrobiony** (opis w sekcji „Refaktor wyglądu wg prototypu” niżej). Wzór wizualny: `docs/prototyp/prototyp-ux.html`; plan z hashami commitów: `docs/plan-wdrozenia-ui.md`.
+
 ### Etapy 0–4 i późniejsze usprawnienia: zrobione
 Szczegóły w `docs/plan.md` (sekcja „Status"). Etap 4 (wspólne statusy, indywidualne gwiazdki, zakładka „Zapisane") jest wdrożony na projekt testowy i sprawdzony przez użytkownika.
 
@@ -222,7 +224,7 @@ Przegląd oparty na kodzie (`src/components/`) i dwóch zrzutach ekranu (widok p
 - **Termin składania ofert NIE jest istotny.** Nie bierzemy udziału w przetargach. Nie dodawaj wskaźników pilności ani „za N dni”. Opcję sortowania „Termin składania” i pole terminu na karcie można usunąć lub zdegradować. Uwaga: pomysł „widok terminów składania ofert dla statusów do wpisania” z listy poniżej jest tym samym nieaktualny.
 
 **Priorytet 1 (wysoki wpływ, niski/średni koszt):**
-1. **Karta przetargu** (`TenderCard.tsx`, `Tenders.module.css`): nazwy CPV (`getCpvName`) jako 1–2 chipy pod tytułem, widoczne bez rozwijania (reszta jako „+N”); oznaczyć, który kod CPV zadecydował o dopasowaniu do IT. Zamawiający i miasto jedną linią pod tytułem. Usunąć termin składania z karty. „Numer publikacji” zmniejszyć do szarego tekstu pomocniczego. Cel: karta o ok. połowę niższa.
+1. **Karta przetargu** (`TenderCard.tsx`, `Tenders.module.css`): nazwy CPV (`getCpvName`) jako 1–2 chipy pod tytułem, widoczne bez rozwijania (reszta jako „+N”). Na razie bez oceny dopasowania do IT (użytkownik zdecydował, że jej nie będzie: żadnych oznaczeń „słabe dopasowanie” ani zaznaczania kodu, który zdecydował o dopasowaniu). Zamawiający i miasto jedną linią pod tytułem. Usunąć termin składania z karty. „Numer publikacji” zmniejszyć do szarego tekstu pomocniczego. Cel: karta o ok. połowę niższa.
 2. **Status na karcie:** zamiast pięciu ikon bez podpisów (`TENDER_STATUSES.map`, `TenderCard.tsx`) jeden przycisk/menu z tekstem („● Do wpisania ▾”) i widocznym podpisem „kto i kiedy” (dziś tylko w `title`, czyli niewidoczne na dotyku). Rozdzielić w interfejsie „Zapisane” (prywatna gwiazdka) od statusu (wspólna ocena zespołu). Cele dotykowe min. 40–44 px.
 3. **Statystyki** (`StatisticsTab.tsx`): dodać kafelek „Do przejrzenia” (dziś są „Wszystkich” i cztery statusy, brakuje najważniejszej liczby). „Postęp przeglądania” przenieść na górę jako pasek postępu („0 z 61 ocenionych”), nie za zwijanym „+”. Kafelki z wartością 0 wyciszyć.
 4. **Filtry statusu** (`FiltersPanel.tsx`): widoczny stan aktywny/nieaktywny (dziś wszystkie szare, `rgba(0,0,0,0.1)` zlewa się z tłem w dark mode), wyciszać pozycje z licznikiem 0, spójne kolory statusów między ikoną, chipem filtra i kafelkiem w statystykach. Kontrast tekstu na chipach (np. `#95a5a6` z białym tekstem, żółty „Roboty budowlane” z białym) sprawdzić pod 4.5:1.
@@ -243,6 +245,18 @@ Przegląd oparty na kodzie (`src/components/`) i dwóch zrzutach ekranu (widok p
 15. Dalszy ciąg, jeśli użytkownik zechce: filtry jako rozwijane menu z chipami aktywnych filtrów, filtry w URL (linki do widoków i przycisk Wstecz), skróty klawiszowe do oceny (np. W / N, strzałki), widok „nowe od ostatniej wizyty”, tokeny semantyczne, jeden font i jeden zestaw ikon SVG, ewentualnie dwie kolumny kart na szerokich ekranach.
 
 **Rozstrzygnięte przy realizacji:** bez prototypu HTML (od razu kod, etapami); zamiast widoku „nowe od ostatniej wizyty” wystarcza filtr po dacie publikacji (nie zbudowano go jako osobnej funkcji).
+
+### Refaktor wyglądu wg prototypu (S1–S13): zrealizowany, wygląd zaakceptowany (2026-11-04, gałąź `feature/ui-prototyp`)
+Wzór: `docs/prototyp/prototyp-ux.html`. Plan sesji: `docs/plan-wdrozenia-ui.md` (z hashami commitów). Nie scalono jeszcze z `main` (push na `main` wdraża hosting produkcyjny `tendersted`, merge robi użytkownik). Co powstało i czym różni się od prototypu lub oczywistych założeń:
+- **Tokeny** (`src/styles/theme.css`): `--surface`, `--raised`, `--radius-card/control`, `--pop-shadow`, `--online-color`. W ciemnym motywie `--button-primary` = #2f6fdb (biały tekst na przyciskach), akcent #6aa5ff tylko jako `--accent`. `overflow-x: clip` (z fallbackiem `hidden`) w `index.css`, żeby `position: sticky` działał.
+- **Karta:** bez wyróżniania kodów IT (usunięto też `.cpvCodeIt`), ikony SVG (gwiazdka, komentarze, odnośniki). Klik w kartę aktywuje ją, drugi klik albo klik poza kartami wyłącza (`data-tender-card`, `tenders.tsx`).
+- **Filtry:** chipy aktywnych filtrów (`ActiveFilterChips`, `utils/activeFilters.ts`) i menu rozwijane (`FilterPopover`); źródła i typy to jeden chip zbiorczy. Przełącznik „Pokaż ukrytych zamawiających (N) – z Bazy Konkurencyjności”. Nagłówek listy „do przejrzenia: N”.
+- **Pasek aplikacji:** wchłonął `UserBar` (konto w `UserMenu`, admin: kropka i „N online”). Wyszukiwarka w pasku, skrót `/`, ukryta poniżej 768 px. „Tylko IT” bez obramowania, przed kalendarzem.
+- **Daty:** `DatePopover.tsx` zastąpił pola `react-datepicker` w pasku: jeden przycisk, panel w dół z polami „Od” i „Do” jedno pod drugim i jednym kalendarzem (po polsku, `date-fns` 4.1.0 jawnie w `package.json`). **Odstępstwo:** daty nie da się już wpisać z klawiatury, tylko wybrać w kalendarzu. Kolor wybranego dnia w kalendarzu to nadal stary `#3498db !important`.
+- **Sidebar zamawiających:** panel w ramce, płaskie wiersze, sticky; na wąskim ekranie zwijany pod przyciskiem „Zamawiający i miasta”. Powtarzający się zamawiający (`utils/repeatOptions.ts`).
+- **Skróty klawiszowe** (`utils/cardNavigation.ts`): J/K, 1–4, 0, S; nie działają, gdy otwarty jest popover (`aria-expanded`).
+- **Statystyki:** panel „powtarzający się zamawiający” (pole `repeatBuyers` zastąpiło `topBuyers`), średnia godzinowa z 14 dni (`utils/hourlyAverage.ts`, bez nowych zapytań).
+- **Niesprawdzone na żywo** (dane wspólne, konto anonimowe): klawisze 1–4/0/S, klik w powtarzającego się zamawiającego, komunikat pustej kolejki, pasek dla zalogowanego (mail, Wyloguj, „N online”). Układ paska admina sprawdzony tylko symulacją DOM (jeden rząd od 1366 px, zawija się przy 1280 px).
 
 ### Znane drobiazgi (poza zakresem, do decyzji użytkownika)
 - `axios` jest w `dependencies`, ale nic w `src/` go nie używa; `puppeteer` (devDependency) służy tylko skryptowi `scripts/generate-favicon.js`.
