@@ -22,6 +22,18 @@
     min-width: 0;
 }
 
+/* Pasek zakładek leży nad układem z sidebarem, więc nie przesuwa się, gdy sidebar znika (Statystyki) */
+.tabsBar {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 24px 24px 0;
+    box-sizing: border-box;
+}
+
+.tabsBar .tabsContainer {
+    margin-bottom: 0;
+}
+
 .tabsContainer {
     margin-bottom: 24px;
     border-bottom: 2px solid var(--border-color);
@@ -825,6 +837,10 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
+    .tabsBar {
+        padding: 20px 20px 0;
+    }
+
     .mainContent {
         flex-direction: column;
         padding: 20px;
@@ -878,6 +894,10 @@
         margin-bottom: 16px;
     }
     
+    .tabsBar {
+        padding: 16px 12px 0;
+    }
+
     .mainContent {
         padding: 16px 12px;
         gap: 16px;
@@ -990,6 +1010,10 @@
         margin-bottom: 12px;
     }
     
+    .tabsBar {
+        padding: 12px 8px 0;
+    }
+
     .mainContent {
         padding: 12px 8px;
         gap: 12px;
@@ -1183,4 +1207,21 @@
     font: inherit;
     font-size: 13px;
     cursor: pointer;
+}
+
+/* Zwykły, widoczny checkbox z podpisem (w odróżnieniu od chipów filtrów) */
+.plainCheckbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.plainCheckbox input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--button-primary);
 }

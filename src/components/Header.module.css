@@ -4,7 +4,7 @@
     gap: 20px;
     padding: 20px 24px;
     min-height: 80px;
-    background: linear-gradient(to right, #2c3e50, #3498db);
+    background: linear-gradient(to right, var(--header-gradient-start), var(--header-gradient-end));
     color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     justify-content: space-between;
@@ -24,9 +24,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 8px 20px;
-    border-radius: 20px;
+    padding: 0;
     flex-shrink: 1;
     min-width: 0;
     overflow: hidden;
@@ -55,8 +53,8 @@
 .tenderCountValue {
     font-size: 14px;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.3);
-    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 1px 8px;
     border-radius: 10px;
     min-width: 24px;
     text-align: center;
@@ -65,12 +63,6 @@
 .tenderCount {
     font-size: 14px;
     font-weight: 500;
-}
-
-.filterStatus {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.9);
-    font-style: italic;
 }
 
 .lastRefresh {
@@ -214,47 +206,32 @@
 
 .buttons {
     display: flex;
+    align-items: center;
     gap: 10px;
     flex-shrink: 0;
 }
 
+/* Wspólna baza przycisków w nagłówku */
 .button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 12px;
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+    font: inherit;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
 }
 
-.buttonPrimary {
-    background: #2ecc71;
-    color: white;
-}
-
-.buttonPrimary:hover {
-    background: #27ae60;
-}
-
-.buttonSecondary {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.buttonSecondary:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.buttonActive {
-    background: #e74c3c;
-    color: white;
-    border: none;
-}
-
-.buttonActive:hover {
-    background: #c0392b;
+.button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .button:disabled {
@@ -262,26 +239,61 @@
     cursor: not-allowed;
 }
 
-.refreshButton {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    font-size: 18px;
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Na gradiencie domyślny niebieski kontur fokusu jest słabo widoczny */
+.button:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
 }
 
-.refreshButton:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(180deg);
-    transition: transform 0.3s ease;
+.iconButton {
+    width: 40px;
+    padding: 0;
 }
 
-.refreshButton:disabled {
+.iconButton svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Obrót tylko w trakcie pobierania; zwykłe wyłączenie przycisku niczego nie animuje */
+.spinning svg {
     animation: spin 1s linear infinite;
-    transform: none !important; /* Wyłącz transform z hover gdy disabled */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinning svg {
+        animation: none;
+    }
+}
+
+/* Przełącznik "Tylko IT": stan widać po położeniu suwaka i wypełnieniu, nie po kolorze */
+.switchTrack {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.3);
+    transition: background-color 0.2s ease;
+}
+
+.switchThumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.button[aria-checked="true"] .switchTrack {
+    background: white;
+}
+
+.button[aria-checked="true"] .switchThumb {
+    transform: translateX(14px);
+    background: var(--header-gradient-end);
 }
 
 @keyframes spin {
@@ -359,21 +371,6 @@
     display: none;
 }
 
-.themeToggle {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: white;
-    font-size: 16px;
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.themeToggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
 .emailAlertButton {
     background: #27ae60;
     color: white;
@@ -430,10 +427,6 @@
         gap: 8px;
     }
     
-    .button {
-        padding: 6px 12px;
-        font-size: 13px;
-    }
 }
 
 @media (max-width: 768px) {
@@ -468,7 +461,6 @@
         font-size: 13px;
     }
     
-    .filterStatus,
     .lastRefresh {
         font-size: 12px;
     }
@@ -536,16 +528,7 @@
         gap: 8px;
     }
     
-    .button {
-        padding: 8px 12px;
-        font-size: 12px;
-        min-width: 80px;
-    }
     
-    .themeToggle {
-        padding: 8px;
-        font-size: 14px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -582,7 +565,6 @@
         font-size: 12px;
     }
     
-    .filterStatus,
     .lastRefresh {
         font-size: 11px;
     }
@@ -650,16 +632,7 @@
         gap: 6px;
     }
     
-    .button {
-        padding: 6px 8px;
-        font-size: 11px;
-        min-width: 70px;
-    }
     
-    .themeToggle {
-        padding: 6px;
-        font-size: 12px;
-    }
 }
 
 /* DatePicker responsive styles */

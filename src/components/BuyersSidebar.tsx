@@ -3,6 +3,7 @@ import styles from "./BuyersSidebar.module.css";
 import { normalizeName } from "../utils/stringUtils";
 import { Tender } from "../types/Tender";
 import { MESSAGES } from "../constants";
+import TabBar, { panelId } from "./TabBar";
 
 type ViewType = "buyers" | "cities";
 
@@ -23,7 +24,7 @@ interface Option {
 }
 
 /**
- * Unikalne nazwy z przetargów z licznikami, alfabetycznie. Nazwy porównujemy po normalizacji, a pokazujemy
+ * Unikalne nazwy z przetargów z licznikami, od najliczniejszych (przy równej liczbie alfabetycznie). Nazwy porównujemy po normalizacji, a pokazujemy
  * najdłuższy wariant (zwykle najpełniejszy). Wybrane pozycje bez przetargów zostają na liście z zerem,
  * żeby dało się je odznaczyć.
  */
@@ -51,7 +52,7 @@ const buildOptions = (
         if (!options.has(key)) options.set(key, { name, count: 0 });
     });
 
-    return Array.from(options.values()).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+    return Array.from(options.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'pl'));
 };
 
 const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
@@ -105,9 +106,9 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
         if (!searchQuery.trim()) {
             return list;
         }
-        
+
         const query = normalizeName(searchQuery);
-        return list.filter(item => 
+        return list.filter(item =>
             normalizeName(item.name).includes(query)
         );
     }, [activeView, buyersList, citiesList, searchQuery]);
@@ -115,28 +116,37 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
     return (
         <aside className={styles.sidebar}>
             <div className={styles.headerRow}>
-                <h3 
-                    className={`${styles.headerButton} ${activeView === "buyers" ? styles.headerButtonActive : ''}`}
-                    onClick={() => setActiveView("buyers")}
-                >
-                    Zamawiający ({buyersList.length})
-                </h3>
-                <h3 
-                    className={`${styles.headerButton} ${activeView === "cities" ? styles.headerButtonActive : ''}`}
-                    onClick={() => setActiveView("cities")}
-                >
-                    Miasta ({citiesList.length})
-                </h3>
+                <TabBar
+                    idPrefix="sidebar"
+                    ariaLabel="Lista do filtrowania"
+                    className={styles.headerTabs}
+                    tabClassName={styles.headerButton}
+                    activeTabClassName={styles.headerButtonActive}
+                    activeId={activeView}
+                    onChange={setActiveView}
+                    tabs={[
+                        { id: "buyers", label: `Zamawiający (${buyersList.length})` },
+                        { id: "cities", label: `Miasta (${citiesList.length})` }
+                    ]}
+                />
                 {currentSelected.length > 0 && (
-                    <button 
+                    <button
+                        type="button"
                         className={styles.clearFilterButton}
                         onClick={handleClearFilter}
+                        aria-label={`Wyczyść wybór (${currentSelected.length})`}
                         title={`Wyczyść wybór (${currentSelected.length})`}
                     >
                         ✕
                     </button>
                 )}
             </div>
+            <div
+                className={styles.panel}
+                role="tabpanel"
+                id={panelId("sidebar")}
+                aria-labelledby={`sidebar-tab-${activeView}`}
+            >
             <div className={styles.searchContainer}>
                 <input
                     ref={searchInputRef}
@@ -152,27 +162,31 @@ const BuyersSidebar: React.FC<BuyersSidebarProps> = ({
                     {filteredList.map((item) => {
                         const normalizedName = normalizeName(item.name);
                         const isSelected = currentSelected.some(selected => normalizeName(selected) === normalizedName);
-                        
+
                         return (
-                            <li 
-                                key={item.name} 
-                                className={`${styles.buyerItem} ${isSelected ? styles.buyerItemSelected : ''}`}
-                                onClick={() => handleItemClick(item.name)}
-                            >
-                                <span className={styles.buyerName}>{item.name}</span>
-                                <span className={styles.buyerCount}>{item.count}</span>
+                            <li key={item.name}>
+                                <button
+                                    type="button"
+                                    className={`${styles.buyerItem} ${isSelected ? styles.buyerItemSelected : ''}`}
+                                    aria-pressed={isSelected}
+                                    onClick={() => handleItemClick(item.name)}
+                                >
+                                    <span className={styles.buyerName}>{item.name}</span>
+                                    <span className={styles.buyerCount}>{item.count}</span>
+                                </button>
                             </li>
                         );
                     })}
                 </ul>
             ) : (
                 <p className={styles.noBuyers}>
-                    {searchQuery.trim() 
+                    {searchQuery.trim()
                         ? `Brak wyników dla "${searchQuery}"`
                         : (activeView === "buyers" ? MESSAGES.NO_BUYERS : MESSAGES.NO_CITIES)
                     }
                 </p>
             )}
+            </div>
         </aside>
     );
 };

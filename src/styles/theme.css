@@ -42,7 +42,7 @@ body[data-theme="dark"] {
     --text-secondary: #4a5568;
     --border-color: #e2e8f0;
     --header-gradient-start: #2c3e50;
-    --header-gradient-end: #3498db;
+    --header-gradient-end: #3b5168;
     --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     --card-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     --button-primary: #3498db;
@@ -58,7 +58,7 @@ body[data-theme="dark"] {
     --text-secondary: #a0aec0;
     --border-color: #4a5568;
     --header-gradient-start: #1a202c;
-    --header-gradient-end: #2c5282;
+    --header-gradient-end: #26364d;
     --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     --card-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
     --button-primary: #4299e1;

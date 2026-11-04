@@ -236,12 +236,11 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
             {(hiddenAdvertisersCount > 0 || showHiddenAdvertisers) && (
                 <div className={styles.statusFiltersSection}>
                     <div className={styles.sourceFilters}>
-                        <label className={styles.sourceFilterLabel} title="Firmy prywatne i organizacje pozarządowe są domyślnie ukryte">
+                        <label className={styles.plainCheckbox} title="Firmy prywatne i organizacje pozarządowe są domyślnie ukryte">
                             <input
                                 type="checkbox"
                                 checked={showHiddenAdvertisers}
                                 onChange={(e) => onShowHiddenAdvertisersChange(e.target.checked)}
-                                className={styles.sourceCheckbox}
                             />
                             <span>Pokaż ukrytych zamawiających ({hiddenAdvertisersCount})</span>
                         </label>

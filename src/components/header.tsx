@@ -30,6 +30,26 @@ interface HeaderProps {
     lastRefreshAt: Date | null;
 }
 
+const RefreshIcon: React.FC = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+        <path d="M21 3v6h-6" />
+    </svg>
+);
+
+const MoonIcon: React.FC = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+    </svg>
+);
+
+const SunIcon: React.FC = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
+);
+
 const Header: React.FC<HeaderProps> = ({ 
     startDate, 
     endDate,
@@ -71,9 +91,6 @@ const Header: React.FC<HeaderProps> = ({
                             </span>
                         );
                     })}
-                    <span className={styles.filterStatus}>
-                        ({isFiltered ? 'tylko IT' : 'wszystkie branże'})
-                    </span>
                     <span className={styles.lastRefresh} title="Ostatnie udane pobranie nowych przetargów ze źródeł (przez dowolnego użytkownika)">
                         Ostatnia aktualizacja: {lastRefreshAt ? formatRelativeTime(lastRefreshAt) : 'brak danych'}
                     </span>
@@ -129,35 +146,39 @@ const Header: React.FC<HeaderProps> = ({
                     </label>
                 </div>
                 <div className={styles.buttons}>
-                    <button 
-                        className={`${styles.button} ${!isFiltered ? styles.buttonActive : styles.buttonPrimary}`}
-                        onClick={onAllTendersClick}
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={isFiltered}
+                        className={styles.button}
+                        onClick={isFiltered ? onAllTendersClick : onFilterClick}
                         disabled={isLoading}
+                        title={isFiltered ? "Pokazuję tylko ogłoszenia z kodami CPV z branży IT" : "Pokazuję wszystkie ogłoszenia, także spoza branży IT"}
                     >
-                        All tenders
-                    </button>
-                    <button 
-                        className={`${styles.button} ${isFiltered ? styles.buttonActive : styles.buttonSecondary}`}
-                        onClick={onFilterClick}
-                        disabled={isLoading}
-                    >
-                        Filter
+                        <span className={styles.switchTrack} aria-hidden="true">
+                            <span className={styles.switchThumb} />
+                        </span>
+                        Tylko IT
                     </button>
                     <button
-                        className={`${styles.button} ${styles.refreshButton}`}
+                        type="button"
+                        className={`${styles.button} ${styles.iconButton} ${isRefreshing ? styles.spinning : ''}`}
                         onClick={onRefresh}
                         disabled={isRefreshing || !canRefresh}
-                        aria-label="Odśwież przetargi"
+                        aria-label={isRefreshing ? "Pobieranie nowych przetargów…" : "Odśwież przetargi"}
+                        aria-busy={isRefreshing}
                         title={canRefresh ? "Pobierz nowe przetargi" : "Odświeżanie dostępne dla dni z ostatniego miesiąca"}
                     >
-                        {isRefreshing ? '⟳' : '↻'}
+                        <RefreshIcon />
                     </button>
                     <button
-                        className={`${styles.button} ${styles.themeToggle}`}
+                        type="button"
+                        className={`${styles.button} ${styles.iconButton}`}
                         onClick={toggleTheme}
-                        aria-label="Toggle theme"
+                        aria-label={theme === 'light' ? "Włącz ciemny motyw" : "Włącz jasny motyw"}
+                        title={theme === 'light' ? "Włącz ciemny motyw" : "Włącz jasny motyw"}
                     >
-                        {theme === 'light' ? '🌙' : '☀️'}
+                        {theme === 'light' ? <MoonIcon /> : <SunIcon />}
                     </button>
                 </div>
             </div>

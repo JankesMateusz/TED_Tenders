@@ -11,6 +11,7 @@ import { dayToDisplayDate, displayDateToDay, parseDate, toDayString } from "../u
 import { calculateStatistics } from "../utils/calculateStatistics";
 import { CpvCategoryKey } from "../utils/cpvCategories";
 import { useRecentTenders } from "../hooks/useRecentTenders";
+import TabBar, { panelId, tabId } from "./TabBar";
 import { TREND_DAYS, countTendersByDay, lastDays } from "../utils/recentTrend";
 import { SortOrder, countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
 import { ALL_SOURCES, NO_STATUS_FILTERS, loadFilters, saveFilters } from "../utils/persistedFilters";
@@ -541,6 +542,24 @@ const Tenders: React.FC = () => {
                 canRefresh={canRefreshAny}
                 lastRefreshAt={lastRefreshAt}
             />
+            <div className={styles.tabsBar}>
+                <div className={styles.tabsContainer}>
+                    <TabBar
+                        idPrefix="main"
+                        ariaLabel="Widok aplikacji"
+                        className={styles.tabs}
+                        tabClassName={styles.tab}
+                        activeTabClassName={styles.tabActive}
+                        activeId={activeTab}
+                        onChange={setActiveTab}
+                        tabs={[
+                            { id: 'tenders', label: `Przetargi (${filteredTenders.length})` },
+                            { id: 'saved', label: `Zapisane (${favorites.length})` },
+                            { id: 'statistics', label: 'Statystyki' }
+                        ]}
+                    />
+                </div>
+            </div>
             <div className={styles.mainContent}>
                 {activeTab !== 'statistics' && (
                     <BuyersSidebar
@@ -553,35 +572,12 @@ const Tenders: React.FC = () => {
                     />
                 )}
                 <div className={styles.contentArea}>
-                    <div className={styles.tabsContainer}>
-                        <ul className={styles.tabs}>
-                            <li>
-                                <button
-                                    className={`${styles.tab} ${activeTab === 'tenders' ? styles.tabActive : ''}`}
-                                    onClick={() => setActiveTab('tenders')}
-                                >
-                                    Przetargi ({filteredTenders.length})
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    className={`${styles.tab} ${activeTab === 'saved' ? styles.tabActive : ''}`}
-                                    onClick={() => setActiveTab('saved')}
-                                >
-                                    Zapisane ({favorites.length})
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    className={`${styles.tab} ${activeTab === 'statistics' ? styles.tabActive : ''}`}
-                                    onClick={() => setActiveTab('statistics')}
-                                >
-                                    Statystyki
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                    <div className={styles.tabContent}>
+                    <div
+                        className={styles.tabContent}
+                        role="tabpanel"
+                        id={panelId('main')}
+                        aria-labelledby={tabId('main', activeTab)}
+                    >
                         {activeTab !== 'statistics' ? (
                             <div className={styles.container}>
                                 <FiltersPanel

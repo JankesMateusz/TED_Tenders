@@ -20,6 +20,20 @@
     border-bottom: 2px solid var(--border-color);
 }
 
+/* Panel zakładki: wypełnia resztę sidebara, żeby lista się przewijała, a nagłówek został na miejscu */
+.panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.headerTabs {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
 .searchContainer {
     margin-bottom: 12px;
 }
@@ -47,13 +61,14 @@
 }
 
 .headerButton {
+    font: inherit;
     font-size: 16px;
     font-weight: 600;
     color: var(--text-secondary);
     margin: 0;
     padding: 0;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
     border: none;
     background: transparent;
 }
@@ -107,6 +122,11 @@
 }
 
 .buyerItem {
+    width: 100%;
+    box-sizing: border-box;
+    font: inherit;
+    text-align: left;
+    color: var(--text-primary);
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -188,3 +208,7 @@
     }
 }
 
+.buyerItem:focus-visible {
+    outline: 2px solid var(--button-primary);
+    outline-offset: 2px;
+}
