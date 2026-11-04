@@ -27,6 +27,7 @@ import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./Stat
 import { FiltersPanel } from "./FiltersPanel";
 import { pluralizeTenders } from "../utils/pluralPl";
 import { afterRemoval, nextActiveId } from "../utils/cardNavigation";
+import { averageHourlyDistribution } from "../utils/hourlyAverage";
 import { TENDER_STATUSES } from "../utils/tenderStatus";
 import { ActiveFilterChip, buildActiveFilterChips } from "../utils/activeFilters";
 import Header from "./header";
@@ -588,6 +589,15 @@ const Tenders: React.FC = () => {
         }),
         [applyStatisticsFilters, recent.tenders, recent.completeDays, recent.error, isFavorite, todayDay]
     );
+    // Średnia godzinowa z tych samych 14 dni (te same dane i filtry co trend, bez dodatkowych zapytań do bazy)
+    const hourlyAverage = useMemo(
+        () => averageHourlyDistribution(
+            applyStatisticsFilters(recent.tenders.filter((tender) => !isFavorite(tender.id))),
+            lastDays(todayDay, TREND_DAYS),
+            recent.completeDays
+        ),
+        [applyStatisticsFilters, recent.tenders, recent.completeDays, isFavorite, todayDay]
+    );
     const [hourlyDay, setHourlyDay] = useState('');
     const hourlyExtraDay = useMemo(() => {
         const day = isStatisticsTab ? displayDateToDay(hourlyDay) : null;
@@ -814,6 +824,7 @@ const Tenders: React.FC = () => {
                                 hourly={{
                                     days: hourlyDays,
                                     distribution: hourlyDistribution,
+                                    average: hourlyAverage,
                                     isLoading: hourlyExtraDay !== null && !isExtraDayLoaded && !extraDay.error,
                                     error: extraDay.error,
                                     onSelectDay: setHourlyDay
