@@ -470,10 +470,9 @@
         padding: 10px 12px;
     }
 
+    /* Na telefonie wyszukiwarka jest ukryta: raczej nie jest tam używana, a pasek zyskuje miejsce */
     .search {
-        flex-basis: 100%;
-        max-width: none;
-        order: 2;
+        display: none;
     }
 
     .tenderInfo {
