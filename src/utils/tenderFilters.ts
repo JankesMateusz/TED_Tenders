@@ -8,12 +8,12 @@ import { parseDate } from './dateUtils';
 import { AdvertiserDecisions, isHiddenAdvertiser } from './advertisers';
 import { CpvCategoryKey, tenderHasCpvCategory } from './cpvCategories';
 
-export type SortOrder = 'publication' | 'deadline' | 'buyer';
+export type SortOrder = 'publication' | 'publicationAsc' | 'deadline' | 'buyer' | 'buyerDesc';
 
 export const DEFAULT_SORT_ORDER: SortOrder = 'publication';
 
 export const isSortOrder = (value: unknown): value is SortOrder =>
-    value === 'publication' || value === 'deadline' || value === 'buyer';
+    value === 'publication' || value === 'publicationAsc' || value === 'deadline' || value === 'buyer' || value === 'buyerDesc';
 
 interface FilterOptions {
     selectedSources: TenderSource[];
@@ -173,6 +173,12 @@ export const filterAndSortTenders = (
             break;
         case 'buyer':
             result.sort(compareBuyer);
+            break;
+        case 'buyerDesc':
+            result.sort((a, b) => b.buyerName.localeCompare(a.buyerName, 'pl') || comparePublication(a, b));
+            break;
+        case 'publicationAsc':
+            result.sort((a, b) => comparePublication(b, a));
             break;
         default:
             result.sort(comparePublication);

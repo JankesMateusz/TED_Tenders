@@ -19,7 +19,9 @@ const statusOption = (key: keyof StatusFilters) =>
 
 const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
     { value: 'publication', label: 'Data publikacji (najnowsze)' },
-    { value: 'buyer', label: 'Zamawiający (A–Z)' }
+    { value: 'publicationAsc', label: 'Data publikacji (najstarsze)' },
+    { value: 'buyer', label: 'Zamawiający (A–Z)' },
+    { value: 'buyerDesc', label: 'Zamawiający (Z–A)' }
 ];
 
 interface FiltersPanelProps {

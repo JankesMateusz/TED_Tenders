@@ -195,6 +195,26 @@ describe('sortowanie', () => {
         ];
         expect(order('buyer', buyers)).toEqual(['s', 'a2', 'a1', 'z']);
     });
+
+    it('po zamawiającym od Z do A, remisy nadal od najnowszej publikacji', () => {
+        const buyers: Tender[] = [
+            { ...tender('z'), buyerName: 'Żłobek' },
+            { ...tender('a1'), buyerName: 'Urząd', publicationDate: '20-10-2026' },
+            { ...tender('a2'), buyerName: 'Urząd', publicationDate: '28-10-2026' },
+            { ...tender('s'), buyerName: 'Szpital' }
+        ];
+        expect(order('buyerDesc', buyers)).toEqual(['z', 'a2', 'a1', 's']);
+    });
+
+    it('od najstarszej publikacji: w obrębie dnia najpierw przetargi bez godziny (TED), potem wg godziny', () => {
+        const day: Tender[] = [
+            { ...tender('pozno'), publicationDate: '29-10-2026', publicationTime: '14:00' },
+            { ...tender('ted'), publicationDate: '29-10-2026' },
+            { ...tender('stary'), publicationDate: '20-10-2026' },
+            { ...tender('rano'), publicationDate: '29-10-2026', publicationTime: '08:00' }
+        ];
+        expect(order('publicationAsc', day)).toEqual(['stary', 'ted', 'rano', 'pozno']);
+    });
 });
 
 describe('liczniki opcji filtrów', () => {
