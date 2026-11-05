@@ -88,7 +88,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                 title={MESSAGES.SHORTCUTS_TITLE}
             >
                 {config && <span className={styles.dot} aria-hidden="true" />}
-                {config ? config.label : 'Oceń'}
+                {config ? config.label : 'Status'}
                 <span className={styles.chevron} aria-hidden="true">▾</span>
             </button>
             {caption && <span className={styles.caption}>{caption}</span>}
