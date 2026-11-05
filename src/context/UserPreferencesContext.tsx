@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Tender } from '../types/Tender';
 import { TenderStatus } from '../types/TenderStatus';
-import { addFavorite, removeFavorite, setTenderStatus, subscribeToFavorites } from '../utils/tendersApi';
+import { TenderLabel } from '../types/TenderLabel';
+import { toggleLabel as toggleLabelIn } from '../utils/tenderLabels';
+import { addFavorite, removeFavorite, setTenderLabels, setTenderStatus, subscribeToFavorites } from '../utils/tendersApi';
 import { GUEST_LABEL, useAuth } from './AuthContext';
 
 const FAVORITES_LOAD_ERROR = 'Nie udało się wczytać zapisanych przetargów.';
@@ -15,6 +17,8 @@ interface UserPreferencesContextType {
     toggleFavorite: (tender: Tender) => void;
     /** Ustawia wspólny status; ponowne wybranie tego samego statusu go zdejmuje. */
     toggleStatus: (tender: Tender, status: TenderStatus) => void;
+    /** Dodaje lub zdejmuje jedną wspólną etykietę (PROSTY i TRUDNY się wykluczają). */
+    toggleLabel: (tender: Tender, label: TenderLabel) => void;
     /** Komunikat o nieudanym zapisie lub wczytaniu; null, gdy wszystko działa. */
     actionError: string | null;
 }
@@ -63,8 +67,14 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         setTenderStatus(tender.id, tender.status === status ? null : status, { uid, email }).catch(reportError);
     }, [uid, email, reportError]);
 
+    const toggleLabel = useCallback((tender: Tender, label: TenderLabel) => {
+        if (!uid) return;
+        setActionError(null);
+        setTenderLabels(tender.id, toggleLabelIn(tender.labels ?? [], label), { uid, email }).catch(reportError);
+    }, [uid, email, reportError]);
+
     return (
-        <UserPreferencesContext.Provider value={{ favorites, isFavorite, toggleFavorite, toggleStatus, actionError }}>
+        <UserPreferencesContext.Provider value={{ favorites, isFavorite, toggleFavorite, toggleStatus, toggleLabel, actionError }}>
             {children}
         </UserPreferencesContext.Provider>
     );

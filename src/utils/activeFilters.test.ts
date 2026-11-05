@@ -10,7 +10,8 @@ const baseInput = (): ActiveFilterInput => ({
     selectedBuyers: [],
     selectedCities: [],
     selectedCpvs: [],
-    selectedCpvCategory: null
+    selectedCpvCategory: null,
+    selectedLabels: []
 });
 
 const labels = (input: ActiveFilterInput) => buildActiveFilterChips(input).map((chip) => chip.label);
@@ -80,5 +81,15 @@ describe('chipy aktywnych filtrów', () => {
         ]);
         expect(chips[4].label).toContain('30213100-6');
         expect(chips[4].value).toBe('30213100-6');
+    });
+});
+
+describe('chipy etykiet', () => {
+    it('każda wybrana etykieta ma własny chip, zaraz po statusach', () => {
+        const input = { ...baseInput(), selectedLabels: ['important' as const, 'hard' as const] };
+        expect(buildActiveFilterChips(input)).toEqual([
+            { id: 'label:important', label: 'Etykieta: WAŻNY!', kind: 'label', value: 'important' },
+            { id: 'label:hard', label: 'Etykieta: TRUDNY', kind: 'label', value: 'hard' }
+        ]);
     });
 });

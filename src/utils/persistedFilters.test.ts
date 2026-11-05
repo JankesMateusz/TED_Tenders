@@ -16,9 +16,15 @@ describe('odczyt zapisanych filtrów', () => {
             selectedCities: ['Kraków'],
             selectedCpvs: ['30213100-6'],
             statusFilters: { toEnter: true, entered: false, toClarify: false, notToEnter: false, unmarked: true },
+            selectedLabels: ['important', 'hard'],
             sortOrder: 'buyer'
         };
         expect(parsePersistedFilters(JSON.stringify(saved))).toEqual(saved);
+    });
+
+    it('odrzuca nieznane etykiety z zapisu', () => {
+        const raw = JSON.stringify({ selectedLabels: ['important', 'nope', 7] });
+        expect(parsePersistedFilters(raw).selectedLabels).toEqual(['important']);
     });
 
     it('zapisane sortowanie po terminie składania wraca do daty publikacji', () => {

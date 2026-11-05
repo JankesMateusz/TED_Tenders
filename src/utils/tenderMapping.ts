@@ -2,6 +2,7 @@ import { Tender } from '../types/Tender';
 import { TenderComment } from '../types/TenderComment';
 import { TenderSource } from '../types/TenderSource';
 import { isTenderStatus } from './tenderStatus';
+import { normalizeLabels } from './tenderLabels';
 
 const NO_DATE = 'Brak daty';
 const NO_DEADLINE = 'Brak terminu';
@@ -28,6 +29,17 @@ const statusFromDoc = (data: Record<string, any>): Pick<Tender, 'status' | 'stat
     };
 };
 
+/** Pola etykiet z dokumentu; brak znanych etykiet oznacza przetarg bez etykiet. */
+const labelsFromDoc = (data: Record<string, any>): Pick<Tender, 'labels' | 'labelsByEmail' | 'labelsAt'> => {
+    const labels = normalizeLabels(data.labels);
+    if (labels.length === 0) return {};
+    return {
+        labels,
+        labelsByEmail: data.labelsByEmail ?? undefined,
+        labelsAt: typeof data.labelsAt?.toDate === 'function' ? data.labelsAt.toDate() : undefined
+    };
+};
+
 /** Zamienia dokument z kolekcji `tenders` (o podanym identyfikatorze) na przetarg używany przez interfejs. */
 export const tenderFromDoc = (data: Record<string, any>, id: string): Tender => ({
     id,
@@ -49,16 +61,17 @@ export const tenderFromDoc = (data: Record<string, any>, id: string): Tender => 
     buyerNip: data.buyerNip ?? undefined,
     buyerSectorAuto: data.buyerSectorAuto ?? undefined,
     changeNoticeVersionIdentifier: null,
-    ...statusFromDoc(data)
+    ...statusFromDoc(data),
+    ...labelsFromDoc(data)
 });
 
 /**
  * Kopia przetargu zapisywana przy oznaczeniu gwiazdką (`users/{uid}/favorites`). Ma format interfejsu,
- * bo służy tylko do wyświetlenia. Bez statusu wspólnego (ten żyje w `tenders`) i bez pól `undefined`,
+ * bo służy tylko do wyświetlenia. Bez statusu i etykiet wspólnych (te żyją w `tenders`) i bez pól `undefined`,
  * których Firestore nie przyjmuje.
  */
 export const favoriteToDoc = (tender: Tender): Record<string, unknown> => {
-    const { id, status, statusByEmail, statusAt, ...copy } = tender;
+    const { id, status, statusByEmail, statusAt, labels, labelsByEmail, labelsAt, ...copy } = tender;
     return Object.fromEntries(Object.entries(copy).filter(([, value]) => value !== undefined));
 };
 

@@ -1,5 +1,7 @@
 import { TenderSource } from '../types/TenderSource';
 import { TENDER_STATUSES } from './tenderStatus';
+import { TenderLabel } from '../types/TenderLabel';
+import { TENDER_LABELS } from './tenderLabels';
 import { DEFAULT_ORDER_TYPES } from '../constants';
 import { OrderType } from './tenderSources';
 import { DEFAULT_SORT_ORDER, SortOrder, StatusFilters, isSortOrder } from './tenderFilters';
@@ -12,6 +14,7 @@ export interface PersistedFilters {
     selectedCities: string[];
     selectedCpvs: string[];
     statusFilters: StatusFilters;
+    selectedLabels: TenderLabel[];
     sortOrder: SortOrder;
 }
 
@@ -45,6 +48,7 @@ export const defaultFilters = (): PersistedFilters => ({
     selectedCities: [],
     selectedCpvs: [],
     statusFilters: { ...DEFAULT_STATUS_FILTERS },
+    selectedLabels: [],
     sortOrder: DEFAULT_SORT_ORDER
 });
 
@@ -85,6 +89,9 @@ export const parsePersistedFilters = (raw: string | null): PersistedFilters => {
     filters.selectedBuyers = pickStrings(data.selectedBuyers) ?? filters.selectedBuyers;
     filters.selectedCities = pickStrings(data.selectedCities) ?? filters.selectedCities;
     filters.selectedCpvs = pickStrings(data.selectedCpvs) ?? filters.selectedCpvs;
+
+    const labels = pickStrings(data.selectedLabels, TENDER_LABELS);
+    if (labels) filters.selectedLabels = labels as TenderLabel[];
 
     const statuses = data.statusFilters;
     if (statuses && typeof statuses === 'object') {

@@ -258,6 +258,13 @@ Wzór: `docs/prototyp/prototyp-ux.html`. Plan sesji: `docs/plan-wdrozenia-ui.md`
 - **Statystyki:** panel „powtarzający się zamawiający” (pole `repeatBuyers` zastąpiło `topBuyers`), średnia godzinowa z 14 dni (`utils/hourlyAverage.ts`, bez nowych zapytań).
 - **Niesprawdzone na żywo** (dane wspólne, konto anonimowe): klawisze 1–4/0/S, klik w powtarzającego się zamawiającego, komunikat pustej kolejki, pasek dla zalogowanego (mail, Wyloguj, „N online”). Układ paska admina sprawdzony tylko symulacją DOM (jeden rząd od 1366 px, zawija się przy 1280 px).
 
+### Wspólne etykiety przetargów (ZROBIONE 2026-11-05)
+- Cztery etykiety: **WAŻNY!**, **PROSTY**, **TRUDNY**, **BRAK DOKUMENTÓW** (`types/TenderLabel.ts`, `utils/tenderLabels.ts`: konfiguracja, `toggleLabel`, `normalizeLabels`). Wspólne dla zespołu, niezależne od statusu, może być kilka naraz; **PROSTY i TRUDNY się wykluczają** (pilnuje tego interfejs i reguły Firestore).
+- Model: w dokumencie `tenders` pola `labels` (lista), `labelsBy`, `labelsByEmail`, `labelsAt`; ustawiane albo usuwane razem. Reguły (`firestore.rules`) walidują status i etykiety niezależnie: grupa pól jest sprawdzana tylko, gdy zmiana jej dotyka, więc zmiana etykiet nie wymaga, by autorem statusu był ten sam użytkownik.
+- UI: `LabelMenu.tsx` (menu wielokrotnego wyboru na karcie), plakietki `labelBadge` w nagłówku karty, `setTenderLabels` w `tendersApi.ts`, `toggleLabel` w `UserPreferencesContext`. Kopia z „Zapisane” bez oryginału nie ma menu (jak status).
+- Filtr: przycisk „Etykiety” w `FiltersPanel`, `selectedLabels` w `tenderFilters`/`persistedFilters`/`activeFilters` (chipy), semantyka „lub”, liczniki w `countFacets`. Nie ma opcji „Bez etykiet” ani drilldownu ze statystyk.
+- Reguły wdrożone na produkcję `tendersted` 2026-11-05 przed wdrożeniem frontendu. Testy: reguły 59/59, frontend 156/156.
+
 ### Znane drobiazgi (poza zakresem, do decyzji użytkownika)
 - `axios` jest w `dependencies`, ale nic w `src/` go nie używa; `puppeteer` (devDependency) służy tylko skryptowi `scripts/generate-favicon.js`.
 - Zakładka „Zapisane (n)" pokazuje liczbę wszystkich gwiazdek, a „Przetargi (n)" liczbę po filtrach.

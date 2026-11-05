@@ -20,6 +20,7 @@ import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
 import { Tender } from '../types/Tender';
 import { TenderStatus } from '../types/TenderStatus';
+import { TenderLabel } from '../types/TenderLabel';
 import { RefreshLogEntry } from './refreshPlan';
 import { TenderComment } from '../types/TenderComment';
 import { parseDate, toDayString } from './dateUtils';
@@ -112,6 +113,33 @@ export const setTenderStatus = async (
         statusBy: user.uid,
         statusByEmail: user.email,
         statusAt: serverTimestamp()
+    });
+};
+
+/**
+ * Ustawia wspólne etykiety przetargu; pusta lista zdejmuje je wszystkie. Reguły wymagają, by autorem był
+ * zalogowany użytkownik, a czas pochodził z serwera.
+ */
+export const setTenderLabels = async (
+    tenderId: string,
+    labels: TenderLabel[],
+    user: { uid: string; email: string | null }
+): Promise<void> => {
+    const ref = doc(db, 'tenders', tenderId);
+    if (labels.length === 0) {
+        await updateDoc(ref, {
+            labels: deleteField(),
+            labelsBy: deleteField(),
+            labelsByEmail: deleteField(),
+            labelsAt: deleteField()
+        });
+        return;
+    }
+    await updateDoc(ref, {
+        labels,
+        labelsBy: user.uid,
+        labelsByEmail: user.email,
+        labelsAt: serverTimestamp()
     });
 };
 

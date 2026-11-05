@@ -6,6 +6,8 @@ import { ALL_SOURCES } from './persistedFilters';
 import { StatusFilters } from './tenderFilters';
 import { getOrderTypeConfig, getSourceConfig, OrderType } from './tenderSources';
 import { STATUS_CONFIG, TENDER_STATUSES } from './tenderStatus';
+import { TenderLabel } from '../types/TenderLabel';
+import { LABEL_CONFIG } from './tenderLabels';
 
 /**
  * Rodzaj chipa decyduje o tym, co robi jego ✕:
@@ -16,6 +18,7 @@ import { STATUS_CONFIG, TENDER_STATUSES } from './tenderStatus';
 export type ActiveFilterKind =
     | 'status'
     | 'allStatuses'
+    | 'label'
     | 'sources'
     | 'orderTypes'
     | 'buyer'
@@ -39,6 +42,7 @@ export interface ActiveFilterInput {
     selectedCities: string[];
     selectedCpvs: string[];
     selectedCpvCategory: CpvCategoryKey | null;
+    selectedLabels: TenderLabel[];
 }
 
 const STATUS_KEYS: Array<keyof StatusFilters> = [...TENDER_STATUSES, 'unmarked'];
@@ -57,9 +61,12 @@ const statusChips = (filters: StatusFilters): ActiveFilterChip[] => {
     return selected.map((key) => ({ id: `status:${key}`, label: statusLabel(key), kind: 'status', value: key }));
 };
 
-/** Zbiera wszystko, co zawęża listę, w stałej kolejności: statusy, źródła, typy, zamawiający, miasta, CPV. Fraza wyszukiwania ma własne pole. */
+/** Zbiera wszystko, co zawęża listę, w stałej kolejności: statusy, etykiety, źródła, typy, zamawiający, miasta, CPV. Fraza wyszukiwania ma własne pole. */
 export const buildActiveFilterChips = (input: ActiveFilterInput): ActiveFilterChip[] => {
     const chips = statusChips(input.statusFilters);
+
+    input.selectedLabels.forEach((label) =>
+        chips.push({ id: `label:${label}`, label: `Etykieta: ${LABEL_CONFIG[label].label}`, kind: 'label', value: label }));
 
     if (input.selectedSources.length < ALL_SOURCES.length) {
         const labels = ALL_SOURCES.filter((source) => input.selectedSources.includes(source))

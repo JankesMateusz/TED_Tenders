@@ -1,5 +1,6 @@
 import { TenderSource } from './TenderSource';
 import { TenderStatus } from './TenderStatus';
+import { TenderLabel } from './TenderLabel';
 import { BuyerSector } from '../utils/advertisers';
 
 export interface Tender {
@@ -31,5 +32,9 @@ export interface Tender {
     status?: TenderStatus;
     statusByEmail?: string;
     statusAt?: Date;
+    /** Wspólne etykiety (może być kilka); autor i czas dotyczą ostatniej zmiany. */
+    labels?: TenderLabel[];
+    labelsByEmail?: string;
+    labelsAt?: Date;
 }
 

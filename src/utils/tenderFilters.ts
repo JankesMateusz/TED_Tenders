@@ -1,6 +1,8 @@
 import { Tender } from '../types/Tender';
 import { TenderSource } from '../types/TenderSource';
 import { TenderStatus } from '../types/TenderStatus';
+import { TenderLabel } from '../types/TenderLabel';
+import { TENDER_LABELS } from './tenderLabels';
 import { OrderType } from './tenderSources';
 import { filterTendersByCpvCodes, normalizeCpv } from './cpvFilter';
 import { normalizeName } from './stringUtils';
@@ -29,6 +31,8 @@ interface FilterOptions {
     isFiltered: boolean;
     searchQuery: string;
     statusFilters: StatusFilters;
+    /** Wybrane etykiety; pusta lub brak oznacza brak filtra, a przetarg musi mieć którąkolwiek z nich. */
+    selectedLabels?: TenderLabel[];
     sortOrder?: SortOrder;
     /** Ręczne decyzje o zamawiających (po NIP); bez nich rozstrzyga sektor ustalony automatycznie. */
     advertiserDecisions?: AdvertiserDecisions;
@@ -40,7 +44,7 @@ interface FilterOptions {
 export type StatusFilters = Record<TenderStatus | 'unmarked', boolean>;
 
 /** Wymiary filtrów, które mają własne liczniki ("ile wyników dałoby wybranie tej opcji"). */
-export type FilterDimension = 'source' | 'orderType' | 'buyer' | 'city' | 'status';
+export type FilterDimension = 'source' | 'orderType' | 'buyer' | 'city' | 'status' | 'label';
 
 const matchesAny = (value: string, selected: string[]): boolean => {
     const normalizedValue = normalizeName(value);
@@ -122,6 +126,12 @@ export const filterTenders = (
         result = result.filter(tender => options.statusFilters[tender.status ?? 'unmarked']);
     }
 
+    // Filtrowanie po etykietach (OR - wystarczy jedna z wybranych)
+    const selectedLabels = options.selectedLabels ?? [];
+    if (skip !== 'label' && selectedLabels.length > 0) {
+        result = result.filter(tender => tender.labels?.some(label => selectedLabels.includes(label)));
+    }
+
     return result;
 };
 
@@ -191,6 +201,8 @@ export interface FacetCounts {
     sources: Partial<Record<TenderSource, number>>;
     orderTypes: Partial<Record<OrderType, number>>;
     statuses: Partial<Record<TenderStatus | 'unmarked', number>>;
+    /** Przetarg z kilkoma etykietami liczy się przy każdej z nich. */
+    labels: Partial<Record<TenderLabel, number>>;
 }
 
 const countBy = <K extends string>(
@@ -205,9 +217,20 @@ const countBy = <K extends string>(
     return counts;
 };
 
+const countLabels = (tenders: Tender[]): Partial<Record<TenderLabel, number>> => {
+    const counts: Partial<Record<TenderLabel, number>> = {};
+    for (const tender of tenders) {
+        for (const label of tender.labels ?? []) {
+            if (TENDER_LABELS.includes(label)) counts[label] = (counts[label] ?? 0) + 1;
+        }
+    }
+    return counts;
+};
+
 /** Liczniki opcji filtrów: ile przetargów zostałoby po wybraniu danej opcji przy pozostałych filtrach bez zmian. */
 export const countFacets = (tenders: Tender[], options: FilterOptions): FacetCounts => ({
     sources: countBy(filterTenders(tenders, options, 'source'), (tender) => tender.source),
     orderTypes: countBy(filterTenders(tenders, options, 'orderType'), (tender) => tender.orderType),
-    statuses: countBy(filterTenders(tenders, options, 'status'), (tender) => tender.status ?? 'unmarked')
+    statuses: countBy(filterTenders(tenders, options, 'status'), (tender) => tender.status ?? 'unmarked'),
+    labels: countLabels(filterTenders(tenders, options, 'label'))
 });

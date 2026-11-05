@@ -30,6 +30,26 @@ service cloud.firestore {
         && !('statusByEmail' in data) && !('statusAt' in data);
     }
 
+    // Wspólne etykiety: lista 1–4 różnych znanych etykiet (PROSTY i TRUDNY się wykluczają)
+    // z autorem i czasem serwera, albo komplet pól usunięty.
+    function labelFieldsAreSet() {
+      let data = request.resource.data;
+      return data.labels is list
+        && data.labels.size() >= 1
+        && data.labels.toSet().size() == data.labels.size()
+        && data.labels.toSet().hasOnly(['important', 'simple', 'hard', 'missingDocs'])
+        && !data.labels.toSet().hasAll(['simple', 'hard'])
+        && data.labelsBy == request.auth.uid
+        && data.labelsByEmail == request.auth.token.get('email', 'Gość')
+        && data.labelsAt == request.time;
+    }
+
+    function labelFieldsAreCleared() {
+      let data = request.resource.data;
+      return !('labels' in data) && !('labelsBy' in data)
+        && !('labelsByEmail' in data) && !('labelsAt' in data);
+    }
+
     // Profile użytkowników: zapis tylko przez Cloud Functions (Admin SDK).
     match /users/{uid} {
       allow read: if isAdmin() || (hasRole() && request.auth.uid == uid);
@@ -42,14 +62,20 @@ service cloud.firestore {
     }
 
     // Przetargi: odczyt dla członków; dokumenty zakłada wyłącznie Cloud Function `refreshTenders`.
-    // Klient może jedynie zmienić pola wspólnego statusu istniejącego przetargu.
+    // Klient może jedynie zmienić pola wspólnego statusu i etykiet istniejącego przetargu.
     match /tenders/{tenderId} {
       allow read: if hasRole();
       allow create, delete: if false;
       allow update: if hasRole()
         && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status', 'statusBy', 'statusByEmail', 'statusAt'])
-        && (statusFieldsAreSet() || statusFieldsAreCleared());
+            .hasOnly(['status', 'statusBy', 'statusByEmail', 'statusAt',
+                      'labels', 'labelsBy', 'labelsByEmail', 'labelsAt'])
+        && (!request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['status', 'statusBy', 'statusByEmail', 'statusAt'])
+            || statusFieldsAreSet() || statusFieldsAreCleared())
+        && (!request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['labels', 'labelsBy', 'labelsByEmail', 'labelsAt'])
+            || labelFieldsAreSet() || labelFieldsAreCleared());
     }
 
     // Komentarze do przetargów: wspólne dla członków, tylko do dodawania i usuwania (bez edycji).

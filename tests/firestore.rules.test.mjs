@@ -169,6 +169,66 @@ describe('wspólny status przetargu', () => {
     });
 });
 
+describe('wspólne etykiety przetargu', () => {
+    const member = { role: 'member', email: 'member@example.com' };
+    const tenderRef = (db) => doc(db, 'tenders/TED_1');
+    const labelFields = (overrides = {}) => ({
+        labels: ['important', 'hard'],
+        labelsBy: 'member1',
+        labelsByEmail: 'member@example.com',
+        labelsAt: serverTimestamp(),
+        ...overrides
+    });
+
+    beforeEach(async () => {
+        await env.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'tenders/TED_1'), {
+                title: 'Przetarg', buyerName: 'Urząd',
+                status: 'entered', statusBy: 'member2', statusByEmail: 'other@example.com', statusAt: new Date()
+            });
+        });
+    });
+
+    it('członek ustawia kilka etykiet, także gdy status ustawił ktoś inny', async () => {
+        await assertSucceeds(updateDoc(tenderRef(dbFor('member1', member)), labelFields()));
+        await assertSucceeds(updateDoc(tenderRef(dbFor('member1', member)), labelFields({
+            labels: ['important', 'simple', 'missingDocs']
+        })));
+    });
+
+    it('członek zdejmuje wszystkie etykiety naraz', async () => {
+        await assertSucceeds(updateDoc(tenderRef(dbFor('member1', member)), labelFields()));
+        await assertSucceeds(updateDoc(tenderRef(dbFor('member1', member)), {
+            labels: deleteField(), labelsBy: deleteField(), labelsByEmail: deleteField(), labelsAt: deleteField()
+        }));
+    });
+
+    it('zablokowane jest połączenie PROSTY i TRUDNY', async () => {
+        await assertFails(updateDoc(tenderRef(dbFor('member1', member)), labelFields({ labels: ['simple', 'hard'] })));
+    });
+
+    it('zablokowane są nieznane, powtórzone i puste etykiety oraz zły typ', async () => {
+        for (const labels of [['nope'], ['important', 'important'], [], 'important']) {
+            await assertFails(updateDoc(tenderRef(dbFor('member1', member)), labelFields({ labels })));
+        }
+    });
+
+    it('zablokowany jest cudzy autor, cudzy e-mail i czas inny niż serwera', async () => {
+        await assertFails(updateDoc(tenderRef(dbFor('member1', member)), labelFields({ labelsBy: 'member2' })));
+        await assertFails(updateDoc(tenderRef(dbFor('member1', member)), labelFields({ labelsByEmail: 'other@example.com' })));
+        await assertFails(updateDoc(tenderRef(dbFor('member1', member)), labelFields({ labelsAt: new Date('2020-01-01') })));
+    });
+
+    it('zablokowany jest niekompletny zestaw pól i zmiana innych pól', async () => {
+        await assertFails(updateDoc(tenderRef(dbFor('member1', member)), { labels: ['important'] }));
+        await assertFails(updateDoc(tenderRef(dbFor('member1', member)), labelFields({ title: 'Podmieniony' })));
+    });
+
+    it('niezalogowany nie ustawia etykiet', async () => {
+        await assertFails(updateDoc(tenderRef(env.unauthenticatedContext().firestore()), labelFields()));
+    });
+});
+
 describe('ulubione (gwiazdki)', () => {
     const favorite = { title: 'Przetarg', publicationNumber: '1-2026' };
 

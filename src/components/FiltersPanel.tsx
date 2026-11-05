@@ -5,6 +5,8 @@ import { DEFAULT_ORDER_TYPES } from '../constants';
 import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
 import { ALL_SOURCES } from '../utils/persistedFilters';
 import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
+import { TenderLabel } from '../types/TenderLabel';
+import { LABEL_CONFIG, TENDER_LABELS } from '../utils/tenderLabels';
 import { ActiveFilterChip } from '../utils/activeFilters';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { FilterPopover, FilterPopoverOption } from './FilterPopover';
@@ -32,6 +34,8 @@ interface FiltersPanelProps {
     statusFilters: StatusFilters;
     onStatusFilterChange: (filter: keyof StatusFilters) => void;
     onShowAllStatuses: () => void;
+    selectedLabels: TenderLabel[];
+    onLabelToggle: (label: TenderLabel) => void;
     facetCounts: FacetCounts;
     sortOrder: SortOrder;
     onSortOrderChange: (order: SortOrder) => void;
@@ -54,6 +58,8 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     statusFilters,
     onStatusFilterChange,
     onShowAllStatuses,
+    selectedLabels,
+    onLabelToggle,
     facetCounts,
     sortOrder,
     onSortOrderChange,
@@ -70,6 +76,14 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
         ...statusOption(key),
         count: facetCounts.statuses[key] ?? 0,
         checked: statusFilters[key]
+    }));
+
+    const labelOptions: FilterPopoverOption[] = TENDER_LABELS.map((label) => ({
+        key: label,
+        label: LABEL_CONFIG[label].label,
+        color: LABEL_CONFIG[label].color,
+        count: facetCounts.labels[label] ?? 0,
+        checked: selectedLabels.includes(label)
     }));
 
     const sourceOptions: FilterPopoverOption[] = ALL_SOURCES.map((source) => {
@@ -112,6 +126,12 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                         Pokaż wszystkie statusy
                     </button>
                 </FilterPopover>
+                <FilterPopover
+                    label="Etykiety"
+                    options={labelOptions}
+                    onToggle={(key) => onLabelToggle(key as TenderLabel)}
+                    badge={selectedLabels.length > 0 ? selectedLabels.length : undefined}
+                />
                 <FilterPopover
                     label="Źródło"
                     options={sourceOptions}

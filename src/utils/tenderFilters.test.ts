@@ -300,3 +300,41 @@ describe('filtr po kategorii CPV', () => {
         expect(run(null)).toEqual(['k', 'm', 'n', 'o']);
     });
 });
+
+describe('filtr po etykietach', () => {
+    const labelled: Tender[] = [
+        { ...tender('a'), labels: ['important', 'hard'] },
+        { ...tender('b'), labels: ['simple'] },
+        { ...tender('c'), labels: ['important'] },
+        tender('d')
+    ];
+    const options = {
+        selectedSources: [TenderSource.TED],
+        selectedOrderTypes: [...DEFAULT_ORDER_TYPES],
+        selectedBuyers: [],
+        selectedCities: [],
+        selectedCpvs: [],
+        isFiltered: false,
+        searchQuery: '',
+        statusFilters: noFilters
+    };
+    const ids = (selectedLabels: Tender['labels']) =>
+        filterAndSortTenders(labelled, { ...options, selectedLabels }).map((t) => t.id).sort();
+
+    it('bez wybranej etykiety pokazuje wszystko', () => {
+        expect(ids([])).toEqual(['a', 'b', 'c', 'd']);
+    });
+
+    it('jedna etykieta zostawia przetargi, które ją mają', () => {
+        expect(ids(['important'])).toEqual(['a', 'c']);
+    });
+
+    it('kilka etykiet działa jak "lub"', () => {
+        expect(ids(['simple', 'hard'])).toEqual(['a', 'b']);
+    });
+
+    it('liczniki liczą przetarg przy każdej jego etykiecie i ignorują własny filtr', () => {
+        const counts = countFacets(labelled, { ...options, selectedLabels: ['simple'] }).labels;
+        expect(counts).toEqual({ important: 2, hard: 1, simple: 1 });
+    });
+});

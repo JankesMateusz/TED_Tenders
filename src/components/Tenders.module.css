@@ -412,6 +412,17 @@
     line-height: 1.4;
 }
 
+.labelBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
 .sourceBadge {
     display: inline-block;
     padding: 4px 10px;

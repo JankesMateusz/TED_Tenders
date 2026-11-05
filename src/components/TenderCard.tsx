@@ -3,13 +3,15 @@ import { Tender } from '../types/Tender';
 import { TenderComment } from '../types/TenderComment';
 import { getSourceConfig, getOrderTypeConfig, getSourceAttribution, OrderType } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
-import { STATUS_CONFIG } from '../utils/tenderStatus';
+import { STATUS_CONFIG, statusAuthorCaption } from '../utils/tenderStatus';
 import { isItRelatedCpv } from '../utils/cpvFilter';
 import { useAuth } from '../context/AuthContext';
 import { AdvertiserDecision } from '../utils/advertisers';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import CommentsPopover from './CommentsPopover';
 import StatusMenu from './StatusMenu';
+import LabelMenu from './LabelMenu';
+import { LABEL_CONFIG } from '../utils/tenderLabels';
 import styles from './Tenders.module.css';
 
 type Props = {
@@ -52,7 +54,7 @@ const VISIBLE_CPV_CHIPS = 2;
 
 const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment, advertiserHidden, onSetAdvertiserDecision, isActive, onActivate }) => {
     const { user } = useAuth();
-    const { isFavorite, toggleFavorite, toggleStatus } = useUserPreferences();
+    const { isFavorite, toggleFavorite, toggleStatus, toggleLabel } = useUserPreferences();
 
     const [expanded, setExpanded] = useState<boolean>(false);
     const cardRef = useRef<HTMLLIElement>(null);
@@ -68,6 +70,8 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
 
     const fav = isFavorite(tender.id);
     const statusColor = tender.status ? STATUS_CONFIG[tender.status].color : undefined;
+
+    const labelsCaption = statusAuthorCaption(tender.labelsByEmail, tender.labelsAt);
 
     // Kolejność chipów: kody IT pierwsze (to tylko kolejność, karta ich nie oznacza)
     const itCodes = cpvCodes.filter(isItRelatedCpv);
@@ -93,6 +97,16 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                             {orderCfg.label}
                         </span>
                     )}
+                    {(tender.labels ?? []).map((label) => (
+                        <span
+                            key={label}
+                            className={styles.labelBadge}
+                            style={{ backgroundColor: LABEL_CONFIG[label].color }}
+                            title={labelsCaption}
+                        >
+                            {LABEL_CONFIG[label].label}
+                        </span>
+                    ))}
                 </div>
                 <div className={styles.cardActions}>
                     <StatusMenu
@@ -101,6 +115,11 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                         statusAt={tender.statusAt}
                         editable={canSetStatus}
                         onToggle={(status) => toggleStatus(tender, status)}
+                    />
+                    <LabelMenu
+                        labels={tender.labels ?? []}
+                        editable={canSetStatus}
+                        onToggle={(label) => toggleLabel(tender, label)}
                     />
                     {canComment && (
                         <CommentsPopover
