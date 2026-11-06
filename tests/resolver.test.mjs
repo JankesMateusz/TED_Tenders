@@ -106,6 +106,12 @@ describe('resolver: eZamówienia', () => {
         assert.match(result.sourceUrl, /ezamawiajacy\.pl/);
     });
 
+    it('pusta lista i adres w polu 3.1 bez https://: UNSUPPORTED_PLATFORM z linkiem', async () => {
+        const result = await resolveDocuments(ez, fakeHttp(ezRoutes({ docs: [], body: fixture('ez-body-no-scheme.html') })));
+        assert.equal(result.status, 'UNSUPPORTED_PLATFORM');
+        assert.equal(result.sourceUrl, 'https://www.dzp.agh.edu.pl');
+    });
+
     it('pusta lista i brak pola 3.1: NO_SOURCE_URL', async () => {
         const result = await resolveDocuments(ez, fakeHttp(ezRoutes({ docs: [] })));
         assert.equal(result.status, 'NO_SOURCE_URL');
@@ -132,6 +138,15 @@ describe('resolver: eZamówienia', () => {
     it('pole 3.1 wyciąga adres z HTML ogłoszenia', () => {
         assert.equal(extractProceedingUrl(fixture('ez-body-profile.html')), 'https://platformazakupowa.pl/pn/sm_wroclaw');
         assert.equal(extractProceedingUrl(fixture('ez-body-none.html')), null);
+    });
+
+    it('pole 3.1 z adresem bez https:// (np. AGH) dostaje schemat, a tekst niebędący adresem jest odrzucany', () => {
+        assert.equal(extractProceedingUrl(fixture('ez-body-no-scheme.html')), 'https://www.dzp.agh.edu.pl');
+        const field = (value) => `<h3>3.1.) Adres strony internetowej prowadzonego postępowania</h3> ${value} <h3>3.2.) Zamawiający zastrzega dostęp</h3>`;
+        assert.equal(extractProceedingUrl(field('https://x.pl/a?b=1.')), 'https://x.pl/a?b=1');
+        assert.equal(extractProceedingUrl(field('zamowienia.uczelnia.pl/przetargi,')), 'https://zamowienia.uczelnia.pl/przetargi');
+        assert.equal(extractProceedingUrl(field('Nie dotyczy')), null);
+        assert.equal(extractProceedingUrl(field('brak.')), null);
     });
 });
 

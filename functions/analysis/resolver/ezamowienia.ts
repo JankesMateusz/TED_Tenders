@@ -29,7 +29,11 @@ export const sourceUrlFor = (tenderId: string): string => `${BASE}/mp-client/sea
 export const extractProceedingUrl = (html: string): string | null => {
   const text = htmlToText(html);
   const match = text.match(/3\.1\.\)?\s*Adres strony internetowej prowadzonego post[ęe]powania\s*(\S+)/i);
-  return match && /^https?:\/\//i.test(match[1]) ? match[1] : null;
+  if (!match) return null;
+  // Zamawiający często wpisuje sam adres („www.dzp.agh.edu.pl") bez https://; pusta sekcja zostawia kolejne pole („3.2.)")
+  const token = match[1].replace(/[.,;]+$/, '');
+  if (!/^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(:\d+)?([/?#]\S*)?$/i.test(token)) return null;
+  return /^https?:\/\//i.test(token) ? token : `https://${token}`;
 };
 
 /** Lista dokumentów postępowania; pusta lista (jeszcze nic nie opublikowano) to nie błąd. */
