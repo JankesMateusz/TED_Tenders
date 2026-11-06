@@ -6,6 +6,7 @@ import { addDays, dayFromTedDate, isValidDay, toWarsaw } from '../functions/lib/
 import { mapBazaNotice } from '../functions/lib/tenders/bazakonkurencyjnosci.js';
 import { extractCpvCodes, mapEzamowieniaNotice } from '../functions/lib/tenders/ezamowienia.js';
 import { IT_CPV_CODES_8 } from '../functions/lib/tenders/itCpvCodes.js';
+import { buildInitialSnapshot, buildSnapshot, statusChanged, MAX_STATUS_HISTORY } from '../functions/lib/labels/labelSnapshot.js';
 import { tenderId } from '../functions/lib/tenders/model.js';
 import { classifySector } from '../functions/lib/tenders/sector.js';
 import { mapTedNotice } from '../functions/lib/tenders/ted.js';
@@ -320,5 +321,57 @@ describe('classifySector', () => {
     it('mapper Bazy zapisuje sektor automatyczny', () => {
         const record = mapBazaNotice(readFixtureDetails()[1], 296954);
         assert.equal(record.buyerSectorAuto, 'public');
+    });
+});
+
+describe('labelSnapshot', () => {
+    const at = (ms) => ({ toMillis: () => ms });
+    const tender = (extra = {}) => ({
+        source: 'E_ZAMOWIENIA', publicationNumber: '2026/BZP 1/01', publicationDate: '2026-11-06', title: 'Laptopy',
+        cpvCodes: ['30213300-8'], orderType: 'Delivery', buyerName: 'Gmina', buyerCity: 'X', labels: ['simple'], ...extra
+    });
+    const withStatus = (status, ms) => tender({ status, statusAt: at(ms), statusBy: 'u1', statusByEmail: 'a@b.pl' });
+
+    it('wykrywa tylko zmiany statusu, nie etykiet', () => {
+        assert.equal(statusChanged(tender(), tender({ labels: ['hard'] })), false);
+        assert.equal(statusChanged(tender(), withStatus('toEnter', 1)), true);
+        assert.equal(statusChanged(withStatus('toEnter', 1), tender()), true);
+        assert.equal(statusChanged(withStatus('toEnter', 1), withStatus('entered', 2)), true);
+        assert.equal(statusChanged(withStatus('toEnter', 1), undefined), false);
+    });
+
+    it('tworzy migawkę z metadanymi i pierwszym wpisem historii', () => {
+        const snap = buildSnapshot('E_x', withStatus('toEnter', 1), undefined);
+        assert.equal(snap.docId, 'E_x');
+        assert.equal(snap.title, 'Laptopy');
+        assert.deepEqual(snap.cpvCodes, ['30213300-8']);
+        assert.equal(snap.status, 'toEnter');
+        assert.equal(snap.statusHistory.length, 1);
+        assert.equal(snap.buyerCity, undefined);
+        assert.equal(snap.labels, undefined);
+    });
+
+    it('dopisuje zmiany do historii, a zdjęcie statusu nie kasuje historii', () => {
+        const first = buildSnapshot('E_x', withStatus('toEnter', 1), undefined);
+        const second = buildSnapshot('E_x', withStatus('notToEnter', 2), first);
+        const cleared = buildSnapshot('E_x', tender(), second);
+        assert.deepEqual(cleared.statusHistory.map((c) => c.status), ['toEnter', 'notToEnter', null]);
+        assert.equal(cleared.status, null);
+    });
+
+    it('ponowne dostarczenie tego samego zdarzenia niczego nie dopisuje', () => {
+        const first = buildSnapshot('E_x', withStatus('toEnter', 1), undefined);
+        assert.equal(buildSnapshot('E_x', withStatus('toEnter', 1), first), null);
+    });
+
+    it('ogranicza historię do ostatnich zmian', () => {
+        let snap;
+        for (let i = 1; i <= MAX_STATUS_HISTORY + 5; i++) snap = buildSnapshot('E_x', withStatus(i % 2 ? 'toEnter' : 'entered', i), snap);
+        assert.equal(snap.statusHistory.length, MAX_STATUS_HISTORY);
+    });
+
+    it('migawka startowa tylko dla przetargów ze statusem', () => {
+        assert.equal(buildInitialSnapshot('E_x', tender()), null);
+        assert.equal(buildInitialSnapshot('E_x', withStatus('entered', 1)).status, 'entered');
     });
 });

@@ -487,3 +487,13 @@ describe('advertisers (ręczne ukrywanie zamawiających)', () => {
         await assertFails(deleteDoc(doc(dbFor('admin1', { role: 'admin' }), `advertisers/${NIP}`)));
     });
 });
+
+describe('labelSnapshots', () => {
+    it('ani członek, ani admin nie czyta ani nie zapisuje migawek', async () => {
+        for (const claims of [{ role: 'member' }, { role: 'admin' }, {}]) {
+            const db = dbFor('member1', claims);
+            await assertFails(getDoc(doc(db, 'labelSnapshots/x')));
+            await assertFails(setDoc(doc(db, 'labelSnapshots/x'), { status: 'toEnter' }));
+        }
+    });
+});

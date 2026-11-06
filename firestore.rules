@@ -143,6 +143,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Migawki ocen przetargów (bez TTL, materiał do oceny wstępnej klasyfikacji): zapisuje i czyta tylko serwer.
+    match /labelSnapshots/{docId} {
+      allow read, write: if false;
+    }
+
     // Pozostałe kolekcje (m.in. blokada odświeżania `meta`) są zamknięte.
     match /{document=**} {
       allow read, write: if false;
