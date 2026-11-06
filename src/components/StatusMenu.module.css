@@ -82,6 +82,31 @@
     box-shadow: var(--card-hover-shadow);
 }
 
+.menuRight {
+    left: auto;
+    right: 0;
+    min-width: 230px;
+}
+
+.moreButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.moreButton:hover {
+    background: var(--bg-secondary);
+}
+
 .item {
     display: flex;
     align-items: center;
