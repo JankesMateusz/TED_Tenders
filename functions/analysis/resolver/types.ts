@@ -58,6 +58,8 @@ export interface HttpRequestOptions {
   text?: boolean;
   /** Domyślnie true; false pozwala wykryć przekierowanie (np. na logowanie). */
   followRedirects?: boolean;
+  /** Przechodzi łańcuch przekierowań z ciasteczkami (SSO platformazakupowa.pl); ignoruje `followRedirects`. */
+  session?: boolean;
 }
 
 /** Wstrzykiwany klient HTTP: w produkcji `requestWithRetry`, w testach atrapa na zapisanych odpowiedziach. */

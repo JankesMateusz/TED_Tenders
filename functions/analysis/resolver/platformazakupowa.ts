@@ -5,19 +5,33 @@ const HOSTS = new Set(['platformazakupowa.pl', 'www.platformazakupowa.pl', 'ww.p
 const TRANSACTION_PATH = /^\/transakcja\/(\d+)/;
 const PROFILE_PATH = /^\/pn\//;
 const ORIGIN = 'https://platformazakupowa.pl';
-const ANCHOR_PATTERN = /<a\b[^>]*\bhref\s*=\s*["']([^"']*\/file\/get_new\/([^"'?#/]+))[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi;
+const ROW_PATTERN = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+const NAME_CELL_PATTERN = /<td[^>]*text-left[^>]*>([\s\S]*?)<\/td>/i;
+const LINK_PATTERN = /href\s*=\s*["']([^"']*\/file\/get_new\/([^"'?#/]+))["']/i;
+const PUBLISHED_PATTERN = /(\d{4}-\d{2}-\d{2})\s*(?:<[^>]*>\s*)*(\d{2}:\d{2}(?::\d{2})?)/;
+
+/** Adres pliku z href (na stronie bywa względny wobec protokołu: `//platformazakupowa.pl/file/...`). */
+const absoluteUrl = (href: string): string =>
+  href.startsWith('//') ? `https:${href}` : /^https?:\/\//.test(href) ? href : `${ORIGIN}${href.startsWith('/') ? '' : '/'}${href}`;
 
 /**
- * Pliki z tabeli „Załączniki do postępowania”: linki `/file/get_new/<hash>.<rozszerzenie>`.
- * Nazwę bierzemy z tekstu linku (nagłówek Content-Disposition ma zepsute polskie znaki), a gdy go brak, z hasha.
+ * Pliki z tabeli „Załączniki do postępowania”. Wiersz ma nazwę pliku (komórka `text-left`), datę i godzinę
+ * (czas polski, bez strefy; zapisujemy jako `RRRR-MM-DDTGG:MM:SS`) oraz link `/file/get_new/<hash>.<rozszerzenie>`.
+ * Nazwę bierzemy z tabeli, bo nagłówek Content-Disposition ma zepsute polskie znaki, a hash nic nie mówi silnikowi.
  */
 export const extractFiles = (html: string): ResolvedFile[] => {
   const byId = new Map<string, ResolvedFile>();
-  for (const match of html.matchAll(ANCHOR_PATTERN)) {
-    const [, href, fileId, inner] = match;
-    if (byId.has(fileId)) continue;
-    const url = href.startsWith('http') ? href : `${ORIGIN}${href.startsWith('/') ? '' : '/'}${href}`;
-    byId.set(fileId, { path: htmlToText(inner.replace(/<[^>]+>/g, '')) || fileId, url, platformFileId: fileId });
+  for (const [, row] of html.matchAll(ROW_PATTERN)) {
+    const link = row.match(LINK_PATTERN);
+    if (!link || byId.has(link[2])) continue;
+    const name = htmlToText((row.match(NAME_CELL_PATTERN)?.[1] ?? '').replace(/<[^>]+>/g, ''));
+    const published = row.replace(NAME_CELL_PATTERN, '').match(PUBLISHED_PATTERN);
+    byId.set(link[2], {
+      path: name || link[2],
+      url: absoluteUrl(link[1]),
+      platformFileId: link[2],
+      ...(published ? { publishedAt: `${published[1]}T${published[2].length === 5 ? `${published[2]}:00` : published[2]}` } : {}),
+    });
   }
   return [...byId.values()];
 };
@@ -49,9 +63,9 @@ export const platformazakupowaAdapter: PlatformAdapter = {
     }
 
     const sourceUrl = `${ORIGIN}/transakcja/${transaction[1]}`;
-    const response = await http.get<string>(sourceUrl, { text: true, followRedirects: false });
+    const response = await http.get<string>(sourceUrl, { text: true, session: true });
     if (response.status >= 300) {
-      // Obserwowane 2026-11-06: 302 na /sso/authorize?error=login_required. To blokada po stronie platformy, nie brak plików.
+      // Nie powinno się zdarzyć po przejściu łańcucha SSO z ciasteczkami; gdyby, to platforma blokuje dostęp, a nie brak plików.
       throw new ResolverError(
         `platformazakupowa.pl przekierowała zapytanie (${response.status}${response.location ? ` → ${response.location}` : ''}) zamiast zwrócić stronę postępowania.`,
         { url: sourceUrl, status: response.status },

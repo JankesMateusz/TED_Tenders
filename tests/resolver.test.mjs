@@ -1,5 +1,5 @@
 // Testy resolvera dokumentacji (TT-1) offline, na zapisanych odpowiedziach z tests/fixtures/resolver.
-// Fixture `pz-transakcja*.html` jest syntetyczny (struktura z researchu); reszta pochodzi z żywych odpowiedzi eZamówień (2026-11-06).
+// Fixtures pochodzą z żywych odpowiedzi eZamówień i platformazakupowa.pl (2026-11-06).
 // Wymagają zbudowanych funkcji: npm run test:unit
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -173,11 +173,16 @@ describe('resolver: TED', () => {
 describe('resolver: platformazakupowa.pl', () => {
     const ted = { source: 'TED', link: '', documentsUrl: 'https://platformazakupowa.pl/transakcja/1403900' };
 
-    it('wyciąga pliki z linków get_new, bez duplikatów i obcych linków', () => {
+    it('wyciąga nazwy, daty i adresy z wierszy tabeli (fragment prawdziwej strony), bez duplikatów i obcych linków', () => {
         const files = extractFiles(fixture('pz-transakcja.html'));
-        assert.deepEqual(files.map((f) => f.path), ['Ogłoszenie o zamówieniu.pdf', 'SWZ & załączniki.docx', 'Formularz cenowy.xlsx']);
-        assert.equal(files[0].url, 'https://platformazakupowa.pl/file/get_new/aaa111bbb.pdf');
-        assert.equal(files[1].url, 'https://platformazakupowa.pl/file/get_new/ccc222ddd.docx');
+        assert.deepEqual(files.map((f) => f.path), [
+            'Ogłoszenie o zamówieniu.pdf',
+            'SWZ_142.pdf',
+            'Załącznik nr 1 do SWZ - Opis przedmiotu zamówienia.pdf'
+        ]);
+        assert.equal(files[0].url, 'https://platformazakupowa.pl/file/get_new/9ea53b0089ef98140ff139b85ed8d697.pdf');
+        assert.equal(files[0].platformFileId, '9ea53b0089ef98140ff139b85ed8d697.pdf');
+        assert.equal(files[0].publishedAt, '2026-11-06T12:41:00');
     });
 
     it('strona bez załączników: NO_DOCUMENTS_YET', async () => {
@@ -190,15 +195,15 @@ describe('resolver: platformazakupowa.pl', () => {
         await assert.rejects(resolveDocuments(ted, http), (error) => error instanceof ResolverError && /login_required/.test(error.message));
     });
 
-    it('nie podąża za przekierowaniami (żeby je wykryć)', async () => {
+    it('prosi klienta o sesję z ciasteczkami (łańcuch SSO)', async () => {
         let seen;
         const http = fakeHttp([['/transakcja/', (options) => ((seen = options), ok(fixture('pz-transakcja.html')))]]);
         await resolveDocuments(ted, http);
-        assert.equal(seen.followRedirects, false);
+        assert.equal(seen.session, true);
     });
 
     it('limit liczby plików', async () => {
-        const many = Array.from({ length: 201 }, (_, i) => `<a href="/file/get_new/h${i}.pdf">p${i}.pdf</a>`).join('');
+        const many = Array.from({ length: 201 }, (_, i) => `<tr><td class="text-left">p${i}.pdf</td><td><a href="//platformazakupowa.pl/file/get_new/h${i}.pdf"></a></td></tr>`).join('');
         const http = fakeHttp([['/transakcja/', ok(`<html>${many}</html>`)]]);
         await assert.rejects(resolveDocuments(ted, http), ResolverError);
     });
