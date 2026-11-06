@@ -1,5 +1,6 @@
 import { DocsCheck, DocsFilter } from '../types/DocsCheck';
 import { Tender } from '../types/Tender';
+import { TenderSource } from '../types/TenderSource';
 
 /** Kolejność tablicy to kolejność w menu filtra. */
 export const DOCS_FILTERS: DocsFilter[] = ['available', 'none', 'otherPlatform'];
@@ -74,12 +75,20 @@ export interface DocsBadgeInfo {
     text: string;
     /** Pełny opis w podpowiedzi. */
     title: string;
-    /** Adres, pod który prowadzi plakietka (dokumenty na innej platformie); brak = zwykły tekst. */
-    href?: string;
     /** Czy pokazać przycisk „Sprawdź teraz" (sprawdzenie ma sens, gdy dokumentów brak lub stan nieznany). */
     canCheckNow: boolean;
     tone: DocsBadgeTone;
 }
+
+/**
+ * Dokąd prowadzi odnośnik do dokumentacji przetargu (przycisk na karcie i kopiowanie linków). Kolejność:
+ * adres od zamawiającego (TED), potem strona postępowania ustalona przy sprawdzaniu (dla eZamówień to jedyne źródło),
+ * a dla Bazy Konkurencyjności strona ogłoszenia, bo tam leży dokumentacja. Brak adresu to brak odnośnika, bez zgadywania.
+ */
+export const docsLinkUrl = (tender: Tender): string | undefined =>
+    tender.documentsUrl
+    ?? tender.docsCheck?.sourceUrl
+    ?? (tender.source === TenderSource.BAZA_KONKURENCYJNOSCI ? tender.link : undefined);
 
 const FINAL_CHECK_NOTE = 'Automatyczne sprawdzanie zakończone.';
 
@@ -110,7 +119,6 @@ export const docsBadge = (tender: Tender, now: Date = new Date()): DocsBadgeInfo
             return {
                 text: `📄 ${files} · ${platformName(check)}`,
                 title: `Dokumentacja jest dostępna na platformie (${platformName(check)}). ${checkedAt} Sama lista plików nie dowodzi, że dokumentacja jest kompletna.`.trim(),
-                href: check.sourceUrl,
                 canCheckNow: false,
                 tone: 'neutral'
             };
@@ -121,7 +129,6 @@ export const docsBadge = (tender: Tender, now: Date = new Date()): DocsBadgeInfo
                     ? `📄 brak dokumentów · następne sprawdzenie ${formatCheckTime(check.nextCheckAt, now)}`
                     : `📄 brak dokumentów · sprawdzono ${check.checkedAt ? formatCheckTime(check.checkedAt, now) : ''}`.trim(),
                 title: `Zamawiający nie dodał jeszcze plików. ${checkedAt}${progress} ${next}`.trim(),
-                href: check.sourceUrl,
                 canCheckNow: true,
                 tone: 'warn'
             };
@@ -129,11 +136,10 @@ export const docsBadge = (tender: Tender, now: Date = new Date()): DocsBadgeInfo
         case 'profile': {
             const where = platformName(check);
             return {
-                text: check.sourceUrl ? `📄 dokumenty na ${where} ↗` : '📄 dokumenty poza obsługiwanymi platformami',
+                text: `📄 dokumenty na ${where}`,
                 title: check.state === 'profile'
                     ? 'Link prowadzi do profilu zamawiającego, a nie do konkretnego postępowania. Dokumentów nie sprawdzamy automatycznie.'
                     : 'Dokumentacja leży na platformie, której nie sprawdzamy automatycznie.',
-                href: check.sourceUrl,
                 canCheckNow: false,
                 tone: 'neutral'
             };

@@ -4,6 +4,7 @@ import { TenderSource } from '../types/TenderSource';
 import { isTenderStatus } from './tenderStatus';
 import { normalizeLabels } from './tenderLabels';
 import { DocsCheck, DocsCheckState } from '../types/DocsCheck';
+import { docsLinkUrl } from './docsCheck';
 
 const NO_DATE = 'Brak daty';
 const NO_DEADLINE = 'Brak terminu';
@@ -97,7 +98,8 @@ export const tenderFromDoc = (data: Record<string, any>, id: string): Tender => 
  */
 export const favoriteToDoc = (tender: Tender): Record<string, unknown> => {
     const { id, status, statusByEmail, statusAt, labels, labelsByEmail, labelsAt, docsCheck, isIT, ...copy } = tender;
-    return Object.fromEntries(Object.entries(copy).filter(([, value]) => value !== undefined));
+    // Odnośnik do dokumentacji zapisujemy gotowy: w kopii nie ma wyniku sprawdzania, z którego dałoby się go wyliczyć
+    return Object.fromEntries(Object.entries({ ...copy, documentsUrl: docsLinkUrl(tender) }).filter(([, value]) => value !== undefined));
 };
 
 export const favoriteFromDoc = (data: Record<string, any>, id: string): Tender => ({

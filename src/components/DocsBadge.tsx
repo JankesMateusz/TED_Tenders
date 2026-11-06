@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Tender } from '../types/Tender';
-import { docsBadge } from '../utils/docsCheck';
+import { docsBadge, docsLinkUrl } from '../utils/docsCheck';
 import { checkDocsNow } from '../utils/tendersApi';
 import { useAuth } from '../context/AuthContext';
+import ExternalIcon from './ExternalIcon';
 import styles from './Tenders.module.css';
 
 type Props = {
@@ -13,14 +14,24 @@ type Props = {
 
 const ANONYMOUS_HINT = 'Zaloguj się na swoje konto, aby sprawdzić dokumenty teraz';
 
-/** Plakietka stanu dokumentów (automatyczne sprawdzanie) z przyciskiem „Sprawdź teraz". Tylko dla przetargów IT lub z wynikiem. */
+/**
+ * Odnośnik do dokumentacji w wierszu linków karty: dla przetargów IT z plakietką stanu (automatyczne sprawdzanie)
+ * i przyciskiem „Sprawdź teraz", dla pozostałych zwykły link „Dokumentacja", jeśli znamy adres.
+ */
 const DocsBadge: React.FC<Props> = ({ tender, canCheck }) => {
     const { user } = useAuth();
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
 
     const info = docsBadge(tender);
-    if (!info) return null;
+    const url = docsLinkUrl(tender);
+    if (!info) {
+        return url ? (
+            <a href={url} target="_blank" rel="noopener noreferrer" className={styles.link}>
+                Dokumentacja <ExternalIcon />
+            </a>
+        ) : null;
+    }
 
     const isRealAccount = Boolean(user && !user.isAnonymous);
     const classes = `${styles.systemBadge} ${info.tone === 'warn' ? styles.systemBadgeWarn : ''}`;
@@ -40,8 +51,8 @@ const DocsBadge: React.FC<Props> = ({ tender, canCheck }) => {
         }
     };
 
-    const content = info.href && info.text.endsWith('↗') ? (
-        <a className={classes} href={info.href} target="_blank" rel="noopener noreferrer" title={info.title}>{info.text}</a>
+    const content = url ? (
+        <a className={classes} href={url} target="_blank" rel="noopener noreferrer" title={info.title}>{info.text} <ExternalIcon /></a>
     ) : (
         <span className={classes} title={info.title}>
             {info.text}

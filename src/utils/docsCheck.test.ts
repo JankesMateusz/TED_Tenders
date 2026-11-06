@@ -1,8 +1,8 @@
 import { Tender } from '../types/Tender';
 import { TenderSource } from '../types/TenderSource';
 import { DocsCheck } from '../types/DocsCheck';
-import { docsBadge, docsFilterOf, formatCheckTime, platformName, pluralizeFiles } from './docsCheck';
-import { tenderFromDoc } from './tenderMapping';
+import { docsBadge, docsFilterOf, docsLinkUrl, formatCheckTime, platformName, pluralizeFiles } from './docsCheck';
+import { favoriteFromDoc, favoriteToDoc, tenderFromDoc } from './tenderMapping';
 
 const NOW = new Date(2026, 10, 9, 11, 0); // poniedziałek 11:00, czas lokalny
 
@@ -59,18 +59,15 @@ describe('docsBadge', () => {
         expect(badge.text).toMatch(/następne sprawdzenie 10\.11 09:00$/);
     });
 
-    it('platforma nieobsługiwana lub profil: link do platformy', () => {
+    it('platforma nieobsługiwana lub profil: nazwa platformy z adresu, bez „Sprawdź teraz"', () => {
         const badge = docsBadge(withCheck({ state: 'unsupported', sourceUrl: 'https://www.ezamawiajacy.pl/postepowanie/1' }), NOW)!;
-        expect(badge.text).toBe('📄 dokumenty na ezamawiajacy.pl ↗');
-        expect(badge.href).toBe('https://www.ezamawiajacy.pl/postepowanie/1');
+        expect(badge.text).toBe('📄 dokumenty na ezamawiajacy.pl');
         expect(badge.canCheckNow).toBe(false);
         expect(docsBadge(withCheck({ state: 'profile', sourceUrl: 'https://platformazakupowa.pl/pn/gmina' }), NOW)!.title).toContain('profilu zamawiającego');
     });
 
-    it('platforma bez adresu: tekst bez linku', () => {
-        const badge = docsBadge(withCheck({ state: 'unsupported' }), NOW)!;
-        expect(badge.text).toBe('📄 dokumenty poza obsługiwanymi platformami');
-        expect(badge.href).toBeUndefined();
+    it('platforma bez adresu: ogólna nazwa', () => {
+        expect(docsBadge(withCheck({ state: 'unsupported' }), NOW)!.text).toBe('📄 dokumenty na innej platformie');
     });
 
     it('błąd sprawdzenia nie udaje braku dokumentów i pozwala sprawdzić ponownie', () => {
@@ -78,6 +75,36 @@ describe('docsBadge', () => {
         expect(badge.text).toBe('📄 nie udało się sprawdzić · ponowię 12:00');
         expect(badge.text).not.toContain('brak dokumentów');
         expect(badge.canCheckNow).toBe(true);
+    });
+});
+
+describe('docsLinkUrl', () => {
+    it('adres od zamawiającego (TED) wygrywa z adresem ustalonym przy sprawdzaniu', () => {
+        expect(docsLinkUrl(tender({ documentsUrl: 'https://zam.pl/dok', docsCheck: { state: 'available', sourceUrl: 'https://ezamowienia.gov.pl/x' } }))).toBe('https://zam.pl/dok');
+    });
+
+    it('eZamówienia: adres strony postępowania ze sprawdzania, także gdy dokumentów jeszcze brak lub leżą na innej platformie', () => {
+        expect(docsLinkUrl(withCheck({ state: 'available', sourceUrl: 'https://ezamowienia.gov.pl/mp-client/search/list/1' }))).toBe('https://ezamowienia.gov.pl/mp-client/search/list/1');
+        expect(docsLinkUrl(withCheck({ state: 'none', sourceUrl: 'https://ezamowienia.gov.pl/mp-client/search/list/1' }))).toBe('https://ezamowienia.gov.pl/mp-client/search/list/1');
+        expect(docsLinkUrl(withCheck({ state: 'unsupported', sourceUrl: 'https://www.dzp.agh.edu.pl' }))).toBe('https://www.dzp.agh.edu.pl');
+    });
+
+    it('Baza Konkurencyjności: strona ogłoszenia, bo tam leży dokumentacja', () => {
+        expect(docsLinkUrl(tender({ source: TenderSource.BAZA_KONKURENCYJNOSCI, link: 'https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/1' })))
+            .toBe('https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/1');
+    });
+
+    it('brak adresu to brak odnośnika (bez zgadywania)', () => {
+        expect(docsLinkUrl(tender())).toBeUndefined();
+        expect(docsLinkUrl(withCheck({ state: 'error' }))).toBeUndefined();
+    });
+
+    it('kopia przetargu z gwiazdką zapamiętuje gotowy odnośnik bez wyniku sprawdzania', () => {
+        const stored = favoriteToDoc(withCheck({ state: 'available', sourceUrl: 'https://ezamowienia.gov.pl/x' }));
+        expect(stored.documentsUrl).toBe('https://ezamowienia.gov.pl/x');
+        expect('docsCheck' in stored).toBe(false);
+        expect('isIT' in stored).toBe(false);
+        expect(docsLinkUrl(favoriteFromDoc(stored, 'a'))).toBe('https://ezamowienia.gov.pl/x');
     });
 });
 
