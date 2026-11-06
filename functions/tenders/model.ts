@@ -25,6 +25,8 @@ export interface TenderRecord {
   link: string;
   /** Adres dokumentacji zamówienia podany przez zamawiającego (często zewnętrzna platforma zakupowa); null, gdy brak. */
   documentsUrl: string | null;
+  /** Numer referencyjny sprawy nadany przez zamawiającego (BT-22); tylko TED, null gdy zamawiający go nie podał. */
+  referenceNumber?: string | null;
   orderType: OrderType | null;
   buyerMainActivity: string | null;
   /** NIP zamawiającego (10 cyfr); tylko Baza Konkurencyjności, dla pozostałych źródeł brak pola. */
