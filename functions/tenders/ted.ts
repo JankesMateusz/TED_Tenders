@@ -20,6 +20,7 @@ const FIELDS = [
   'change-notice-version-identifier',
   'deadline-receipt-tender-date-lot',
   'document-url-lot',
+  'internal-identifier-proc',
 ];
 
 /** Zapytanie o ogłoszenia o udzielenie zamówienia z Polski opublikowane danego dnia (YYYY-MM-DD). */
@@ -79,6 +80,12 @@ export const extractDocumentsUrl = (field: unknown): string | null => {
   return null;
 };
 
+/** `internal-identifier-proc` (BT-22) to numer sprawy zamawiającego; bywa tekstem albo jednoelementową tablicą. */
+export const extractReferenceNumber = (field: unknown): string | null => {
+  const value = Array.isArray(field) ? field[0] : field;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+};
+
 /**
  * Mapuje ogłoszenie TED na przetarg. Zwraca null dla ogłoszeń bez numeru oraz dla ogłoszeń zmieniających
  * (z identyfikatorem wersji zmiany), których aplikacja nie pokazuje.
@@ -103,6 +110,7 @@ export const mapTedNotice = (raw: any, fallbackDay: string): TenderRecord | null
     cpvCodes: raw['classification-cpv'] || [],
     link: `https://ted.europa.eu/udl?uri=TED:NOTICE:${publicationNumber}:TEXT:PL:HTML`,
     documentsUrl: extractDocumentsUrl(raw['document-url-lot']),
+    referenceNumber: extractReferenceNumber(raw['internal-identifier-proc']),
     orderType: extractOrderType(raw['contract-nature']),
     buyerMainActivity: extractActivity(raw['authority-main-activity']),
   };

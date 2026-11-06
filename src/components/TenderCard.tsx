@@ -152,6 +152,10 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                 </span>
             </p>
 
+            {tender.source === 'TED' && (
+                <p className={styles.metaLine}>Nr referencyjny: {tender.referenceNumber ?? 'brak'}</p>
+            )}
+
             {cpvCodes.length > 0 && (
                 <div className={styles.cpvSection}>
                     <div className={styles.cpvChips}>

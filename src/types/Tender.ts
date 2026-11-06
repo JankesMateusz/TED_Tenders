@@ -17,6 +17,8 @@ export interface Tender {
     link: string;
     /** Adres dokumentacji: w TED podany przez zamawiającego (jeśli go podał), w Bazie Konkurencyjności strona ogłoszenia. */
     documentsUrl?: string;
+    /** Numer referencyjny sprawy od zamawiającego (tylko TED); brak, gdy zamawiający go nie podał. */
+    referenceNumber?: string;
     source: TenderSource;
     orderType?: "Delivery" | "Services" | "Works";
     changeNoticeVersionIdentifier?: string | null;

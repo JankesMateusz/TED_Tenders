@@ -83,6 +83,7 @@ describe('mapTedNotice', () => {
             cpvCodes: ['30213300', '48000000'],
             link: 'https://ted.europa.eu/udl?uri=TED:NOTICE:745242-2026:TEXT:PL:HTML',
             documentsUrl: null,
+            referenceNumber: null,
             orderType: 'Delivery',
             buyerMainActivity: 'gen-pub',
         });
