@@ -1,7 +1,7 @@
 import { Tender } from '../types/Tender';
 import { TenderSource } from '../types/TenderSource';
 import { DocsCheck } from '../types/DocsCheck';
-import { docsBadge, docsFilterOf, docsLinkUrl, formatCheckTime, platformName, pluralizeFiles } from './docsCheck';
+import { docsBadge, docsFilterOf, docsLinkUrl, formatCheckTime, platformName, pluralizeFiles, toPublicEzamowieniaUrl } from './docsCheck';
 import { favoriteFromDoc, favoriteToDoc, tenderFromDoc } from './tenderMapping';
 
 const NOW = new Date(2026, 10, 9, 11, 0); // poniedziałek 11:00, czas lokalny
@@ -92,6 +92,27 @@ describe('docsLinkUrl', () => {
     it('Baza Konkurencyjności: strona ogłoszenia, bo tam leży dokumentacja', () => {
         expect(docsLinkUrl(tender({ source: TenderSource.BAZA_KONKURENCYJNOSCI, link: 'https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/1' })))
             .toBe('https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/1');
+    });
+
+    it('adres z panelu eZamówień (wymaga logowania) zamienia na publiczny, także gdy pochodzi od zamawiającego', () => {
+        const id = 'ocds-148610-a712e62d-12b1-46ea-948f-04271b6061b1';
+        const publicUrl = `https://ezamowienia.gov.pl/mp-client/search/list/${id}`;
+        expect(docsLinkUrl(tender({ documentsUrl: `https://ezamowienia.gov.pl/mp-client/tenders/${id}` }))).toBe(publicUrl);
+        expect(docsLinkUrl(withCheck({ state: 'none', sourceUrl: `https://ezamowienia.gov.pl/mp-client/tenders/${id}` }))).toBe(publicUrl);
+    });
+
+    it('toPublicEzamowieniaUrl: dopisek ścieżki i zapytanie są odrzucane, inne adresy bez zmian', () => {
+        const id = 'ocds-148610-a712e62d-12b1-46ea-948f-04271b6061b1';
+        expect(toPublicEzamowieniaUrl(`https://ezamowienia.gov.pl/mp-client/tenders/${id}/documents?x=1`))
+            .toBe(`https://ezamowienia.gov.pl/mp-client/search/list/${id}`);
+        const unchanged = [
+            `https://ezamowienia.gov.pl/mp-client/search/list/${id}`,
+            'https://ezamowienia.gov.pl/mp-client/tenders',
+            `https://inna.pl/mp-client/tenders/${id}`,
+            'https://ezamowienia.gov.pl',
+            'nie-adres'
+        ];
+        unchanged.forEach((url) => expect(toPublicEzamowieniaUrl(url)).toBe(url));
     });
 
     it('brak adresu to brak odnośnika (bez zgadywania)', () => {

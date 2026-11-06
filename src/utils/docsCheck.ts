@@ -85,10 +85,28 @@ export interface DocsBadgeInfo {
  * adres od zamawiającego (TED), potem strona postępowania ustalona przy sprawdzaniu (dla eZamówień to jedyne źródło),
  * a dla Bazy Konkurencyjności strona ogłoszenia, bo tam leży dokumentacja. Brak adresu to brak odnośnika, bez zgadywania.
  */
-export const docsLinkUrl = (tender: Tender): string | undefined =>
-    tender.documentsUrl
-    ?? tender.docsCheck?.sourceUrl
-    ?? (tender.source === TenderSource.BAZA_KONKURENCYJNOSCI ? tender.link : undefined);
+export const docsLinkUrl = (tender: Tender): string | undefined => {
+    const url = tender.documentsUrl
+        ?? tender.docsCheck?.sourceUrl
+        ?? (tender.source === TenderSource.BAZA_KONKURENCYJNOSCI ? tender.link : undefined);
+    return url && toPublicEzamowieniaUrl(url);
+};
+
+/**
+ * Zamawiający wklejają do ogłoszeń adres z własnego panelu eZamówień (`/mp-client/tenders/<id>`), który bez
+ * logowania przekierowuje na stronę logowania. Te same dokumenty są publicznie pod `/mp-client/search/list/<id>`.
+ * Inne adresy zostają bez zmian.
+ */
+export const toPublicEzamowieniaUrl = (url: string): string => {
+    try {
+        const parsed = new URL(url);
+        const match = parsed.pathname.match(/^\/mp-client\/tenders\/(ocds-[A-Za-z0-9-]+)/);
+        if (parsed.hostname === 'ezamowienia.gov.pl' && match) return `${parsed.origin}/mp-client/search/list/${match[1]}`;
+    } catch {
+        // adres nieparsowalny zostaje jak był
+    }
+    return url;
+};
 
 const FINAL_CHECK_NOTE = 'Automatyczne sprawdzanie zakończone.';
 
