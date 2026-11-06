@@ -3,6 +3,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
 import type { OnlineEntry } from '../hooks/usePresence';
 import styles from './Auth.module.css';
+import DevManifestTool from './DevManifestTool'; // DEV-MANIFEST: tymczasowe, usunąć razem z plikiem
 
 type ActivationStatus = 'invited' | 'password-set' | 'active';
 
@@ -191,6 +192,8 @@ const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ 
                     </button>
                 </div>
                 {docsMessage && <p className={docsMessage.isError ? styles.error : styles.role} role={docsMessage.isError ? 'alert' : 'status'}>{docsMessage.text}</p>}
+
+                <DevManifestTool /> {/* DEV-MANIFEST: tymczasowe */}
 
                 {listError && <p className={styles.error} role="alert">{listError}</p>}
                 <ul className={styles.userList}>
