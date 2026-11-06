@@ -79,7 +79,17 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
     const chipCodes = (itCodes.length > 0 ? itCodes : cpvCodes).slice(0, VISIBLE_CPV_CHIPS);
     const hiddenCpvCount = cpvCodes.length - chipCodes.length;
 
+    // Gotowy opis do wklejenia: zamawiający, link do ogłoszenia i (jeśli jest) link do dokumentacji, każde w osobnej linii
+    const summary = [tender.buyerName, tender.link, tender.documentsUrl].filter(Boolean).join('\n');
+
+    const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const summaryHtml = [
+        escapeHtml(tender.buyerName),
+        ...[tender.link, tender.documentsUrl].filter(Boolean).map((url) => `<a href="${escapeHtml(url as string)}">${escapeHtml(url as string)}</a>`),
+    ].join('<br>');
+
     const copyItems: CopyItem[] = [
+        { key: 'summary', label: 'Kopiuj zamawiającego i linki', value: summary, html: summaryHtml },
         { key: 'title', label: 'Kopiuj tytuł przetargu', value: tender.title },
         { key: 'link', label: 'Kopiuj link do ogłoszenia', value: tender.link },
         ...(tender.documentsUrl ? [{ key: 'docs', label: 'Kopiuj link do dokumentacji', value: tender.documentsUrl }] : []),

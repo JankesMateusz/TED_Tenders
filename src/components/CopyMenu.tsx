@@ -5,6 +5,25 @@ export type CopyItem = {
     key: string;
     label: string;
     value: string;
+    /** Wersja HTML trafia do schowka obok zwykłego tekstu; edytory z obsługą HTML wkleją z niej klikalne linki. */
+    html?: string;
+};
+
+const copyToClipboard = async (item: CopyItem): Promise<void> => {
+    if (item.html && typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
+        try {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/plain': new Blob([item.value], { type: 'text/plain' }),
+                    'text/html': new Blob([item.html], { type: 'text/html' }),
+                }),
+            ]);
+            return;
+        } catch {
+            // Przeglądarka odrzuciła zapis HTML: kopiujemy sam tekst
+        }
+    }
+    await navigator.clipboard.writeText(item.value);
 };
 
 type Props = {
@@ -61,7 +80,7 @@ const CopyMenu: React.FC<Props> = ({ items }) => {
 
     const copy = async (item: CopyItem) => {
         try {
-            await navigator.clipboard.writeText(item.value);
+            await copyToClipboard(item);
         } catch {
             return;
         }
