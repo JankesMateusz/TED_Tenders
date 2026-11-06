@@ -29,6 +29,19 @@ const buildQuery = (day: string): string =>
 const extractCountry = (title: string | undefined): string =>
   title?.split('–')[0].trim() || 'Nieznany kraj';
 
+const TITLE_SEPARATOR = ' – ';
+
+/**
+ * TED składa tytuł z trzech części: "Polska – Serwery – Tytuł przetargu" (kraj, kategoria CPV, właściwy tytuł).
+ * Zwraca sam właściwy tytuł. Tytuł może sam zawierać myślnik, więc odcinamy tylko dwa pierwsze człony.
+ * Gdy członów jest mniej niż trzy, nie wiadomo, co jest prefiksem, więc tytuł zostaje bez zmian.
+ */
+export const stripTitlePrefix = (title: string): string => {
+  const parts = title.split(TITLE_SEPARATOR);
+  if (parts.length < 3) return title;
+  return parts.slice(2).join(TITLE_SEPARATOR).trim() || title;
+};
+
 const extractActivity = (field: unknown): string | null => {
   const value = Array.isArray(field) ? field[0] : field;
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -79,7 +92,8 @@ export const mapTedNotice = (raw: any, fallbackDay: string): TenderRecord | null
   return {
     source: 'TED',
     publicationNumber,
-    title: title || 'Brak tytułu',
+    // Kraj wyciągamy z pełnego tytułu (extractCountry niżej), do pola `title` trafia już tytuł bez prefiksu
+    title: title ? stripTitlePrefix(title) : 'Brak tytułu',
     buyerName: raw['organisation-name-buyer']?.pol?.[0] || 'Brak danych',
     buyerCity: raw['buyer-city']?.mul?.[0] || 'Brak miasta',
     country: extractCountry(title),

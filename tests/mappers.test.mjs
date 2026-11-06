@@ -88,6 +88,21 @@ describe('mapTedNotice', () => {
         });
     });
 
+    it('usuwa z tytułu prefiks z krajem i kategorią, ale zachowuje kraj w osobnym polu', () => {
+        const mapped = (title) => mapTedNotice({ ...raw, 'notice-title': { pol: title } }, '2026-10-28');
+        const full = mapped('Polska – Serwery – Dostawa serwerów dla szkół');
+        assert.equal(full.title, 'Dostawa serwerów dla szkół');
+        assert.equal(full.country, 'Polska');
+        // myślnik w samym tytule nie jest ucinany
+        assert.equal(mapped('Polska – Serwery – Dostawa – część 1').title, 'Dostawa – część 1');
+        // dwa człony: nie wiadomo, co jest prefiksem, więc bez zmian
+        assert.equal(mapped('Polska – Dostawa komputerów').title, 'Polska – Dostawa komputerów');
+        assert.equal(mapped('Dostawa komputerów').title, 'Dostawa komputerów');
+        // zwykły łącznik w nazwie kategorii nie dzieli tytułu
+        assert.equal(mapped('Polska – Sprzęt IT i oprogramowanie – Tytuł').title, 'Tytuł');
+        assert.equal(mapTedNotice({ ...raw, 'notice-title': undefined }, '2026-10-28').title, 'Brak tytułu');
+    });
+
     it('ustala rodzaj zamówienia z lotów, a dostawa ma pierwszeństwo', () => {
         const orderType = (nature) => mapTedNotice({ ...raw, 'contract-nature': nature }, '2026-10-28').orderType;
         assert.equal(orderType(['services', 'services']), 'Services');
