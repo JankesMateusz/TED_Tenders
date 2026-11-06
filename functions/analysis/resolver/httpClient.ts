@@ -7,6 +7,16 @@ const REQUEST_TIMEOUT_MS = 30000;
 export const RESOLVER_USER_AGENT = 'TED-Tenders-DocCheck/1.0 (narzedzie wewnetrzne, pojedyncze zapytania o liste plikow)';
 
 const MAX_SESSION_HOPS = 8;
+/** Hosty dozwolone w łańcuchu przekierowań sesji (D16): platforma i SSO jej operatora. Inny host = zmiana zachowania platformy, ma być widoczna. */
+const SESSION_ALLOWED_HOSTS = new Set(['platformazakupowa.pl', 'www.platformazakupowa.pl', 'accounts.opennexus.com']);
+
+export const assertSessionUrl = (url: string): void => {
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'https:') throw new ResolverError('Przekierowanie na adres inny niż https.', { url });
+  if (!SESSION_ALLOWED_HOSTS.has(parsed.hostname.toLowerCase())) {
+    throw new ResolverError(`Przekierowanie na nieoczekiwany host: ${parsed.hostname}.`, { url });
+  }
+};
 
 /** Minimalny słoik ciasteczek na czas jednego zapytania: nazwa=wartość per host (wystarcza do łańcucha SSO platformy). */
 const storeCookies = (jar: Map<string, Map<string, string>>, host: string, setCookie: unknown) => {
@@ -51,6 +61,7 @@ export const createHttpClient = (): HttpClient => ({
       const jar = new Map<string, Map<string, string>>();
       let current = url;
       for (let hop = 0; hop <= MAX_SESSION_HOPS; hop++) {
+        assertSessionUrl(current);
         const host = new URL(current).hostname;
         const cookie = cookieHeader(jar, host);
         const response = await requestWithRetry<T>({
@@ -68,7 +79,6 @@ export const createHttpClient = (): HttpClient => ({
           return { status: response.status, data: response.data };
         }
         current = new URL(location, current).toString();
-        if (new URL(current).protocol !== 'https:') throw new ResolverError('Przekierowanie na adres inny niż https.', { url: current });
       }
       throw new ResolverError('Zbyt wiele przekierowań (pętla logowania SSO?).', { url });
     } catch (error) {

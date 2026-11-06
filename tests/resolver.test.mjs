@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { resolveDocuments, ResolverError } from '../functions/lib/analysis/resolver/index.js';
 import { extractProceedingUrl } from '../functions/lib/analysis/resolver/ezamowienia.js';
+import { assertSessionUrl } from '../functions/lib/analysis/resolver/httpClient.js';
 import { extractFiles } from '../functions/lib/analysis/resolver/platformazakupowa.js';
 
 const fixture = (name) => readFileSync(new URL(`./fixtures/resolver/${name}`, import.meta.url), 'utf8');
@@ -206,5 +207,18 @@ describe('resolver: platformazakupowa.pl', () => {
         const many = Array.from({ length: 201 }, (_, i) => `<tr><td class="text-left">p${i}.pdf</td><td><a href="//platformazakupowa.pl/file/get_new/h${i}.pdf"></a></td></tr>`).join('');
         const http = fakeHttp([['/transakcja/', ok(`<html>${many}</html>`)]]);
         await assert.rejects(resolveDocuments(ted, http), ResolverError);
+    });
+});
+
+describe('host przekierowań sesji (D16)', () => {
+    it('przepuszcza platformę i SSO operatora', () => {
+        assertSessionUrl('https://platformazakupowa.pl/transakcja/1');
+        assertSessionUrl('https://accounts.opennexus.com/oauth2/authorize?prompt=none');
+    });
+
+    it('odrzuca inny host i http', () => {
+        assert.throws(() => assertSessionUrl('https://example.com/login'), ResolverError);
+        assert.throws(() => assertSessionUrl('https://platformazakupowa.pl.evil.com/'), ResolverError);
+        assert.throws(() => assertSessionUrl('http://platformazakupowa.pl/transakcja/1'), ResolverError);
     });
 });
