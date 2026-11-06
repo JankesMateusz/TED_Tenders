@@ -8,6 +8,8 @@ import { getOrderTypeConfig, getSourceConfig, OrderType } from './tenderSources'
 import { STATUS_CONFIG, TENDER_STATUSES } from './tenderStatus';
 import { TenderLabel } from '../types/TenderLabel';
 import { LABEL_CONFIG } from './tenderLabels';
+import { DocsFilter } from '../types/DocsCheck';
+import { DOCS_FILTER_LABELS } from './docsCheck';
 
 /**
  * Rodzaj chipa decyduje o tym, co robi jego ✕:
@@ -19,6 +21,7 @@ export type ActiveFilterKind =
     | 'status'
     | 'allStatuses'
     | 'label'
+    | 'docs'
     | 'sources'
     | 'orderTypes'
     | 'buyer'
@@ -43,6 +46,7 @@ export interface ActiveFilterInput {
     selectedCpvs: string[];
     selectedCpvCategory: CpvCategoryKey | null;
     selectedLabels: TenderLabel[];
+    selectedDocs?: DocsFilter[];
 }
 
 const STATUS_KEYS: Array<keyof StatusFilters> = [...TENDER_STATUSES, 'unmarked'];
@@ -61,12 +65,15 @@ const statusChips = (filters: StatusFilters): ActiveFilterChip[] => {
     return selected.map((key) => ({ id: `status:${key}`, label: statusLabel(key), kind: 'status', value: key }));
 };
 
-/** Zbiera wszystko, co zawęża listę, w stałej kolejności: statusy, etykiety, źródła, typy, zamawiający, miasta, CPV. Fraza wyszukiwania ma własne pole. */
+/** Zbiera wszystko, co zawęża listę, w stałej kolejności: statusy, etykiety, dokumenty, źródła, typy, zamawiający, miasta, CPV. Fraza wyszukiwania ma własne pole. */
 export const buildActiveFilterChips = (input: ActiveFilterInput): ActiveFilterChip[] => {
     const chips = statusChips(input.statusFilters);
 
     input.selectedLabels.forEach((label) =>
         chips.push({ id: `label:${label}`, label: `Etykieta: ${LABEL_CONFIG[label].label}`, kind: 'label', value: label }));
+
+    (input.selectedDocs ?? []).forEach((docs) =>
+        chips.push({ id: `docs:${docs}`, label: `Dokumenty: ${DOCS_FILTER_LABELS[docs]}`, kind: 'docs', value: docs }));
 
     if (input.selectedSources.length < ALL_SOURCES.length) {
         const labels = ALL_SOURCES.filter((source) => input.selectedSources.includes(source))

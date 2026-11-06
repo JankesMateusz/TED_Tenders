@@ -92,4 +92,10 @@ describe('chipy etykiet', () => {
             { id: 'label:hard', label: 'Etykieta: TRUDNY', kind: 'label', value: 'hard' }
         ]);
     });
+
+    it('wybrane stany dokumentów dają po chipie, zaraz po etykietach', () => {
+        const chips = buildActiveFilterChips({ ...baseInput(), selectedLabels: ['important'], selectedDocs: ['none', 'otherPlatform'] });
+        expect(chips.map((chip) => chip.label)).toEqual(['Etykieta: WAŻNY!', 'Dokumenty: Brak dokumentów', 'Dokumenty: Inna platforma']);
+        expect(chips[1]).toMatchObject({ kind: 'docs', value: 'none' });
+    });
 });

@@ -3,6 +3,7 @@ import { TenderComment } from '../types/TenderComment';
 import { TenderSource } from '../types/TenderSource';
 import { isTenderStatus } from './tenderStatus';
 import { normalizeLabels } from './tenderLabels';
+import { DocsCheck, DocsCheckState } from '../types/DocsCheck';
 
 const NO_DATE = 'Brak daty';
 const NO_DEADLINE = 'Brak terminu';
@@ -40,6 +41,27 @@ const labelsFromDoc = (data: Record<string, any>): Pick<Tender, 'labels' | 'labe
     };
 };
 
+const DOCS_CHECK_STATES: DocsCheckState[] = ['none', 'available', 'unsupported', 'profile', 'error'];
+
+/** Pole `docsCheck` z dokumentu; nieznany stan oznacza brak informacji (przetarg wygląda na niesprawdzony). */
+const docsCheckFromDoc = (value: any): DocsCheck | undefined => {
+    if (!value || !DOCS_CHECK_STATES.includes(value.state)) return undefined;
+    return {
+        state: value.state,
+        platform: value.platform ?? undefined,
+        sourceUrl: value.sourceUrl ?? undefined,
+        fileCount: typeof value.fileCount === 'number' ? value.fileCount : undefined,
+        checks: typeof value.checks === 'number' ? value.checks : undefined,
+        checkedAt: dateFromTimestamp(value.checkedAt),
+        nextCheckAt: dateFromTimestamp(value.nextCheckAt)
+    };
+};
+
+const docsCheckField = (value: any): Pick<Tender, 'docsCheck'> => {
+    const docsCheck = docsCheckFromDoc(value);
+    return docsCheck ? { docsCheck } : {};
+};
+
 /** Zamienia dokument z kolekcji `tenders` (o podanym identyfikatorze) na przetarg używany przez interfejs. */
 export const tenderFromDoc = (data: Record<string, any>, id: string): Tender => ({
     id,
@@ -62,6 +84,8 @@ export const tenderFromDoc = (data: Record<string, any>, id: string): Tender => 
     buyerNip: data.buyerNip ?? undefined,
     buyerSectorAuto: data.buyerSectorAuto ?? undefined,
     changeNoticeVersionIdentifier: null,
+    ...(data.isIT === true && { isIT: true }),
+    ...docsCheckField(data.docsCheck),
     ...statusFromDoc(data),
     ...labelsFromDoc(data)
 });
@@ -72,7 +96,7 @@ export const tenderFromDoc = (data: Record<string, any>, id: string): Tender => 
  * których Firestore nie przyjmuje.
  */
 export const favoriteToDoc = (tender: Tender): Record<string, unknown> => {
-    const { id, status, statusByEmail, statusAt, labels, labelsByEmail, labelsAt, ...copy } = tender;
+    const { id, status, statusByEmail, statusAt, labels, labelsByEmail, labelsAt, docsCheck, isIT, ...copy } = tender;
     return Object.fromEntries(Object.entries(copy).filter(([, value]) => value !== undefined));
 };
 

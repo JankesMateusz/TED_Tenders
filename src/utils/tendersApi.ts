@@ -236,3 +236,14 @@ export const addComment = async (
 };
 
 export const deleteComment = (commentId: string): Promise<void> => deleteDoc(doc(db, 'comments', commentId));
+
+export interface CheckDocsResult {
+    state: 'none' | 'available' | 'unsupported' | 'profile' | 'error' | 'pending';
+    /** Sprawdzono przed chwilą, więc zwrócono zapisany stan bez pytania platformy. */
+    skipped?: 'recent';
+}
+
+const checkDocsNowCallable = httpsCallable<{ docId: string }, CheckDocsResult>(functions, 'checkDocsNow');
+
+/** „Sprawdź teraz": serwer od razu pyta platformę o listę plików (tylko konta z rolą, nie sesje anonimowe). */
+export const checkDocsNow = async (docId: string): Promise<CheckDocsResult> => (await checkDocsNowCallable({ docId })).data;

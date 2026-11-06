@@ -122,6 +122,7 @@ const Tenders: React.FC = () => {
     // expanded state for CPV cards is now managed inside TenderCard
     const [statusFilters, setStatusFilters] = useState(initialFilters.statusFilters);
     const [selectedLabels, setSelectedLabels] = useState(initialFilters.selectedLabels);
+    const [selectedDocs, setSelectedDocs] = useState(initialFilters.selectedDocs);
     const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
     const searchInputRef = useRef<HTMLInputElement>(null);
     // Karta, której dotyczą skróty klawiszowe (J/K, 1-4, 0, S)
@@ -323,9 +324,10 @@ const Tenders: React.FC = () => {
             selectedCpvs,
             statusFilters,
             selectedLabels,
+            selectedDocs,
             sortOrder
         });
-    }, [uid, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, statusFilters, selectedLabels, sortOrder]);
+    }, [uid, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, statusFilters, selectedLabels, selectedDocs, sortOrder]);
 
     const filterOptions = useMemo(() => ({
         selectedSources,
@@ -338,10 +340,11 @@ const Tenders: React.FC = () => {
         searchQuery,
         statusFilters,
         selectedLabels,
+        selectedDocs,
         sortOrder,
         advertiserDecisions,
         showHiddenAdvertisers
-    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, selectedCpvCategory, isFiltered, searchQuery, statusFilters, selectedLabels, sortOrder, advertiserDecisions, showHiddenAdvertisers]);
+    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, selectedCpvCategory, isFiltered, searchQuery, statusFilters, selectedLabels, selectedDocs, sortOrder, advertiserDecisions, showHiddenAdvertisers]);
 
     // Zapisane (gwiazdką) zostają widoczne nawet po ukryciu zamawiającego: ktoś świadomie je wybrał
     const savedFilterOptions = useMemo(() => ({ ...filterOptions, showHiddenAdvertisers: true }), [filterOptions]);
@@ -400,6 +403,7 @@ const Tenders: React.FC = () => {
         setSelectedCpvCategory(null);
         setStatusFilters(NO_STATUS_FILTERS);
         setSelectedLabels([]);
+        setSelectedDocs([]);
     };
 
     const activeChips = useMemo(() => buildActiveFilterChips({
@@ -410,8 +414,9 @@ const Tenders: React.FC = () => {
         selectedCities,
         selectedCpvs,
         selectedCpvCategory,
-        selectedLabels
-    }), [statusFilters, selectedLabels, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, selectedCpvCategory]);
+        selectedLabels,
+        selectedDocs
+    }), [statusFilters, selectedLabels, selectedDocs, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, selectedCpvCategory]);
 
     const handleRemoveChip = (chip: ActiveFilterChip) => {
         switch (chip.kind) {
@@ -420,6 +425,9 @@ const Tenders: React.FC = () => {
                 break;
             case 'label':
                 setSelectedLabels(prev => prev.filter(item => item !== chip.value));
+                break;
+            case 'docs':
+                setSelectedDocs(prev => prev.filter(item => item !== chip.value));
                 break;
             case 'allStatuses':
                 setStatusFilters(NO_STATUS_FILTERS);
@@ -742,6 +750,10 @@ const Tenders: React.FC = () => {
                                     selectedLabels={selectedLabels}
                                     onLabelToggle={(label) =>
                                         setSelectedLabels(prev => prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label])
+                                    }
+                                    selectedDocs={selectedDocs}
+                                    onDocsToggle={(docs) =>
+                                        setSelectedDocs(prev => prev.includes(docs) ? prev.filter(item => item !== docs) : [...prev, docs])
                                     }
                                     onShowAllStatuses={() => setStatusFilters({ toEnter: true, entered: true, toClarify: true, notToEnter: true, unmarked: true })}
                                     facetCounts={facetCounts}

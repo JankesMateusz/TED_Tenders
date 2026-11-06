@@ -17,9 +17,15 @@ describe('odczyt zapisanych filtrów', () => {
             selectedCpvs: ['30213100-6'],
             statusFilters: { toEnter: true, entered: false, toClarify: false, notToEnter: false, unmarked: true },
             selectedLabels: ['important', 'hard'],
+            selectedDocs: ['available', 'otherPlatform'],
             sortOrder: 'buyer'
         };
         expect(parsePersistedFilters(JSON.stringify(saved))).toEqual(saved);
+    });
+
+    it('odrzuca nieznane wartości filtra dokumentów i domyślnie go nie włącza', () => {
+        expect(parsePersistedFilters(JSON.stringify({ selectedDocs: ['none', 'nope', 7] })).selectedDocs).toEqual(['none']);
+        expect(parsePersistedFilters(null).selectedDocs).toEqual([]);
     });
 
     it('odrzuca nieznane etykiety z zapisu', () => {

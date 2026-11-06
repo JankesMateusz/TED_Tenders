@@ -338,3 +338,41 @@ describe('filtr po etykietach', () => {
         expect(counts).toEqual({ important: 2, hard: 1, simple: 1 });
     });
 });
+
+describe('filtr po dokumentach', () => {
+    const withDocs = (id: string, state?: NonNullable<Tender['docsCheck']>['state']): Tender => ({
+        ...tender(id),
+        ...(state && { docsCheck: { state } })
+    });
+    const list = [withDocs('a', 'available'), withDocs('b', 'none'), withDocs('c', 'unsupported'), withDocs('d', 'profile'), withDocs('e', 'error'), withDocs('f')];
+    const options = {
+        selectedSources: [TenderSource.TED],
+        selectedOrderTypes: [...DEFAULT_ORDER_TYPES],
+        selectedBuyers: [],
+        selectedCities: [],
+        selectedCpvs: [],
+        isFiltered: false,
+        searchQuery: '',
+        statusFilters: noFilters
+    };
+    const ids = (selectedDocs: Array<'available' | 'none' | 'otherPlatform'>) =>
+        filterAndSortTenders(list, { ...options, selectedDocs }).map((t) => t.id).sort();
+
+    it('bez wyboru pokazuje wszystko, także niesprawdzone', () => {
+        expect(ids([])).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    });
+
+    it('„Są dokumenty" i „Brak dokumentów" pasują tylko do swojego stanu (błąd nie jest brakiem)', () => {
+        expect(ids(['available'])).toEqual(['a']);
+        expect(ids(['none'])).toEqual(['b']);
+    });
+
+    it('„Inna platforma" łączy platformy nieobsługiwane i profile zamawiających', () => {
+        expect(ids(['otherPlatform'])).toEqual(['c', 'd']);
+    });
+
+    it('kilka wyborów działa jak „lub", a liczniki ignorują własny filtr', () => {
+        expect(ids(['available', 'none'])).toEqual(['a', 'b']);
+        expect(countFacets(list, { ...options, selectedDocs: ['available'] }).docs).toEqual({ available: 1, none: 1, otherPlatform: 2 });
+    });
+});

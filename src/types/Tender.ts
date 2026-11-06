@@ -2,6 +2,7 @@ import { TenderSource } from './TenderSource';
 import { TenderStatus } from './TenderStatus';
 import { TenderLabel } from './TenderLabel';
 import { BuyerSector } from '../utils/advertisers';
+import { DocsCheck } from './DocsCheck';
 
 export interface Tender {
     /** Identyfikator dokumentu w Firestore (`{źródło}_{numer}`); numer publikacji sam nie jest unikalny między źródłami. */
@@ -38,5 +39,9 @@ export interface Tender {
     labels?: TenderLabel[];
     labelsByEmail?: string;
     labelsAt?: Date;
+    /** Czy któryś z kodów CPV należy do IT (liczone przez serwer); starsze przetargi mogą nie mieć flagi. */
+    isIT?: boolean;
+    /** Stan automatycznego sprawdzania dokumentacji; brak = jeszcze nie sprawdzono. */
+    docsCheck?: DocsCheck;
 }
 

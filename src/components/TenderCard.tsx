@@ -12,6 +12,7 @@ import CommentsPopover from './CommentsPopover';
 import StatusMenu from './StatusMenu';
 import LabelMenu from './LabelMenu';
 import CopyMenu, { CopyItem } from './CopyMenu';
+import DocsBadge from './DocsBadge';
 import { LABEL_CONFIG } from '../utils/tenderLabels';
 import styles from './Tenders.module.css';
 
@@ -126,6 +127,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                             {LABEL_CONFIG[label].label}
                         </span>
                     ))}
+                    <DocsBadge tender={tender} canCheck={canSetStatus} />
                 </div>
                 <div className={styles.cardActions}>
                     <StatusMenu

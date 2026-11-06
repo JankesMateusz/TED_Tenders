@@ -8,6 +8,8 @@ import { filterTendersByCpvCodes, normalizeCpv } from './cpvFilter';
 import { normalizeName } from './stringUtils';
 import { parseDate } from './dateUtils';
 import { AdvertiserDecisions, isHiddenAdvertiser } from './advertisers';
+import { DocsFilter } from '../types/DocsCheck';
+import { docsFilterOf } from './docsCheck';
 import { CpvCategoryKey, tenderHasCpvCategory } from './cpvCategories';
 
 export type SortOrder = 'publication' | 'publicationAsc' | 'deadline' | 'buyer' | 'buyerDesc';
@@ -33,6 +35,8 @@ interface FilterOptions {
     statusFilters: StatusFilters;
     /** Wybrane etykiety; pusta lub brak oznacza brak filtra, a przetarg musi mieć którąkolwiek z nich. */
     selectedLabels?: TenderLabel[];
+    /** Wybrane stany dokumentów; pusta lub brak oznacza brak filtra, a przetarg musi pasować do któregokolwiek. */
+    selectedDocs?: DocsFilter[];
     sortOrder?: SortOrder;
     /** Ręczne decyzje o zamawiających (po NIP); bez nich rozstrzyga sektor ustalony automatycznie. */
     advertiserDecisions?: AdvertiserDecisions;
@@ -44,7 +48,7 @@ interface FilterOptions {
 export type StatusFilters = Record<TenderStatus | 'unmarked', boolean>;
 
 /** Wymiary filtrów, które mają własne liczniki ("ile wyników dałoby wybranie tej opcji"). */
-export type FilterDimension = 'source' | 'orderType' | 'buyer' | 'city' | 'status' | 'label';
+export type FilterDimension = 'source' | 'orderType' | 'buyer' | 'city' | 'status' | 'label' | 'docs';
 
 const matchesAny = (value: string, selected: string[]): boolean => {
     const normalizedValue = normalizeName(value);
@@ -132,6 +136,15 @@ export const filterTenders = (
         result = result.filter(tender => tender.labels?.some(label => selectedLabels.includes(label)));
     }
 
+    // Filtrowanie po stanie dokumentów (OR); przetarg bez wyniku sprawdzenia nie pasuje do żadnej opcji
+    const selectedDocs = options.selectedDocs ?? [];
+    if (skip !== 'docs' && selectedDocs.length > 0) {
+        result = result.filter(tender => {
+            const docs = docsFilterOf(tender);
+            return docs !== undefined && selectedDocs.includes(docs);
+        });
+    }
+
     return result;
 };
 
@@ -203,6 +216,7 @@ export interface FacetCounts {
     statuses: Partial<Record<TenderStatus | 'unmarked', number>>;
     /** Przetarg z kilkoma etykietami liczy się przy każdej z nich. */
     labels: Partial<Record<TenderLabel, number>>;
+    docs: Partial<Record<DocsFilter, number>>;
 }
 
 const countBy = <K extends string>(
@@ -232,5 +246,6 @@ export const countFacets = (tenders: Tender[], options: FilterOptions): FacetCou
     sources: countBy(filterTenders(tenders, options, 'source'), (tender) => tender.source),
     orderTypes: countBy(filterTenders(tenders, options, 'orderType'), (tender) => tender.orderType),
     statuses: countBy(filterTenders(tenders, options, 'status'), (tender) => tender.status ?? 'unmarked'),
-    labels: countLabels(filterTenders(tenders, options, 'label'))
+    labels: countLabels(filterTenders(tenders, options, 'label')),
+    docs: countBy(filterTenders(tenders, options, 'docs'), docsFilterOf)
 });

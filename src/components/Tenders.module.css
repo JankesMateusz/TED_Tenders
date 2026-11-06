@@ -715,6 +715,49 @@
     font-size: 0.85em;
 }
 
+/* Plakietka systemowa (stan dokumentów): obramowanie przerywane = informacja od systemu, nie decyzja człowieka */
+.systemBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px dashed var(--border-color);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    text-decoration: none;
+}
+
+a.systemBadge:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.systemBadgeWarn {
+    border-color: var(--warning-border);
+    background: var(--warning-bg);
+}
+
+.systemBadgeButton {
+    padding: 0 4px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1;
+}
+
+.systemBadgeButton:hover:not(:disabled) {
+    color: var(--accent);
+}
+
+.systemBadgeButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .tabsBar {

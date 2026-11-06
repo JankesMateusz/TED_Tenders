@@ -6,6 +6,8 @@ import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
 import { ALL_SOURCES } from '../utils/persistedFilters';
 import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
 import { TenderLabel } from '../types/TenderLabel';
+import { DocsFilter } from '../types/DocsCheck';
+import { DOCS_FILTERS, DOCS_FILTER_LABELS } from '../utils/docsCheck';
 import { LABEL_CONFIG, TENDER_LABELS } from '../utils/tenderLabels';
 import { ActiveFilterChip } from '../utils/activeFilters';
 import { ActiveFilterChips } from './ActiveFilterChips';
@@ -36,6 +38,8 @@ interface FiltersPanelProps {
     onShowAllStatuses: () => void;
     selectedLabels: TenderLabel[];
     onLabelToggle: (label: TenderLabel) => void;
+    selectedDocs: DocsFilter[];
+    onDocsToggle: (docs: DocsFilter) => void;
     facetCounts: FacetCounts;
     sortOrder: SortOrder;
     onSortOrderChange: (order: SortOrder) => void;
@@ -60,6 +64,8 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onShowAllStatuses,
     selectedLabels,
     onLabelToggle,
+    selectedDocs,
+    onDocsToggle,
     facetCounts,
     sortOrder,
     onSortOrderChange,
@@ -84,6 +90,13 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
         color: LABEL_CONFIG[label].color,
         count: facetCounts.labels[label] ?? 0,
         checked: selectedLabels.includes(label)
+    }));
+
+    const docsOptions: FilterPopoverOption[] = DOCS_FILTERS.map((docs) => ({
+        key: docs,
+        label: DOCS_FILTER_LABELS[docs],
+        count: facetCounts.docs[docs] ?? 0,
+        checked: selectedDocs.includes(docs)
     }));
 
     const sourceOptions: FilterPopoverOption[] = ALL_SOURCES.map((source) => {
@@ -131,6 +144,12 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     options={labelOptions}
                     onToggle={(key) => onLabelToggle(key as TenderLabel)}
                     badge={selectedLabels.length > 0 ? selectedLabels.length : undefined}
+                />
+                <FilterPopover
+                    label="Dokumenty"
+                    options={docsOptions}
+                    onToggle={(key) => onDocsToggle(key as DocsFilter)}
+                    badge={selectedDocs.length > 0 ? selectedDocs.length : undefined}
                 />
                 <FilterPopover
                     label="Źródło"
