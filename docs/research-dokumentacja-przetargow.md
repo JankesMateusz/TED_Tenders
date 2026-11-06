@@ -60,7 +60,24 @@ Próbka: 60 ogłoszeń (`ContractNotice`, `isTenderAmountBelowEU=true`, typy `De
 | brak pola 3.1 | 1 |
 | adres eZamówień w 3.1, ale lista dokumentów pusta | 1 |
 
-Wniosek: eZamówienia ok. połowy, platformazakupowa.pl ok. 30%, długi ogon reszta. Dla przetargów IT rozkład może być inny (duże instytucje częściej mają własne platformy). **Do zmierzenia na próbce z kodami CPV z IT, zanim zapadną decyzje.**
+Wniosek: eZamówienia ok. połowy, platformazakupowa.pl ok. 30%, długi ogon reszta. Dla przetargów IT rozkład może być inny (duże instytucje częściej mają własne platformy).
+
+### Pomiar dla przetargów IT (2026-11-06)
+
+Skrypt `scripts/measure-platforms.browser.js` (kody CPV z `functions/tenders/itCpvCodes.ts`, publikacje 2026-10-26..2026-11-04, limit 40 na typ zamówienia). Uruchomiony w Node z zaślepką `DOMParser` (powłoka agenta miała wtedy dostęp do eZamówień), nie w przeglądarce. Próbka: **73 ogłoszenia IT** (Delivery 40, Services 24, Works 9; tyle było w zakresie dat). Pole 3.1 znaleziono w każdym, błędów zapytań 0.
+
+| Gdzie jest dokumentacja | Liczba z 73 | Udział |
+|---|---|---|
+| eZamówienia, pliki wystawione | 37 | 51% |
+| platformazakupowa.pl | 20 | 27% |
+| logintrade | 4 | 5% |
+| ezamawiajacy.pl | 4 | 5% |
+| eZamówienia, ale lista dokumentów pusta | 1 | 1% |
+| reszta (po 1: e-propublico, eb2b, 5 innych domen) | 7 | 10% |
+
+Wg typu zamówienia (eZamówienia / platformazakupowa / reszta): Delivery 17 / 13 / 10, Services 16 / 4 / 4, Works 5 / 3 / 1. Usługi idą głównie przez eZamówienia, dostawy częściej przez platformazakupowa i długi ogon.
+
+Wnioski: rozkład dla IT jest zbliżony do próbki ze wszystkich branż (sekcja wyżej). Dwa adaptery (eZamówienia i platformazakupowa) pokrywają ok. 78%, następny kandydat to ezamawiajacy.pl. Wcześniejszy pomiar tego samego dnia (102 ogłoszenia, tylko Delivery) dał 46% / 28% / 11% dla eZamówień / platformazakupowa / ezamawiajacy. W pierwszym pomiarze 7 z 29 adresów platformazakupowa.pl to profile zamawiających (`/pn/...`), nie postępowania. Próbka jest mała (ok. 8 dni, 9 sztuk Works), procenty są orientacyjne. Nie sprawdzono działania z Cloud Run. Pełny wynik z tytułami i CPV (do oceny klasyfikatora z sekcji 14) był tylko w pliku tymczasowym, skrypt można uruchomić ponownie.
 
 ## 6. Czego NIE sprawdzono
 
@@ -170,7 +187,31 @@ Na platformazakupowa.pl (origin `platformazakupowa.pl`): `fetch('/transakcja/<id
 7. Pracodawca: zgoda na narzędzie, własność, wymagania co do danych, ewentualne finansowanie (sekcja 2).
 8. Region Cloud Run (Tier a darmowy limit) i model Gemini (jakość a koszt, do rozstrzygnięcia na zbiorze regresyjnym Tender Explorera).
 
-## 14. Źródła (cenniki, sprawdzone 2026-11-04)
+## 14. Do dalszego researchu: wstępna klasyfikacja przetargów (pomysł z 2026-11-06)
+
+**Tylko pomysł, nic nie zbadane ani zaimplementowane.** Zanim pobierzemy i przeanalizujemy dokumentację, ocenić po samych danych z listy (kody CPV, tytuł, ewentualnie opis z ogłoszenia), czy przetarg w ogóle ma szansę być „do wpisania". Przykład użytkownika: „Dostawa 1000 stacji roboczych" jest wyraźnie do wpisania, „zakup oprogramowania Jira" nie.
+
+Po co:
+- Pełna analiza kosztuje ok. 2 centy i wymaga pobrania dokumentacji, klasyfikacja po tytule i opisie ułamek centa albo zero (same reguły).
+- Dokumentację trzeba pobierać tylko dla przetargów, które przejdą filtr, więc długi ogon nieobsługiwanych platform (sekcja 5) boli mniej.
+
+Założenia i ryzyka do zweryfikowania:
+- **Koszty błędów są asymetryczne** (por. sekcja 9): pominięcie przetargu, który powinien trafić do raportu, jest gorsze niż zbędny przetarg do przejrzenia. Automatyczne odrzucenie tylko przy wysokiej pewności, odrzucone przetargi pozostają widoczne (wyszarzone, z etykietą), nie ukryte.
+- **CPV słabo rozróżnia**: Jira i stacje robocze mogą mieć kody z tej samej listy IT (grupa 48 to oprogramowanie, dopasowanie w aplikacji jest dokładne po 8 cyfrach). O decyzji przesądza głównie tytuł.
+- **Sam tytuł bywa za mało**: `Board/Search` zwraca tylko `orderObject`. Opis jest w HTML ogłoszenia (`GetNoticeHtmlBodyById`), który należy dociągać leniwie, po filtrze CPV, nie dla wszystkich ok. 850 ogłoszeń dziennie.
+- Klasyfikator mówi „bardzo prawdopodobne / mało prawdopodobne / niepewne", ostateczny werdykt zostaje po stronie analizy dokumentacji (przetarg może odpaść przez wymagania w SWZ mimo dobrego tytułu).
+
+Szkic poziomów (od najtańszego):
+1. Reguły: CPV, słowa kluczowe w tytule, wykluczenia (licencje, subskrypcje, SaaS). Sprawdzić, co robi już `coverage.py` w Tender Explorerze (siatka słów kluczowych). Wynik: „pewnie tak" / „pewnie nie" / „niepewne".
+2. Mały model (`gemini-3.5-flash-lite`) tylko dla „niepewnych": tytuł plus fragment opisu, odpowiedź: kategoria, pewność, jedno zdanie uzasadnienia. Koszt rzędu 0,1 centa.
+3. Pełna analiza dokumentacji dla „pewnie tak" i „niepewnych".
+
+Do ustalenia przed implementacją:
+- Dokładna definicja „do wpisania" (granice: sprzęt, oprogramowanie, usługi, serwis, infrastruktura sieciowa). Prawdopodobnie część jest już zakodowana w regułach Tender Explorera.
+- Zbiór referencyjny do zmierzenia skuteczności: 42 zapisane wyniki Tender Explorera oraz historia przetargów, które realnie trafiły do raportów. Metryki: ile prawdziwych trafień klasyfikator by przepuścił (priorytet) i ile przetargów odsiał.
+- Czy próbka z `scripts/measure-platforms.browser.js` (pomiar platform) ma zapisywać też tytuł i CPV, żeby posłużyła później do oceny klasyfikatora.
+
+## 15. Źródła (cenniki, sprawdzone 2026-11-04)
 
 - Cloud Run pricing: https://cloud.google.com/run/pricing
 - Firebase pricing (Blaze, Cloud Storage, Functions): https://firebase.google.com/pricing
