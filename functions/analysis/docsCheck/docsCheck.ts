@@ -3,7 +3,7 @@ import { getFunctions } from 'firebase-admin/functions';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { onTaskDispatched } from 'firebase-functions/v2/tasks';
-import { REGION, requireAdmin } from '../../access';
+import { REGION, requireAdmin, requireRole } from '../../access';
 import { TenderRecord } from '../../tenders/model';
 import { ResolverError, ResolverResult, resolveDocuments } from '../resolver';
 import { clampToWindow, firstCheckTime, nextCheckTime } from './schedule';
@@ -44,8 +44,24 @@ export const enqueueCheck = async (payload: CheckPayload, when: Date): Promise<v
 
 const defaultDeps = (): DocsCheckDeps => ({ resolve: resolveDocuments, enqueue: enqueueCheck, now: () => new Date() });
 
-const stored = (value: unknown): Partial<DocsCheckOutcome> & { checks?: number; firstSeenAt?: Timestamp; nextCheckAt?: Timestamp | null } | undefined =>
-  value && typeof value === 'object' ? (value as never) : undefined;
+type StoredDocsCheck = Partial<DocsCheckOutcome> & {
+  checks?: number;
+  firstSeenAt?: Timestamp;
+  checkedAt?: Timestamp;
+  nextCheckAt?: Timestamp | null;
+};
+
+const stored = (value: unknown): StoredDocsCheck | undefined => (value && typeof value === 'object' ? (value as StoredDocsCheck) : undefined);
+
+/** Wynik resolvera jako stan sprawdzenia. Awaria platformy to `error`, nie „brak dokumentów"; zachowujemy to, co o platformie już wiemy. */
+const resolveOutcome = async (tender: TenderRecord, previous: StoredDocsCheck | undefined, deps: DocsCheckDeps): Promise<DocsCheckOutcome> => {
+  try {
+    return outcomeFromResult(await deps.resolve(tender));
+  } catch (error) {
+    if (!(error instanceof ResolverError)) throw error;
+    return { ...errorOutcome(), ...(previous?.platform && { platform: previous.platform }), ...(previous?.sourceUrl && { sourceUrl: previous.sourceUrl }) };
+  }
+};
 
 /** Jedno sprawdzenie: resolver → kolejne sprawdzenie w kolejce → zapis. Idempotentne przy ponowieniu zadania. */
 export const processDocsCheck = async ({ docId, check }: CheckPayload, deps: DocsCheckDeps = defaultDeps()): Promise<void> => {
@@ -59,14 +75,7 @@ export const processDocsCheck = async ({ docId, check }: CheckPayload, deps: Doc
   // To sprawdzenie zostało już zapisane (ponowione zadanie): zapis jest ostatnim krokiem, więc nic nie zostało pominięte
   if (previous?.checks !== undefined && previous.checks >= check) return;
 
-  let outcome: DocsCheckOutcome;
-  try {
-    outcome = outcomeFromResult(await deps.resolve(tender));
-  } catch (error) {
-    if (!(error instanceof ResolverError)) throw error;
-    // Awaria platformy to `error`, nie „brak dokumentów"; zachowujemy to, co o platformie już wiemy
-    outcome = { ...errorOutcome(), ...(previous?.platform && { platform: previous.platform }), ...(previous?.sourceUrl && { sourceUrl: previous.sourceUrl }) };
-  }
+  const outcome = await resolveOutcome(tender, previous, deps);
 
   const now = deps.now();
   const next = isTerminalState(outcome.state) ? null : nextCheckTime(check, now);
@@ -136,4 +145,64 @@ export const enqueueDocsChecks = onCall<{ sinceDay?: string; limit?: number }>({
     enqueued++;
   }
   return { enqueued, candidates: docs.length };
+});
+
+/** Najkrótszy odstęp między ręcznymi sprawdzeniami tego samego przetargu (ochrona platform przed wielokrotnym klikaniem). */
+export const MANUAL_COOLDOWN_MS = 60 * 1000;
+
+export interface ManualCheckResult {
+  state: DocsCheckOutcome['state'] | 'pending';
+  /** True, gdy sprawdzono przed chwilą i zwrócono zapisany stan bez pytania platformy. */
+  skipped?: 'recent';
+}
+
+/**
+ * Ręczne „Sprawdź teraz". Przetarg jeszcze nieobjęty sprawdzaniem dostaje normalne pierwsze sprawdzenie
+ * (z harmonogramem kolejnych). Dla przetargu z historią sprawdzenie odświeża tylko stan, a harmonogram
+ * (`checks`, `nextCheckAt`) zostaje bez zmian, więc ręczne klikanie nie zużywa limitu 6 sprawdzeń.
+ */
+export const runManualCheck = async (docId: string, deps: DocsCheckDeps = defaultDeps()): Promise<ManualCheckResult> => {
+  const ref = getFirestore().doc(`tenders/${docId}`);
+  const snapshot = await ref.get();
+  if (!snapshot.exists) throw new HttpsError('not-found', 'Nie znaleziono przetargu.');
+  const tender = snapshot.data() as TenderRecord & { docsCheck?: unknown };
+  const previous = stored(tender.docsCheck);
+  const now = deps.now();
+
+  if (previous?.checkedAt && now.getTime() - previous.checkedAt.toMillis() < MANUAL_COOLDOWN_MS) {
+    return { state: previous.state ?? 'pending', skipped: 'recent' };
+  }
+
+  if (!previous?.checks) {
+    await processDocsCheck({ docId, check: 1 }, deps);
+    return { state: stored((await ref.get()).data()?.docsCheck)?.state ?? 'pending' };
+  }
+
+  const outcome = await resolveOutcome(tender, previous, deps);
+  // Chwilowa awaria platformy nie nadpisuje znanego stanu (np. „dostępne, 6 plików"); użytkownik dostaje informację w odpowiedzi
+  if (outcome.state === 'error') return { state: 'error' };
+  const firstSeenAt = previous.firstSeenAt ?? (outcome.state === 'available' ? Timestamp.fromDate(now) : undefined);
+  await ref.update({
+    docsCheck: {
+      ...outcome,
+      checks: previous.checks,
+      checkedAt: Timestamp.fromDate(now),
+      nextCheckAt: previous.nextCheckAt ?? null,
+      ...(firstSeenAt && { firstSeenAt }),
+    },
+  });
+  return { state: outcome.state };
+};
+
+/** „Sprawdź teraz" z karty przetargu: tylko konta z rolą (D1), anonimowe sesje są odrzucane. */
+export const checkDocsNow = onCall<{ docId?: string }>({ region: REGION, timeoutSeconds: 120 }, async (request) => {
+  requireRole(request);
+  const docId = request.data?.docId;
+  if (typeof docId !== 'string' || !docId || docId.includes('/')) throw new HttpsError('invalid-argument', 'Podaj docId przetargu.');
+  try {
+    return await runManualCheck(docId);
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', 'Nie udało się sprawdzić dokumentacji. Spróbuj ponownie za chwilę.');
+  }
 });

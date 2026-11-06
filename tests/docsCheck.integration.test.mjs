@@ -10,7 +10,7 @@ const admin = requireFromFunctions('firebase-admin');
 admin.initializeApp({ projectId: PROJECT_ID });
 const db = admin.firestore();
 
-const { processDocsCheck } = await import('../functions/lib/analysis/docsCheck/docsCheck.js');
+const { processDocsCheck, runManualCheck, MANUAL_COOLDOWN_MS } = await import('../functions/lib/analysis/docsCheck/docsCheck.js');
 const { ResolverError } = await import('../functions/lib/analysis/resolver/index.js');
 
 const DOC_ID = 'E_ZAMOWIENIA_2026_BZP_88_01';
@@ -134,5 +134,65 @@ describe('processDocsCheck', () => {
         const deps = makeDeps([none]);
         await processDocsCheck({ docId: DOC_ID, check: 1 }, deps);
         assert.equal(deps.calls, 0);
+    });
+});
+
+describe('runManualCheck („Sprawdź teraz")', () => {
+    beforeEach(async () => {
+        await db.doc(`tenders/${DOC_ID}`).set({
+            source: 'E_ZAMOWIENIA', publicationNumber: '2026/BZP 88/01', link: 'https://x/id/1', documentsUrl: null, isIT: true, title: 'Laptopy'
+        });
+    });
+
+    it('przetarg bez historii dostaje normalne pierwsze sprawdzenie z harmonogramem', async () => {
+        const deps = makeDeps([none]);
+        const result = await runManualCheck(DOC_ID, deps);
+        assert.equal(result.state, 'none');
+        const check = await docsCheckOf();
+        assert.equal(check.checks, 1);
+        assert.equal(deps.queued.length, 1);
+        assert.equal(deps.queued[0].check, 2);
+    });
+
+    it('przetarg z historią: odświeża stan, ale nie rusza licznika ani harmonogramu', async () => {
+        const next = admin.firestore.Timestamp.fromDate(new Date('2026-11-09T12:00:00Z'));
+        await db.doc(`tenders/${DOC_ID}`).update({
+            docsCheck: { state: 'none', platform: 'ezamowienia', sourceUrl: 's', checks: 2, nextCheckAt: next, checkedAt: admin.firestore.Timestamp.fromDate(new Date(NOW.getTime() - 2 * MANUAL_COOLDOWN_MS)) }
+        });
+        const deps = makeDeps([resolved]);
+        const result = await runManualCheck(DOC_ID, deps);
+        assert.equal(result.state, 'available');
+        const check = await docsCheckOf();
+        assert.equal(check.state, 'available');
+        assert.equal(check.fileCount, 1);
+        assert.equal(check.checks, 2);
+        assert.equal(check.nextCheckAt.toDate().toISOString(), '2026-11-09T12:00:00.000Z');
+        assert.equal(check.firstSeenAt.toDate().toISOString(), NOW.toISOString());
+        assert.equal(deps.queued.length, 0);
+    });
+
+    it('ponowne kliknięcie w ciągu minuty zwraca zapisany stan bez pytania platformy', async () => {
+        await db.doc(`tenders/${DOC_ID}`).update({
+            docsCheck: { state: 'none', checks: 1, nextCheckAt: null, checkedAt: admin.firestore.Timestamp.fromDate(new Date(NOW.getTime() - 10 * 1000)) }
+        });
+        const deps = makeDeps([resolved]);
+        const result = await runManualCheck(DOC_ID, deps);
+        assert.deepEqual(result, { state: 'none', skipped: 'recent' });
+        assert.equal(deps.calls, 0);
+    });
+
+    it('awaria platformy nie nadpisuje znanego stanu', async () => {
+        await db.doc(`tenders/${DOC_ID}`).update({
+            docsCheck: { state: 'available', fileCount: 6, platform: 'ezamowienia', checks: 1, nextCheckAt: null, checkedAt: admin.firestore.Timestamp.fromDate(new Date(NOW.getTime() - 2 * MANUAL_COOLDOWN_MS)) }
+        });
+        const result = await runManualCheck(DOC_ID, makeDeps([new ResolverError('timeout')]));
+        assert.equal(result.state, 'error');
+        const check = await docsCheckOf();
+        assert.equal(check.state, 'available');
+        assert.equal(check.fileCount, 6);
+    });
+
+    it('nieistniejący przetarg to not-found', async () => {
+        await assert.rejects(runManualCheck('NIE_MA_TAKIEGO', makeDeps([none])), { code: 'not-found' });
     });
 });

@@ -26,3 +26,18 @@ export const requireAdmin = (request: CallableRequest): string => {
   }
   return request.auth.uid;
 };
+
+/**
+ * Wymaga zalogowania na prawdziwe konto z rolą `admin` lub `member` (D1 planu integracji). W odróżnieniu od
+ * `requireMember` odrzuca sesje anonimowe, więc nadaje się do akcji, które kosztują zapytania do platform lub model.
+ */
+export const requireRole = (request: CallableRequest): string => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Wymagane zalogowanie.');
+  }
+  const role = request.auth.token.role;
+  if (role !== 'admin' && role !== 'member') {
+    throw new HttpsError('permission-denied', 'Ta operacja wymaga zalogowania na konto z uprawnieniami.');
+  }
+  return request.auth.uid;
+};
