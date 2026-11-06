@@ -1,0 +1,46 @@
+[
+ {
+  "objectId": "ocds-148610-5b872046-7861-4d59-a28a-d041c73da713_4",
+  "name": "Zał. nr 4 do SWZ - Projekt umowy",
+  "url": "https://ezamowienia.gov.pl/mp-client/search/tenderdocument/ocds-148610-5b872046-7861-4d59-a28a-d041c73da713/ocds-148610-5b872046-7861-4d59-a28a-d041c73da713_4",
+  "tenderDocumentState": "Published",
+  "createDate": "2026-11-06T11:17:08.608Z",
+  "fileName": "Zał. nr 4 do SWZ - Projekt umowy.pdf",
+  "publishedDate": "2026-11-06T11:17:42.931Z",
+  "deleteDate": null,
+  "deleteReason": null
+ },
+ {
+  "objectId": "ocds-148610-5b872046-7861-4d59-a28a-d041c73da713_3",
+  "name": "Zał. nr 3 do SWZ - Oświadczenie o grupie kapitałowej",
+  "url": "https://ezamowienia.gov.pl/mp-client/search/tenderdocument/ocds-148610-5b872046-7861-4d59-a28a-d041c73da713/ocds-148610-5b872046-7861-4d59-a28a-d041c73da713_3",
+  "tenderDocumentState": "Published",
+  "createDate": "2026-11-06T11:16:29.908Z",
+  "fileName": "Zał. nr 3 do SWZ - Oświadczenie o grupie kapitałowej.doc",
+  "publishedDate": "2026-11-06T11:17:42.931Z",
+  "deleteDate": null,
+  "deleteReason": null
+ },
+ {
+  "objectId": "ocds-148610-5b872046-7861-4d59-a28a-d041c73da713_2",
+  "name": "Formularz ofertowy (zał. 1 do SWZ), oświadczenie (zał. nr 2 do SWZ)",
+  "url": "https://ezamowienia.gov.pl/mp-client/search/tenderdocument/ocds-148610-5b872046-7861-4d59-a28a-d041c73da713/ocds-148610-5b872046-7861-4d59-a28a-d041c73da713_2",
+  "tenderDocumentState": "Published",
+  "createDate": "2026-11-06T11:16:16.225Z",
+  "fileName": "Formularz ofertowy (zał. 1 do SWZ), oświadczenie (zał. nr 2 do SWZ).docx",
+  "publishedDate": "2026-11-06T11:17:42.931Z",
+  "deleteDate": null,
+  "deleteReason": null
+ },
+ {
+  "objectId": "ocds-148610-5b872046-7861-4d59-a28a-d041c73da713_1",
+  "name": "SWZ IR.272.19.2026",
+  "url": "https://ezamowienia.gov.pl/mp-client/search/tenderdocument/ocds-148610-5b872046-7861-4d59-a28a-d041c73da713/ocds-148610-5b872046-7861-4d59-a28a-d041c73da713_1",
+  "tenderDocumentState": "Published",
+  "createDate": "2026-11-06T11:15:49.326Z",
+  "fileName": "SWZ IR.272.19.2026.pdf",
+  "publishedDate": "2026-11-06T11:17:42.931Z",
+  "deleteDate": null,
+  "deleteReason": null
+ }
+]
