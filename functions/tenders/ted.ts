@@ -1,5 +1,6 @@
 import { dayFromTedDate } from './dates';
 import { requestWithRetry } from './http';
+import { isItTender } from './itCpvCodes';
 import { OrderType, SourceResult, TenderRecord } from './model';
 
 // Adres można podmienić w testach (functions/.env.demo-tenders). Wyszukiwanie ogłoszeń jest w TED publiczne, bez klucza API.
@@ -96,6 +97,8 @@ export const mapTedNotice = (raw: any, fallbackDay: string): TenderRecord | null
 
   const title: string | undefined = raw['notice-title']?.pol;
 
+  const cpvCodes: string[] = raw['classification-cpv'] || [];
+
   return {
     source: 'TED',
     publicationNumber,
@@ -107,7 +110,8 @@ export const mapTedNotice = (raw: any, fallbackDay: string): TenderRecord | null
     publicationDate: dayFromTedDate(raw['publication-date']) ?? fallbackDay,
     publicationTime: null,
     deadlineDate: dayFromTedDate(raw['deadline-receipt-tender-date-lot']),
-    cpvCodes: raw['classification-cpv'] || [],
+    cpvCodes,
+    isIT: isItTender(cpvCodes),
     link: `https://ted.europa.eu/udl?uri=TED:NOTICE:${publicationNumber}:TEXT:PL:HTML`,
     documentsUrl: extractDocumentsUrl(raw['document-url-lot']),
     referenceNumber: extractReferenceNumber(raw['internal-identifier-proc']),

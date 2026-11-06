@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import { addDays, dayFromTedDate, isValidDay, toWarsaw } from '../functions/lib/tenders/dates.js';
 import { mapBazaNotice } from '../functions/lib/tenders/bazakonkurencyjnosci.js';
 import { extractCpvCodes, mapEzamowieniaNotice } from '../functions/lib/tenders/ezamowienia.js';
-import { IT_CPV_CODES_8 } from '../functions/lib/tenders/itCpvCodes.js';
+import { IT_CPV_CODES_8, isItTender } from '../functions/lib/tenders/itCpvCodes.js';
 import { buildInitialSnapshot, buildSnapshot, statusChanged, MAX_STATUS_HISTORY } from '../functions/lib/labels/labelSnapshot.js';
 import { tenderId } from '../functions/lib/tenders/model.js';
 import { classifySector } from '../functions/lib/tenders/sector.js';
@@ -82,6 +82,7 @@ describe('mapTedNotice', () => {
             publicationTime: null,
             deadlineDate: '2026-11-20',
             cpvCodes: ['30213300', '48000000'],
+            isIT: true,
             link: 'https://ted.europa.eu/udl?uri=TED:NOTICE:745242-2026:TEXT:PL:HTML',
             documentsUrl: null,
             referenceNumber: null,
@@ -168,6 +169,7 @@ describe('eZamówienia', () => {
             publicationTime: '20:22',
             deadlineDate: '2026-11-06',
             cpvCodes: ['34144210-3'],
+            isIT: false,
             link: 'https://ezamowienia.gov.pl/mo-client-board/bzp/notice-details/id/08df35f1-ed3f-ef38-cfcf-e60001f8c1d8',
             documentsUrl: null,
             orderType: 'Delivery',
@@ -264,6 +266,29 @@ describe('mapBazaNotice (Baza Konkurencyjności)', () => {
         const frontendCodes = [...frontendSource.matchAll(/^\s+"(\d{8})":/gm)].map((match) => match[1]);
         assert.equal(frontendCodes.length, 119);
         assert.deepEqual([...IT_CPV_CODES_8].sort(), frontendCodes.sort());
+    });
+
+    describe('isItTender (flaga isIT)', () => {
+        it('rozpoznaje kod IT z cyfrą kontrolną i bez niej', () => {
+            assert.equal(isItTender(['30213300-8']), true);
+            assert.equal(isItTender(['30213300']), true);
+        });
+
+        it('wystarczy jeden kod IT wśród innych', () => {
+            assert.equal(isItTender(['34144210-3', '48000000']), true);
+        });
+
+        it('kody spoza listy i brak kodów to nie IT', () => {
+            assert.equal(isItTender(['34144210-3']), false);
+            assert.equal(isItTender([]), false);
+        });
+
+        it('zgadza się z isItRelatedCpv z aplikacji dla każdego kodu z listy i dla kodów obcych', () => {
+            const frontendSource = readFileSync(new URL('../src/utils/cpvFilter.ts', import.meta.url), 'utf8');
+            assert.match(frontendSource, /hasOwnProperty\.call\(IT_CPV_CODES, normalizeCpv\(code\)\)/);
+            for (const code of IT_CPV_CODES_8) assert.equal(isItTender([`${code}-1`]), true);
+            assert.equal(isItTender(['99999999-9']), false);
+        });
     });
 });
 

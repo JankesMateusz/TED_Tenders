@@ -122,3 +122,13 @@ export const IT_CPV_CODES_8: readonly string[] = [
   '72268000',
   '72610000',
 ];
+
+const IT_CPV_SET: ReadonlySet<string> = new Set(IT_CPV_CODES_8);
+
+/**
+ * Czy przetarg dotyczy IT: ma co najmniej jeden kod CPV z listy (porównanie po 8 cyfrach, bez cyfry kontrolnej,
+ * jak `isItRelatedCpv` w aplikacji). Flaga `isIT` jest liczona przy zapisie przetargu; po zmianie listy kodów
+ * trzeba uruchomić `functions/scripts/backfillIsIt.js`, bo odświeżanie nie nadpisuje istniejących przetargów.
+ */
+export const isItTender = (cpvCodes: readonly string[]): boolean =>
+  cpvCodes.some((code) => IT_CPV_SET.has(code.split('-')[0].trim()));

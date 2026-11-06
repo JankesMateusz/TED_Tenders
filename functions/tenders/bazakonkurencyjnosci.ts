@@ -1,7 +1,7 @@
 import { isAxiosError } from 'axios';
 import { addDays } from './dates';
 import { requestWithRetry } from './http';
-import { IT_CPV_CODES_8 } from './itCpvCodes';
+import { IT_CPV_CODES_8, isItTender } from './itCpvCodes';
 import { OrderType, SourceResult, TenderRecord, tenderId } from './model';
 import { classifySector } from './sector';
 import { findExistingIds } from './store';
@@ -81,6 +81,7 @@ export const mapBazaNotice = (raw: any, id: number | string): TenderRecord | nul
   const nip = buyer?.identification_number_type === 'nip' ? text(buyer?.identification_number) : null;
   const orders: any[] = Array.isArray(raw?.orders) ? raw.orders : [];
   const link = `${BAZA_SITE_URL}/${publicationNumber}`;
+  const cpvCodes = extractCpvCodes(orders);
 
   return {
     source: SOURCE,
@@ -92,7 +93,8 @@ export const mapBazaNotice = (raw: any, id: number | string): TenderRecord | nul
     publicationDate,
     publicationTime: null,
     deadlineDate: dayPart(raw?.submission_deadline),
-    cpvCodes: extractCpvCodes(orders),
+    cpvCodes,
+    isIT: isItTender(cpvCodes),
     link,
     // Dokumentacja leży na stronie ogłoszenia, czyli pod tym samym adresem co `link`: osobny przycisk byłby zbędny
     documentsUrl: null,

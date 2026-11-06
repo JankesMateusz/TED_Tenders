@@ -22,6 +22,8 @@ export interface TenderRecord {
   /** Termin składania ofert, YYYY-MM-DD. */
   deadlineDate: string | null;
   cpvCodes: string[];
+  /** Czy przynajmniej jeden kod CPV należy do listy IT (patrz `isItTender`); liczone przy zapisie, tylko serwer. */
+  isIT: boolean;
   link: string;
   /** Adres dokumentacji zamówienia podany przez zamawiającego (często zewnętrzna platforma zakupowa); null, gdy brak. */
   documentsUrl: string | null;

@@ -1,5 +1,6 @@
 import { addDays, toWarsaw } from './dates';
 import { requestWithRetry } from './http';
+import { isItTender } from './itCpvCodes';
 import { OrderType, SourceResult, TenderRecord } from './model';
 
 // Adres można podmienić w testach (functions/.env.demo-tenders).
@@ -38,6 +39,8 @@ export const mapEzamowieniaNotice = (raw: EzamowieniaNotice, orderType: OrderTyp
   const published = toWarsaw(raw?.publicationDate);
   if (!raw?.noticeNumber || !published) return null;
 
+  const cpvCodes = extractCpvCodes(raw.cpvCode);
+
   return {
     source: 'E_ZAMOWIENIA',
     publicationNumber: raw.noticeNumber,
@@ -48,7 +51,8 @@ export const mapEzamowieniaNotice = (raw: EzamowieniaNotice, orderType: OrderTyp
     publicationDate: published.date,
     publicationTime: published.time,
     deadlineDate: toWarsaw(raw.submittingOffersDate)?.date ?? null,
-    cpvCodes: extractCpvCodes(raw.cpvCode),
+    cpvCodes,
+    isIT: isItTender(cpvCodes),
     link: `https://ezamowienia.gov.pl/mo-client-board/bzp/notice-details/id/${raw.objectId}`,
     documentsUrl: null,
     orderType,
