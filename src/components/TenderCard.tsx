@@ -152,10 +152,6 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                 </span>
             </p>
 
-            {tender.source === 'TED' && (
-                <p className={styles.metaLine}>Nr referencyjny: {tender.referenceNumber ?? 'brak'}</p>
-            )}
-
             {cpvCodes.length > 0 && (
                 <div className={styles.cpvSection}>
                     <div className={styles.cpvChips}>
@@ -213,8 +209,9 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
             </div>
 
             <p className={styles.cardFootnote}>
-                Nr publikacji: {tender.publicationNumber}
-                {attribution && ` · ${attribution}`}
+                <span>Nr publikacji: {tender.publicationNumber}</span>
+                {tender.source === 'TED' && <span>Nr referencyjny: {tender.referenceNumber ?? 'brak'}</span>}
+                {attribution && <span>{attribution}</span>}
             </p>
         </li>
     );
