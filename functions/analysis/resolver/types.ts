@@ -1,6 +1,6 @@
 import type { TenderSource } from '../../tenders/model';
 
-export type Platform = 'ezamowienia' | 'platformazakupowa';
+export type Platform = 'ezamowienia' | 'platformazakupowa' | 'bazakonkurencyjnosci';
 
 export interface ResolvedFile {
   /** Ścieżka względna dla silnika: oryginalna nazwa z platformy (nie z Content-Disposition). */

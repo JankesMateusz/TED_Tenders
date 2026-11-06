@@ -140,6 +140,7 @@ describe('docsFilterOf', () => {
 describe('pomocnicze', () => {
     it('platformName: znane platformy, host nieobsługiwanych, wartość zastępcza', () => {
         expect(platformName({ platform: 'ezamowienia' })).toBe('eZamówienia');
+        expect(platformName({ platform: 'bazakonkurencyjnosci' })).toBe('Baza Konkurencyjności');
         expect(platformName({ sourceUrl: 'https://www.logintrade.net/x' })).toBe('logintrade.net');
         expect(platformName({ sourceUrl: 'nie-adres' })).toBe('innej platformie');
     });

@@ -8,6 +8,7 @@ import { resolveDocuments, ResolverError } from '../functions/lib/analysis/resol
 import { extractProceedingUrl } from '../functions/lib/analysis/resolver/ezamowienia.js';
 import { assertSessionUrl } from '../functions/lib/analysis/resolver/httpClient.js';
 import { extractFiles } from '../functions/lib/analysis/resolver/platformazakupowa.js';
+import { announcementId, extractFiles as extractBazaFiles } from '../functions/lib/analysis/resolver/bazakonkurencyjnosci.js';
 
 const fixture = (name) => readFileSync(new URL(`./fixtures/resolver/${name}`, import.meta.url), 'utf8');
 const json = (name) => JSON.parse(fixture(name));
@@ -180,10 +181,6 @@ describe('resolver: TED', () => {
         assert.equal(http.requests.length, 0);
     });
 
-    it('Baza Konkurencyjności jest poza zakresem', async () => {
-        const result = await resolveDocuments({ source: 'BAZA_KONKURENCYJNOSCI', link: '', documentsUrl: null }, fakeHttp([]));
-        assert.equal(result.status, 'UNSUPPORTED_PLATFORM');
-    });
 });
 
 describe('resolver: platformazakupowa.pl', () => {
@@ -222,6 +219,80 @@ describe('resolver: platformazakupowa.pl', () => {
         const many = Array.from({ length: 201 }, (_, i) => `<tr><td class="text-left">p${i}.pdf</td><td><a href="//platformazakupowa.pl/file/get_new/h${i}.pdf"></a></td></tr>`).join('');
         const http = fakeHttp([['/transakcja/', ok(`<html>${many}</html>`)]]);
         await assert.rejects(resolveDocuments(ted, http), ResolverError);
+    });
+});
+
+describe('resolver: Baza Konkurencyjności', () => {
+    const baza = { source: 'BAZA_KONKURENCYJNOSCI', link: 'https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/297242', documentsUrl: null };
+    const route = (value) => [['/api/announcements/297242', value]];
+
+    it('zwraca manifest z attachments[] (prawdziwe ogłoszenie 297242, bez danych osobowych w fixture)', async () => {
+        const http = fakeHttp(route(ok(json('baza-ogloszenie.json'))));
+        const result = await resolveDocuments(baza, http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'bazakonkurencyjnosci');
+        assert.equal(result.sourceUrl, 'https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/297242');
+        assert.equal(result.files.length, 6);
+        assert.equal(result.files[0].path, 'Zapytanie  ofertowe.pdf');
+        assert.equal(result.files[0].url, 'https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/api/files/3190394');
+        assert.equal(result.files[0].platformFileId, '3190394');
+        assert.equal(result.files[0].publishedAt, '2026-11-06T11:42:15');
+        assert.match(result.fingerprint, /^[0-9a-f]{64}$/);
+        assert.equal(http.requests.length, 1);
+    });
+
+    it('odcisk nie zależy od kolejności plików i zmienia się po dodaniu pliku', async () => {
+        const data = json('baza-ogloszenie.json');
+        const withAttachments = (list) => ({ data: { advertisement: { ...data.data.advertisement, attachments: list } } });
+        const all = data.data.advertisement.attachments;
+        const first = await resolveDocuments(baza, fakeHttp(route(ok(withAttachments(all)))));
+        const reversed = await resolveDocuments(baza, fakeHttp(route(ok(withAttachments([...all].reverse())))));
+        const fewer = await resolveDocuments(baza, fakeHttp(route(ok(withAttachments(all.slice(1))))));
+        assert.equal(first.fingerprint, reversed.fingerprint);
+        assert.notEqual(first.fingerprint, fewer.fingerprint);
+    });
+
+    it('nie przepisuje danych osobowych i odrzuca załączniki bez poprawnego adresu pliku', () => {
+        const files = extractBazaFiles([
+            { name: 'Opis', file: { id: 1, name: 'opis.pdf', uri: '/api/files/1', created_at: '2026-11-06 10:00:00', created_by: { forename: 'Jan', surname: 'Kowalski' } } },
+            { name: 'Obcy', file: { id: 2, name: 'x.pdf', uri: 'https://example.com/x.pdf' } },
+            { name: 'Bez pliku' },
+            { name: 'Duplikat', file: { id: 1, name: 'opis.pdf', uri: '/api/files/1' } },
+            { name: 'Tylko opis', file: { id: 3, uri: '/api/files/3' }, origin: { publication_date: '2026-11-05' } }
+        ]);
+        assert.deepEqual(files.map((f) => f.path), ['opis.pdf', 'Tylko opis']);
+        assert.equal(files[1].publishedAt, '2026-11-05');
+        assert.ok(!JSON.stringify(files).includes('Kowalski'));
+    });
+
+    it('ogłoszenie bez załączników: NO_DOCUMENTS_YET', async () => {
+        const result = await resolveDocuments(baza, fakeHttp(route(ok({ data: { advertisement: { id: 297242, attachments: [] } } }))));
+        assert.equal(result.status, 'NO_DOCUMENTS_YET');
+        assert.equal(result.platform, 'bazakonkurencyjnosci');
+    });
+
+    it('ogłoszenie usunięte z Bazy (404): NO_SOURCE_URL, bez ponawiania', async () => {
+        const http = fakeHttp(route(new ResolverError('404', { status: 404 })));
+        assert.equal((await resolveDocuments(baza, http)).status, 'NO_SOURCE_URL');
+    });
+
+    it('odpowiedź bez ogłoszenia i błąd sieci to wyjątek (stan error), nie "brak dokumentów"', async () => {
+        await assert.rejects(resolveDocuments(baza, fakeHttp(route(ok({ data: {} })))), ResolverError);
+        await assert.rejects(resolveDocuments(baza, fakeHttp(route(new ResolverError('500', { status: 500 })))), ResolverError);
+    });
+
+    it('limit liczby plików', async () => {
+        const many = Array.from({ length: 201 }, (_, i) => ({ name: `p${i}`, file: { id: i + 1, name: `p${i}.pdf`, uri: `/api/files/${i + 1}` } }));
+        await assert.rejects(resolveDocuments(baza, fakeHttp(route(ok({ data: { advertisement: { attachments: many } } })))), ResolverError);
+    });
+
+    it('link spoza Bazy lub bez numeru: NO_SOURCE_URL bez zapytań; adres Bazy w TED trafia do tego adaptera', async () => {
+        const http = fakeHttp(route(ok(json('baza-ogloszenie.json'))));
+        assert.equal((await resolveDocuments({ ...baza, link: '' }, http)).status, 'NO_SOURCE_URL');
+        assert.equal(http.requests.length, 0);
+        assert.equal(announcementId('https://bazakonkurencyjnosci.funduszeeuropejskie.gov.pl/ogloszenia/297242?sekcja=ogloszenie'), '297242');
+        const fromTed = await resolveDocuments({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl: baza.link }, http);
+        assert.equal(fromTed.status, 'RESOLVED');
     });
 });
 

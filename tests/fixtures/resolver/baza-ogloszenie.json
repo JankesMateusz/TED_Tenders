@@ -1,0 +1,98 @@
+{
+  "data": {
+    "advertisement": {
+      "id": 394251,
+      "status": {
+        "label": "PUBLISHED"
+      },
+      "publication_date": "2026-11-06",
+      "modified_at": "2026-11-06 12:15:33",
+      "attachments": [
+        {
+          "origin": {
+            "id": 394251,
+            "publication_date": "2026-11-06"
+          },
+          "id": 2874614,
+          "name": "Zapytanie  ofertowe",
+          "file": {
+            "id": 3190394,
+            "name": "Zapytanie  ofertowe.pdf",
+            "created_at": "2026-11-06 11:42:15",
+            "uri": "/api/files/3190394"
+          }
+        },
+        {
+          "origin": {
+            "id": 394251,
+            "publication_date": "2026-11-06"
+          },
+          "id": 2874615,
+          "name": "Załącznik nr 1 Opis przedmiotu zamówienia",
+          "file": {
+            "id": 3190396,
+            "name": "Załącznik nr 1 Opis przedmiotu zamówienia.pdf",
+            "created_at": "2026-11-06 11:43:20",
+            "uri": "/api/files/3190396"
+          }
+        },
+        {
+          "origin": {
+            "id": 394251,
+            "publication_date": "2026-11-06"
+          },
+          "id": 2874616,
+          "name": "Załącznik nr 2 Formularz oferty",
+          "file": {
+            "id": 3190400,
+            "name": "Załącznik nr 2 Formularz oferty.doc",
+            "created_at": "2026-11-06 11:44:30",
+            "uri": "/api/files/3190400"
+          }
+        },
+        {
+          "origin": {
+            "id": 394251,
+            "publication_date": "2026-11-06"
+          },
+          "id": 2874617,
+          "name": "Klauzula RODO",
+          "file": {
+            "id": 3190402,
+            "name": "Klauzula RODO.docx",
+            "created_at": "2026-11-06 11:44:51",
+            "uri": "/api/files/3190402"
+          }
+        },
+        {
+          "origin": {
+            "id": 394251,
+            "publication_date": "2026-11-06"
+          },
+          "id": 2874618,
+          "name": "Załącznik nr 3 Projekt umowy",
+          "file": {
+            "id": 3190410,
+            "name": "Załącznik nr 3 Projekt umowy.pdf",
+            "created_at": "2026-11-06 11:47:04",
+            "uri": "/api/files/3190410"
+          }
+        },
+        {
+          "origin": {
+            "id": 394251,
+            "publication_date": "2026-11-06"
+          },
+          "id": 2874619,
+          "name": "Wzór oświadczeń Wykonawcy do uzupełnienia - załączniki nr 5 .docx",
+          "file": {
+            "id": 3190422,
+            "name": "Wzór oświadczeń Wykonawcy do uzupełnienia - załączniki nr 5 .docx",
+            "created_at": "2026-11-06 11:50:28",
+            "uri": "/api/files/3190422"
+          }
+        }
+      ]
+    }
+  }
+}

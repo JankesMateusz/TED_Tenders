@@ -1,4 +1,5 @@
 import { ezamowieniaAdapter, extractProceedingUrl, noticeObjectId, resolveNotice } from './ezamowienia';
+import { bazaAdapter } from './bazakonkurencyjnosci';
 import { createHttpClient } from './httpClient';
 import { platformazakupowaAdapter } from './platformazakupowa';
 import { HttpClient, PlatformAdapter, ResolverResult, TenderContext } from './types';
@@ -6,7 +7,7 @@ import { HttpClient, PlatformAdapter, ResolverResult, TenderContext } from './ty
 export * from './types';
 
 /** Adaptery dopasowywane do adresu dokumentacji (adresy się nie nakładają, kolejność nie ma znaczenia). */
-export const ADAPTERS: PlatformAdapter[] = [ezamowieniaAdapter, platformazakupowaAdapter];
+export const ADAPTERS: PlatformAdapter[] = [ezamowieniaAdapter, platformazakupowaAdapter, bazaAdapter];
 
 /** Adres dokumentacji → adapter; brak dopasowania = platforma nieobsługiwana (ręczne wgranie plików). */
 const resolveByUrl = async (url: string, http: HttpClient): Promise<ResolverResult> => {
@@ -21,7 +22,7 @@ const resolveByUrl = async (url: string, http: HttpClient): Promise<ResolverResu
  *
  * - E_ZAMOWIENIA: objectId z linku → metadane → lista dokumentów; przy pustej liście sprawdza pole 3.1 ogłoszenia.
  * - TED: `documentsUrl` → adapter dopasowany do adresu.
- * - BAZA_KONKURENCYJNOSCI: poza zakresem v1.
+ * - BAZA_KONKURENCYJNOSCI: `link` ogłoszenia → szczegóły w API Bazy → `attachments[]`.
  */
 export const resolveDocuments = async (tender: TenderContext, http: HttpClient = createHttpClient()): Promise<ResolverResult> => {
   if (tender.source === 'E_ZAMOWIENIA') {
@@ -42,5 +43,10 @@ export const resolveDocuments = async (tender: TenderContext, http: HttpClient =
     return resolveByUrl(tender.documentsUrl, http);
   }
 
-  return { status: 'UNSUPPORTED_PLATFORM', note: 'Źródło Baza Konkurencyjności nie jest obsługiwane w tej wersji.' };
+  if (tender.source === 'BAZA_KONKURENCYJNOSCI') {
+    if (!bazaAdapter.matches(tender.link)) return { status: 'NO_SOURCE_URL', note: 'Nie udało się odczytać adresu ogłoszenia w Bazie Konkurencyjności.' };
+    return bazaAdapter.resolve(tender.link, http);
+  }
+
+  return { status: 'UNSUPPORTED_PLATFORM', note: 'Nieznane źródło przetargu.' };
 };
