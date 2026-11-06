@@ -11,6 +11,7 @@ import { useUserPreferences } from '../context/UserPreferencesContext';
 import CommentsPopover from './CommentsPopover';
 import StatusMenu from './StatusMenu';
 import LabelMenu from './LabelMenu';
+import CopyMenu, { CopyItem } from './CopyMenu';
 import { LABEL_CONFIG } from '../utils/tenderLabels';
 import styles from './Tenders.module.css';
 
@@ -78,6 +79,14 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
     const chipCodes = (itCodes.length > 0 ? itCodes : cpvCodes).slice(0, VISIBLE_CPV_CHIPS);
     const hiddenCpvCount = cpvCodes.length - chipCodes.length;
 
+    const copyItems: CopyItem[] = [
+        { key: 'title', label: 'Kopiuj tytuł przetargu', value: tender.title },
+        { key: 'link', label: 'Kopiuj link do ogłoszenia', value: tender.link },
+        ...(tender.documentsUrl ? [{ key: 'docs', label: 'Kopiuj link do dokumentacji', value: tender.documentsUrl }] : []),
+        { key: 'pubNo', label: 'Kopiuj numer publikacji', value: tender.publicationNumber },
+        ...(tender.referenceNumber ? [{ key: 'refNo', label: 'Kopiuj numer referencyjny', value: tender.referenceNumber }] : []),
+    ];
+
     return (
         <li
             ref={cardRef}
@@ -138,6 +147,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     >
                         <StarIcon filled={fav} />
                     </button>
+                    <CopyMenu items={copyItems} />
                 </div>
             </div>
 
