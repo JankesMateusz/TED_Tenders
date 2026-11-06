@@ -33,6 +33,13 @@ interface InviteResult {
 const inviteUser = httpsCallable<{ email: string }, InviteResult>(functions, 'inviteUser');
 const listUsersStatus = httpsCallable<void, { users: UserProfile[] }>(functions, 'listUsersStatus');
 
+interface EnqueueDocsChecksResult {
+    enqueued: number;
+    candidates: number;
+}
+
+const enqueueDocsChecks = httpsCallable<{ sinceDay?: string }, EnqueueDocsChecksResult>(functions, 'enqueueDocsChecks');
+
 const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ online, onClose }) => {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [listError, setListError] = useState<string | null>(null);
@@ -41,6 +48,9 @@ const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ 
     const [inviteError, setInviteError] = useState<string | null>(null);
     const [invite, setInvite] = useState<InviteResult | null>(null);
     const [copied, setCopied] = useState(false);
+    const [docsSinceDay, setDocsSinceDay] = useState('');
+    const [isQueueingDocs, setIsQueueingDocs] = useState(false);
+    const [docsMessage, setDocsMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
     const loadUsers = useCallback(async () => {
         try {
@@ -79,6 +89,28 @@ const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ 
     const handleInvite = (event: React.FormEvent) => {
         event.preventDefault();
         sendInvite(email, true);
+    };
+
+    // Jednorazowe nadrobienie przetargów IT sprzed wdrożenia automatycznego sprawdzania; serwer kolejkuje je po jednym na sekundę
+    const handleQueueDocs = async () => {
+        const scope = docsSinceDay ? `przetargów IT opublikowanych od ${docsSinceDay}` : 'wszystkich przetargów IT w bazie';
+        if (!window.confirm(`Zakolejkować sprawdzenie dokumentów dla ${scope}, które jeszcze nie były sprawdzane? Serwer zapyta platformy o listy plików (ok. 1 zapytanie na sekundę).`)) return;
+        setIsQueueingDocs(true);
+        setDocsMessage(null);
+        try {
+            const { data } = await enqueueDocsChecks(docsSinceDay ? { sinceDay: docsSinceDay } : {});
+            setDocsMessage({
+                text: data.enqueued > 0
+                    ? `Zakolejkowano sprawdzenie ${data.enqueued} przetargów (przetargów IT w bazie: ${data.candidates}). Wyniki pojawią się na kartach w ciągu kilku minut.`
+                    : `Nic do zakolejkowania: wszystkie przetargi IT w tym zakresie mają już wynik (przetargów IT w bazie: ${data.candidates}).`,
+                isError: false
+            });
+        } catch (error) {
+            console.error('Kolejkowanie sprawdzeń dokumentów nie powiodło się:', error);
+            setDocsMessage({ text: (error as { message?: string })?.message || 'Nie udało się zakolejkować sprawdzeń.', isError: true });
+        } finally {
+            setIsQueueingDocs(false);
+        }
     };
 
     const handleCopy = async () => {
@@ -138,6 +170,27 @@ const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ 
                         </button>
                     </div>
                 )}
+
+                <h3 style={{ margin: '20px 0 8px' }}>Sprawdzanie dokumentów</h3>
+                <p style={{ margin: '0 0 8px' }}>
+                    <small className={styles.role}>
+                        Nowe przetargi IT są sprawdzane automatycznie. Ten przycisk obejmuje także te, które były w bazie wcześniej i nie mają jeszcze wyniku.
+                    </small>
+                </p>
+                <div className={styles.inviteRow}>
+                    <input
+                        className={styles.input}
+                        type="date"
+                        aria-label="Tylko przetargi opublikowane od (puste = wszystkie)"
+                        title="Tylko przetargi opublikowane od tej daty (puste = wszystkie)"
+                        value={docsSinceDay}
+                        onChange={(event) => setDocsSinceDay(event.target.value)}
+                    />
+                    <button className={styles.primaryButton} style={{ margin: 0 }} type="button" disabled={isQueueingDocs} onClick={handleQueueDocs}>
+                        {isQueueingDocs ? 'Kolejkowanie...' : 'Sprawdź dokumenty'}
+                    </button>
+                </div>
+                {docsMessage && <p className={docsMessage.isError ? styles.error : styles.role} role={docsMessage.isError ? 'alert' : 'status'}>{docsMessage.text}</p>}
 
                 {listError && <p className={styles.error} role="alert">{listError}</p>}
                 <ul className={styles.userList}>
