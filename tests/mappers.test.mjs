@@ -126,6 +126,14 @@ describe('mapTedNotice', () => {
         assert.equal(url(undefined), null);
     });
 
+    it('adres dokumentacji bez https:// (np. AGH: "www.dzp.agh.edu.pl") dostaje schemat', () => {
+        const url = (field) => mapTedNotice({ ...raw, 'document-url-lot': field }, '2026-10-28').documentsUrl;
+        assert.equal(url(['www.dzp.agh.edu.pl']), 'https://www.dzp.agh.edu.pl');
+        assert.equal(url([' zamowienia.uczelnia.pl/przetargi, ']), 'https://zamowienia.uczelnia.pl/przetargi');
+        assert.equal(url(['Nie dotyczy', 'brak']), null);
+        assert.equal(url(['javascript:alert(1)', 'data:text/html,x']), null);
+    });
+
     it('pomija ogłoszenia zmieniające i bez numeru', () => {
         assert.equal(mapTedNotice({ ...raw, 'change-notice-version-identifier': '2' }, '2026-10-28'), null);
         assert.equal(mapTedNotice({ ...raw, 'publication-number': undefined }, '2026-10-28'), null);

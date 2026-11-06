@@ -1,6 +1,7 @@
 import { dayFromTedDate } from './dates';
 import { requestWithRetry } from './http';
 import { isItTender } from './itCpvCodes';
+import { normalizeWebAddress } from './webAddress';
 import { OrderType, SourceResult, TenderRecord } from './model';
 
 // Adres można podmienić w testach (functions/.env.demo-tenders). Wyszukiwanie ogłoszeń jest w TED publiczne, bez klucza API.
@@ -69,14 +70,13 @@ const extractOrderType = (field: unknown): OrderType | null => {
 
 /**
  * `document-url-lot` to tablica adresów dokumentacji, po jednym na lot (często powtórzonych). Zwraca pierwszy
- * poprawny adres http(s) albo null; inne schematy (np. `javascript:`) są odrzucane, bo trafiają do linku w interfejsie.
+ * poprawny adres albo null (patrz `normalizeWebAddress`: adres bez `https://` dostaje schemat, inne schematy są odrzucane).
  */
 export const extractDocumentsUrl = (field: unknown): string | null => {
   const values: unknown[] = Array.isArray(field) ? field : [field];
   for (const value of values) {
-    if (typeof value !== 'string') continue;
-    const url = value.trim();
-    if (/^https?:\/\/\S+$/i.test(url)) return url;
+    const url = normalizeWebAddress(value);
+    if (url) return url;
   }
   return null;
 };

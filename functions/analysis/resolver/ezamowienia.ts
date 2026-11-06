@@ -1,3 +1,4 @@
+import { normalizeWebAddress } from '../../tenders/webAddress';
 import { fingerprintOf, hostOf, htmlToText, uniquePaths } from './common';
 import { ExcludedFile, HttpClient, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
 
@@ -29,11 +30,8 @@ export const sourceUrlFor = (tenderId: string): string => `${BASE}/mp-client/sea
 export const extractProceedingUrl = (html: string): string | null => {
   const text = htmlToText(html);
   const match = text.match(/3\.1\.\)?\s*Adres strony internetowej prowadzonego post[ęe]powania\s*(\S+)/i);
-  if (!match) return null;
-  // Zamawiający często wpisuje sam adres („www.dzp.agh.edu.pl") bez https://; pusta sekcja zostawia kolejne pole („3.2.)")
-  const token = match[1].replace(/[.,;]+$/, '');
-  if (!/^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(:\d+)?([/?#]\S*)?$/i.test(token)) return null;
-  return /^https?:\/\//i.test(token) ? token : `https://${token}`;
+  // Pusta sekcja zostawia kolejne pole („3.2.)"), które normalizator odrzuca
+  return match ? normalizeWebAddress(match[1]) : null;
 };
 
 /** Lista dokumentów postępowania; pusta lista (jeszcze nic nie opublikowano) to nie błąd. */
