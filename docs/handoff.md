@@ -14,7 +14,7 @@ Użytkownik komunikuje się po polsku. Odpowiadaj po polsku, zwięźle, z uzasad
 
 - **Zasady z `docs/CLAUDE.md` obowiązują.** Najważniejsze: najpierw poznaj kod, ograniczaj zakres zmian, nie twierdź, że coś działa, jeśli tego nie sprawdziłeś, i raportuj uczciwie, co zweryfikowano, a co nie.
 - **Commity i pushe tylko za wyraźną zgodą.** Dotychczas pytałem przed każdą porcją commitów i pushem. Commit message kończy się linią współautora podaną w system-reminderze sesji (do tej pory: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`).
-- **Nic nie wdrażaj na produkcję bez wyraźnej zgody** (projekt `tendersted`, działa od 2026-11-01). Zmiany robimy i sprawdzamy na projekcie testowym `tenders-test-b5bb3` i na emulatorach. Każdy push do `main` uruchamia GitHub Actions i wdraża hosting na produkcję, także zmiana samej dokumentacji (patrz sekcja 8).
+- **Nic nie wdrażaj na produkcję bez wyraźnej zgody** (projekt `tendersted`, działa od 2026-11-01). Zmiany robimy i sprawdzamy na projekcie testowym `tenders-test-b5bb3` i na emulatorach. Od 2026-11-08 wdrożenia robi CI: `develop` wdraża się na projekt testowy, `main` na produkcję (hosting, funkcje, reguły i indeksy Firestore; produkcja czeka na zatwierdzenie w środowisku `production`). Każdy merge do `main`, także samej dokumentacji, uruchamia deploy produkcyjny. Opis w README, sekcja „Gałęzie i środowiska”.
 - Użytkownik pytany o decyzje odpowiada konkretnie. Nie pytaj o rzeczy, które da się rozstrzygnąć rozsądnym domyślnym wyborem; opisz założenie i idź dalej.
 - Użytkownik sprawdza zmiany w przeglądarce sam i raportuje wyniki. Nie widziałeś interfejsu na żywo, więc zawsze zaznaczaj, co zweryfikowano tylko typami, buildem i testami. Reguły Firestore na projekt testowy wdrażaj dopiero po jego zgodzie (tak było dotąd), bo frontend z nowymi regułami zmienia to, co użytkownik zobaczy.
 - Produkcja jest wdrożona i użytkownik potwierdził, że działa. Zapytaj o jego plany na kolejne funkcjonalności, zanim zaczniesz nową pracę.
@@ -171,7 +171,7 @@ Projekt produkcyjny to `tendersted`. Zrobione, w tej kolejności:
 - PR #4 zmergowany do `main`. Pierwsze uruchomienie workflow wywaliło się na `npm ci` (Node 20 / npm 10 odrzuca lockfile wygenerowany przez npm 11: brak `@types/node@26` i `undici-types`). Poprawka: `node-version: '24'` w `firebase-deploy.yml` (commit `efba7d9`); workflow przeszedł na zielono, a użytkownik potwierdził, że aplikacja działa. Polityka czyszczenia obrazów (1 dzień) już istniała.
 - **Do zrobienia przez użytkownika:** unieważnić klucz TED w portalu TED (był publicznie dostępny przez `getApiKey`; nowa wersja go nie używa). Nie wiadomo, czy zrobione. Alert budżetowy: nie potwierdzono.
 - **Sprawdzone przez użytkownika na produkcji:** logowanie admina, odświeżanie przetargów oraz zapraszanie innych osób przez `inviteUser` działają.
-- Każdy push do `main` (także zmiana samej dokumentacji) wdraża hosting na produkcję. Reguły i funkcje nadal wdraża się ręcznie, z jawnym `--project`, po wyraźnej zgodzie użytkownika.
+- (Historyczne, nieaktualne od 2026-11-08.) Wcześniej push do `main` wdrażał tylko hosting, a reguły i funkcje wdrażało się ręcznie. Teraz wdraża wszystko CI, patrz README.
 
 ### Status aktywacji kont w panelu admina (ZROBIONE 2026-11-01)
 - Dodano funkcję `listUsersStatus` i przycisk „Nowy link” w `AdminPanel.tsx` (commit `a9e2a71` w `main`). Użytkownik sprawdził na produkcji, że lista ze statusami działa.
