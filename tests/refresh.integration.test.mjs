@@ -173,6 +173,12 @@ const signInAs = async ({ email, password }) => {
 };
 
 before(async () => {
+    // Pliki testowe dzielą jeden emulator Firestore, a testy liczą dokumenty w całej kolekcji "tenders".
+    // Czyścimy dane z poprzednich plików (endpoint emulatora, bez wyzwalania funkcji).
+    const cleared = await fetch(`http://127.0.0.1:8080/emulator/v1/projects/${PROJECT_ID}/databases/(default)/documents`, {
+        method: 'DELETE'
+    });
+    assert.ok(cleared.ok, `czyszczenie emulatora Firestore nie powiodło się: ${cleared.status}`);
     await new Promise((resolve) => server.listen(STUB_PORT, '127.0.0.1', resolve));
     execFileSync('node', ['functions/scripts/setAdmin.js', PROJECT_ID, ADMIN.email, ADMIN.password], { stdio: 'inherit' });
     const member = await admin.auth().createUser(MEMBER);
