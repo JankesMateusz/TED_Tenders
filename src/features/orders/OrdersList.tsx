@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DictionaryOption, OrderListItem } from '../../types/Orders';
+import { orderHash } from './ordersRoute';
 import { useDictionaries } from './useDictionaries';
 import { OrderFilters, useOrdersList } from './useOrdersList';
 import styles from './OrdersList.module.css';
@@ -39,7 +40,9 @@ const FilterSelect: React.FC<SelectProps> = ({ label, value, options, onChange }
 
 const OrderRow: React.FC<{ order: OrderListItem; lobLabels: DictionaryOption[] | undefined }> = ({ order, lobLabels }) => (
     <tr>
-        <td data-label="MDP ID">{order.mdpId}</td>
+        <td data-label="MDP ID">
+            <a href={orderHash(order.id)}>{order.mdpId}</a>
+        </td>
         <td data-label="Nr przetargu">{order.endUserBidNumber ?? 'brak'}</td>
         <td data-label="Zamawiający">
             <div>{order.buyer.name}</div>
