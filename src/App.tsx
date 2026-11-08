@@ -3,12 +3,21 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { UserPreferencesProvider } from './context/UserPreferencesContext';
 import Tenders from './components/tenders';
+import OrdersModule from './features/orders/OrdersModule';
+import { useHashRoute } from './hooks/useHashRoute';
+import { moduleForHash } from './modules';
 import ScrollToTopButton from './components/ScrollToTopButton';
 import LoginScreen from './components/LoginScreen';
 import NoAccessScreen from './components/NoAccessScreen';
 import { MESSAGES } from './constants';
 import styles from './components/Auth.module.css';
 import './styles/theme.css';
+
+/** Wybiera moduł aplikacji na podstawie hasha adresu (domyślnie przetargi). Przełączenie odmontowuje poprzedni moduł. */
+const ModuleSwitch: React.FC = () => {
+  const hash = useHashRoute();
+  return moduleForHash(hash) === 'orders' ? <OrdersModule /> : <Tenders />;
+};
 
 /** Pokazuje aplikację tylko zalogowanym użytkownikom, którzy mają nadaną rolę. */
 const AuthGate: React.FC = () => {
@@ -20,7 +29,7 @@ const AuthGate: React.FC = () => {
 
   return (
     <UserPreferencesProvider>
-      <Tenders />
+      <ModuleSwitch />
       <ScrollToTopButton />
     </UserPreferencesProvider>
   );

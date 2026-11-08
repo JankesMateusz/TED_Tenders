@@ -27,3 +27,6 @@ yarn-error.log*
 .firebase/
 functions/node_modules/
 functions/lib/
+
+# Dane firmy narzeczonej (raport Excel i zrzuty aplikacji), nie do repozytorium
+docs/App/

@@ -2,6 +2,7 @@ import React from "react";
 import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
 import UserMenu from "./UserMenu";
+import ModuleMenu from "./ModuleMenu";
 import DatePopover from "./DatePopover";
 import { TenderSource } from "../types/TenderSource";
 import { tenderSourceConfig } from "../utils/tenderSources";
@@ -87,6 +88,7 @@ const Header: React.FC<HeaderProps> = ({
         <header className={styles.header}>
           <div className={styles.headerInner}>
             <div className={styles.brand}>
+                <ModuleMenu current="tenders" />
                 <span className={styles.brandMark} aria-hidden="true">P</span>
                 <h1 className={styles.title}>Przetargi</h1>
             </div>
