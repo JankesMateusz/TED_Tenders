@@ -9,16 +9,26 @@ Schemat modułu zamówień (POC). Opis założeń jest w nagłówku `migrations/
 
 ## Uruchomienie lokalne (Docker)
 
+Trwała baza deweloperska: kontener `tenders-pg` z nazwanym wolumenem `tenders-pg-data` (dane przeżywają `docker stop` i restart Dockera) i portem tylko na localhost. **Nie używaj `--rm`**: usunięcie kontenera kasuje wtedy dane. Wolumen zniknie dopiero po `docker volume rm tenders-pg-data`.
+
 ```bash
-docker run --rm -d --name tenders-pg -e POSTGRES_PASSWORD=dev -p 5433:5432 postgres:17
-URL="postgresql://postgres:dev@localhost:5433/postgres"
+# jednorazowo: utworzenie bazy
+docker run -d --name tenders-pg --restart unless-stopped -v tenders-pg-data:/var/lib/postgresql/data   -e POSTGRES_PASSWORD=dev -p 127.0.0.1:5433:5432 postgres:17
+
+# migracje i testy (testy przed importem: wstawiają własne dane w transakcji wycofywanej na końcu)
 for f in db/migrations/0001_init.sql db/migrations/0002_seed_dictionaries.sql db/tests/0002_seed.test.sql db/tests/0001_init.test.sql; do
-  psql "$URL" -v ON_ERROR_STOP=1 -q -f "$f" || break
+  docker exec -i tenders-pg psql -U postgres -v ON_ERROR_STOP=1 -q < "$f" || break
 done
-docker stop tenders-pg
+
+# na co dzień
+docker start tenders-pg      # włączenie
+docker stop tenders-pg       # wyłączenie (dane zostają)
+docker exec -it tenders-pg psql -U postgres   # konsola SQL
 ```
 
-Test `0002_seed` sprawdza słowniki, więc uruchamiamy go przed `0001_init.test`, który dopisuje własne dane (w transakcji wycofywanej na końcu).
+Połączenie z aplikacji: `postgresql://postgres:dev@localhost:5433/postgres` (hasło `dev` dotyczy tylko lokalnej bazy deweloperskiej).
+
+Test `0002_seed` sprawdza słowniki, a `0001_init.test` wstawia dane z numerami MDP 1 i 2 w roku 2026, więc uruchamiamy je na bazie bez zaimportowanych zamówień.
 
 Bez `psql` na hoście: `docker exec -i tenders-pg psql -U postgres -v ON_ERROR_STOP=1 < db/migrations/0001_init.sql`.
 
