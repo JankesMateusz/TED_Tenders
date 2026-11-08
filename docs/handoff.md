@@ -4,6 +4,8 @@ Ten plik jest dla agenta rozpoczynającego nową sesję. Czytaj go razem z `docs
 
 **Zadanie o Bazie Konkurencyjności:** cały dotychczasowy research (endpointy, struktura danych, wolumen, niewiadome, plan) jest w `docs/research-baza-konkurencyjnosci.md`. Przeczytaj go przed rozpoczęciem takiej pracy. Nowsze ustalenia (dostępne publiczne API wyszukiwania, regulamin, filtr sektora zamawiającego): `docs/research-baza-konkurencyjnosci-v2.md`; research dokumentacji przetargów i architektury hostingu: `docs/research-dokumentacja-przetargow.md`. Źródło jest zaimplementowane (sekcja „Baza Konkurencyjności jako trzecie źródło” w punkcie 5); research opisuje stan sprzed implementacji i w kilku miejscach jest nieaktualny, a poprawki są w sekcji 14 pliku v2.
 
+**Moduł Zamówienia (POC, od 2026-11-08 w `develop` i wdrożony na projekt testowy):** osobny moduł z danymi w PostgreSQL (Neon), dostępny z menu modułów za flagą `REACT_APP_ENABLE_ORDERS` (włączoną tylko w buildzie z `develop`). Cały kontekst, stan i dalszy plan są w `docs/zamowienia/handoff.md` i `docs/zamowienia/plan.md`; bazę opisuje `db/README.md`. Nie powielaj tych treści tutaj.
+
 ## 1. Projekt w skrócie
 
 Aplikacja do przeglądania zamówień publicznych na sprzęt IT (TED, eZamówienia i Baza Konkurencyjności; ta ostatnia nie ma oficjalnego API, więc korzysta z publicznego, nieudokumentowanego wyszukiwania, patrz `docs/research-baza-konkurencyjnosci-v2.md`). Analityk tworzy z niej raporty dla firm. Cel prac: kilka zaproszonych osób ma widzieć **wspólną** listę przetargów i **wspólne** oznaczenia (patrz `docs/goals.md`). Rozbudowa aplikacji dopiero po osiągnięciu tego minimum.
