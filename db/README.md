@@ -13,7 +13,8 @@ Trwała baza deweloperska: kontener `tenders-pg` z nazwanym wolumenem `tenders-p
 
 ```bash
 # jednorazowo: utworzenie bazy
-docker run -d --name tenders-pg --restart unless-stopped -v tenders-pg-data:/var/lib/postgresql/data   -e POSTGRES_PASSWORD=dev -p 127.0.0.1:5433:5432 postgres:17
+docker run -d --name tenders-pg --restart unless-stopped -v tenders-pg-data:/var/lib/postgresql/data \
+  -e POSTGRES_PASSWORD=dev -p 127.0.0.1:5433:5432 postgres:17
 
 # migracje i testy (testy przed importem: wstawiają własne dane w transakcji wycofywanej na końcu)
 for f in db/migrations/0001_init.sql db/migrations/0002_seed_dictionaries.sql db/tests/0002_seed.test.sql db/tests/0001_init.test.sql; do
@@ -71,3 +72,18 @@ Zasady importu:
 - **Wszystkie zamówienia dostają status `open`**, bo raport nie zawiera statusu zamówienia.
 - Wyzwalacze dziennika zmian są na czas importu wyłączone. Powstaje jeden wpis zbiorczy (`import`) z liczbami wierszy.
 - Normalizacja z `db/import/normalize.mjs` jest wzorcem dla formularzy aplikacji (ten sam klucz dla wpisu ręcznego i z importu).
+
+## Funkcje odczytu (`functions/orders/`)
+
+Cloud Functions (`onCall`, region `europe-central2`) czytają bazę przez sterownik `pg`. Przeglądarka nie łączy się z Postgresem. Wszystkie wymagają `requireRole` (konto z rolą `admin` lub `member`, bez sesji anonimowych), bo zwracają dane kontaktowe.
+
+| Funkcja (plik `callables.ts`) | Dane wejściowe | Zwraca |
+|---|---|---|
+| `listOrdersCallable` | filtry: `year`, `status`, `accountType`, `lobCategory`, `positionStatus`, `buyerId`, `search`, `registeredFrom`, `registeredTo`; `limit` (domyślnie 50, maks. 200), `cursor` | strona zamówień z podsumowaniem pozycji i `nextCursor` (stronicowanie kluczem, od najnowszych) |
+| `getOrderCallable` | `id` | zamówienie z zamawiającym, kontaktem, pozycjami i pismami |
+| `searchBuyersCallable` | `query` (min. 2 znaki), `limit` | zamawiający z liczbą zamówień i kontaktów |
+| `getBuyerCallable` | `id` | zamawiający z kontaktami i ostatnimi zamówieniami |
+
+- **Konfiguracja:** adres bazy z sekretu `ORDERS_DATABASE_URL` (lokalnie ze zmiennej środowiskowej o tej samej nazwie). Nigdy w kodzie. Pula ma 2 połączenia, limit czasu zapytania 10 s.
+- **Funkcje nie są jeszcze wyeksportowane w `functions/index.ts`.** Dopisanie ich tam wymaga najpierw ustawienia sekretu na projekcie testowym, inaczej wdrożenie wszystkich funkcji z `develop` się nie powiedzie.
+- **Testy:** `npm run test:orders`. Walidacja działa zawsze. Testy zapytań potrzebują bazy z migracjami (domyślnie kontener z tego README, inny adres w `ORDERS_TEST_DATABASE_URL`); bez bazy są pomijane z komunikatem. Każdy test działa w transakcji wycofywanej na końcu, na danych z roku 2099, więc nie dotyka danych z importu.
