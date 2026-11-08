@@ -17,7 +17,7 @@ docker run -d --name tenders-pg --restart unless-stopped -v tenders-pg-data:/var
   -e POSTGRES_PASSWORD=dev -p 127.0.0.1:5433:5432 postgres:17
 
 # migracje i testy (testy przed importem: wstawiają własne dane w transakcji wycofywanej na końcu)
-for f in db/migrations/0001_init.sql db/migrations/0002_seed_dictionaries.sql db/tests/0002_seed.test.sql db/tests/0001_init.test.sql; do
+for f in db/migrations/0001_init.sql db/migrations/0002_seed_dictionaries.sql db/migrations/0003_lob_phone.sql db/tests/0002_seed.test.sql db/tests/0001_init.test.sql; do
   docker exec -i tenders-pg psql -U postgres -v ON_ERROR_STOP=1 -q < "$f" || break
 done
 
@@ -42,7 +42,7 @@ Wymagane rozszerzenie `pg_trgm` jest w standardowym obrazie Postgresa oraz w Neo
 - **Autor zmiany**: aplikacja ustawia na czas transakcji `SELECT set_config('app.user_id', '<uid>', true);`. Wyzwalacze zapisują zmiany w `audit_log`.
 - **Optymistyczna blokada**: `UPDATE ... WHERE id = $1 AND version = $2`, a wersja rośnie automatycznie.
 - **Klucze deduplikacji** (`buyers.dedupe_key`, `winners.name_key`, `vendors.name_key`) liczy aplikacja z nazwy po normalizacji. Ta sama funkcja normalizująca musi być używana w imporcie i w formularzach.
-- **Słowniki**: `lob_categories`, `account_types` i `position_statuses` są wypełnione z arkusza „Legenda" (migracja 0002). `budget_brackets`, `acquisition_forms`, `os_options` i `office_options` wypełnia import z danych, potem administrator. `order_statuses` zawiera tylko `open`, pozostałe wartości do ustalenia.
+- **Słowniki**: `lob_categories`, `account_types` i `position_statuses` są wypełnione z arkusza „Legenda" (migracja 0002; migracja 0003 dodaje kategorię `Phone`, czyli smartfony, której Legenda nie zawiera). `budget_brackets`, `acquisition_forms`, `os_options` i `office_options` wypełnia import z danych, potem administrator. `order_statuses` zawiera tylko `open`, pozostałe wartości do ustalenia.
 
 ## Import raportu MDP (xlsx)
 
