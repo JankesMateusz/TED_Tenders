@@ -79,11 +79,13 @@ Cloud Functions (`onCall`, region `europe-central2`) czytają bazę przez sterow
 
 | Funkcja (plik `callables.ts`) | Dane wejściowe | Zwraca |
 |---|---|---|
+| `getDictionariesCallable` | brak | słowniki do list rozwijanych (kategorie LoB, typy kont, statusy zamówień i pozycji) oraz lata, w których są zamówienia |
 | `listOrdersCallable` | filtry: `year`, `status`, `accountType`, `lobCategory`, `positionStatus`, `buyerId`, `search`, `registeredFrom`, `registeredTo`; `limit` (domyślnie 50, maks. 200), `cursor` | strona zamówień z podsumowaniem pozycji i `nextCursor` (stronicowanie kluczem, od najnowszych) |
 | `getOrderCallable` | `id` | zamówienie z zamawiającym, kontaktem, pozycjami i pismami |
 | `searchBuyersCallable` | `query` (min. 2 znaki), `limit` | zamawiający z liczbą zamówień i kontaktów |
 | `getBuyerCallable` | `id` | zamawiający z kontaktami i ostatnimi zamówieniami |
 
 - **Konfiguracja:** adres bazy z sekretu `ORDERS_DATABASE_URL` (lokalnie ze zmiennej środowiskowej o tej samej nazwie). Nigdy w kodzie. Pula ma 2 połączenia, limit czasu zapytania 10 s.
-- **Funkcje nie są jeszcze wyeksportowane w `functions/index.ts`.** Dopisanie ich tam wymaga najpierw ustawienia sekretu na projekcie testowym, inaczej wdrożenie wszystkich funkcji z `develop` się nie powiedzie.
+- **Eksport tylko w emulatorze.** `functions/index.ts` eksportuje je pod nazwami `getDictionaries`, `listOrders`, `getOrder`, `searchBuyers` i `getBuyer` wyłącznie przy `FUNCTIONS_EMULATOR=true`. Przy wdrożeniu są niewidoczne, bo bez sekretu `ORDERS_DATABASE_URL` w projekcie testowym wdrożenie wszystkich funkcji z `develop` by się nie powiodło. Po ustawieniu sekretu zamienić ten blok na zwykły eksport.
+- **Uruchomienie lokalne:** `ORDERS_DATABASE_URL=postgresql://postgres:dev@127.0.0.1:5433/postgres npx firebase emulators:start --only functions --project demo-tenders` (po `npm --prefix functions run build`). Emulator nie weryfikuje podpisu tokenu, więc do ręcznych wywołań HTTP wystarczy token z potrzebnym claimem `role`.
 - **Testy:** `npm run test:orders`. Walidacja działa zawsze. Testy zapytań potrzebują bazy z migracjami (domyślnie kontener z tego README, inny adres w `ORDERS_TEST_DATABASE_URL`); bez bazy są pomijane z komunikatem. Każdy test działa w transakcji wycofywanej na końcu, na danych z roku 2099, więc nie dotyka danych z importu.

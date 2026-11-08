@@ -3,7 +3,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { REGION, requireRole } from '../access';
 import { getPool } from './db';
-import { getBuyer, getOrder, listOrders, searchBuyers } from './queries';
+import { getBuyer, getDictionaries, getOrder, listOrders, searchBuyers } from './queries';
 import { parseBuyerSearchInput, parseId, parseListOrdersInput } from './validation';
 
 // Funkcje odczytu modułu zamówień. Dane zawierają kontakty urzędników, więc wymagamy prawdziwego konta z rolą
@@ -29,6 +29,11 @@ const guarded = async <T>(operation: string, run: () => Promise<T>): Promise<T> 
 const notFound = (what: string): never => {
   throw new HttpsError('not-found', `Nie znaleziono: ${what}.`);
 };
+
+export const getDictionariesCallable = onCall(options, (request) => {
+  requireRole(request);
+  return guarded('getDictionaries', () => getDictionaries(getPool()));
+});
 
 export const listOrdersCallable = onCall(options, (request) => {
   requireRole(request);

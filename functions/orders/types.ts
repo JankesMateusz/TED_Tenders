@@ -123,6 +123,21 @@ export interface OrderDetails {
   letters: LetterDetails[];
 }
 
+export interface DictionaryOption {
+  code: string;
+  /** Opis lub etykieta do wyświetlenia; null, gdy słownik nie ma opisu. */
+  label: string | null;
+}
+
+export interface Dictionaries {
+  lobCategories: DictionaryOption[];
+  accountTypes: DictionaryOption[];
+  orderStatuses: DictionaryOption[];
+  positionStatuses: DictionaryOption[];
+  /** Lata, w których są zamówienia, od najnowszego. */
+  years: number[];
+}
+
 export interface BuyerSearchItem extends BuyerDetails {
   ordersCount: number;
   contactsCount: number;

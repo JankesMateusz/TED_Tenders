@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import { createPool } from '../functions/lib/orders/db.js';
-import { getBuyer, getOrder, listOrders, searchBuyers } from '../functions/lib/orders/queries.js';
+import { getBuyer, getDictionaries, getOrder, listOrders, searchBuyers } from '../functions/lib/orders/queries.js';
 import { parseListOrdersInput } from '../functions/lib/orders/validation.js';
 
 const URL = process.env.ORDERS_TEST_DATABASE_URL ?? 'postgresql://postgres:dev@localhost:5433/postgres';
@@ -217,6 +217,18 @@ describe('zapytania modułu zamówień (Postgres)', { concurrency: false }, () =
         assert.equal(await getBuyer(db, 999999999), null);
         await client.query('UPDATE buyers SET deleted_at = now() WHERE id = $1', [ids.buyerB]);
         assert.equal(await getBuyer(db, ids.buyerB), null);
+    });
+
+    dbTest('getDictionaries zwraca słowniki z migracji i lata z zamówień', async () => {
+        const dictionaries = await getDictionaries(db);
+        const codes = (options) => options.map((o) => o.code);
+        assert.ok(codes(dictionaries.lobCategories).includes('MFP'));
+        assert.equal(dictionaries.lobCategories.find((o) => o.code === 'MFP').label, 'urządzenia wielofunkcyjne');
+        assert.ok(codes(dictionaries.accountTypes).includes('Local govt'));
+        assert.deepEqual(codes(dictionaries.positionStatuses), ['Pending', 'Confirmed', 'Refuse', 'Cancel']);
+        assert.ok(codes(dictionaries.orderStatuses).includes('open'));
+        assert.ok(dictionaries.years.includes(TEST_YEAR));
+        assert.deepEqual(dictionaries.years, [...dictionaries.years].sort((a, b) => b - a));
     });
 
     dbTest('rekord uznany za duplikat wskazuje rekord główny', async () => {

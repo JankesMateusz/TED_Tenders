@@ -4,6 +4,8 @@ import {
   BuyerSearchItem,
   BuyerWithContacts,
   ContactDetails,
+  Dictionaries,
+  DictionaryOption,
   LetterDetails,
   OrderDetails,
   OrderListItem,
@@ -242,6 +244,26 @@ export const getOrder = async (db: Queryable, id: number): Promise<OrderDetails 
     contact: row.contact_id === null ? null : mapContact({ ...row, id: row.contact_id }),
     positions,
     letters,
+  };
+};
+
+// --- Słowniki do list rozwijanych --------------------------------------------------------------------------
+
+export const getDictionaries = async (db: Queryable): Promise<Dictionaries> => {
+  const options = (rows: any[]): DictionaryOption[] => rows.map((row) => ({ code: row.code, label: row.label }));
+  const [lob, accountTypes, orderStatuses, positionStatuses, years] = await Promise.all([
+    db.query('SELECT code, description AS label FROM lob_categories WHERE active ORDER BY sort_order, code'),
+    db.query('SELECT code, description AS label FROM account_types WHERE active ORDER BY sort_order, code'),
+    db.query('SELECT code, label FROM order_statuses ORDER BY sort_order, code'),
+    db.query('SELECT code, label FROM position_statuses ORDER BY sort_order, code'),
+    db.query('SELECT DISTINCT year FROM orders WHERE deleted_at IS NULL ORDER BY year DESC'),
+  ]);
+  return {
+    lobCategories: options(lob.rows),
+    accountTypes: options(accountTypes.rows),
+    orderStatuses: options(orderStatuses.rows),
+    positionStatuses: options(positionStatuses.rows),
+    years: years.rows.map((row) => row.year),
   };
 };
 
