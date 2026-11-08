@@ -72,7 +72,36 @@ npx firebase deploy --only firestore:rules,firestore:indexes --project <projekt>
 npx firebase deploy --only functions --project <projekt>
 ```
 
-Push do `main` uruchamia GitHub Actions (`.github/workflows/firebase-deploy.yml`), które buduje frontend i **wdraża sam hosting na produkcję**. Reguły i funkcje wdraża się osobno poleceniami powyżej. Workflow wymaga sekretów repozytorium `REACT_APP_FIREBASE_*` (te same wartości co w `.env.local`), `FIREBASE_SERVICE_ACCOUNT` i `FIREBASE_PROJECT_ID`.
+Wdrożenia robi CI (`.github/workflows/deploy.yml`), a nie ręczne polecenia powyżej, które zostają na wypadek awarii CI. Push do `develop` lub `main` najpierw uruchamia testy (`tests.yml`), a po ich przejściu wdraża **hosting, funkcje oraz reguły i indeksy Firestore** na środowisko przypisane do gałęzi (opis niżej).
+
+## Gałęzie i środowiska
+
+| Gałąź | Środowisko GitHub | Projekt Firebase | Wdrożenie |
+|---|---|---|---|
+| `develop` | `test` | `tenders-test-b5bb3` | automatyczne po merge'u |
+| `main` | `production` | `tendersted` | automatyczne po merge'u |
+
+Sekrety (`FIREBASE_SERVICE_ACCOUNT` i sześć `REACT_APP_FIREBASE_*`) są zdefiniowane osobno w każdym środowisku (Settings → Environments), pod tymi samymi nazwami. O projekcie docelowym decyduje `REACT_APP_FIREBASE_PROJECT_ID` środowiska.
+
+### Zwykły rozwój
+
+1. Gałąź feature odchodzi od `develop` (`feature/...`, `fix/...`).
+2. PR do **`develop`** (baza PR musi być `develop`, GitHub domyślnie proponuje `main`). Testy muszą przejść. Merge wdraża na `test`.
+3. Wydanie: PR `develop` → `main`, scalany zwykłym merge commitem (nie squash, żeby gałęzie się nie rozjeżdżały). Merge wdraża na produkcję.
+
+### Hotfix na produkcji
+
+Hotfix idzie od `main`, a nie przez `develop`, bo `develop` zawiera niewydane zmiany.
+
+1. `hotfix/opis` odchodzi od `main`.
+2. PR do `main`. Merge wdraża na produkcję.
+3. **Zaraz potem** wciągnij zmianę do `develop` (merge `main` → `develop`), inaczej poprawka zginie przy następnym wydaniu.
+
+Zmiany reguł Firestore, indeksów i uprawnień traktujemy tak samo jak kod: zmiana w repozytorium i ta sama ścieżka, bez ręcznych poprawek w konsoli Firebase.
+
+### Ochrona gałęzi
+
+`main` i `develop` są chronione: zmiany wyłącznie przez PR, z przechodzącymi testami (`tests`), bez force-push. Szczegóły konfiguracji: Settings → Branches → Branch protection rules.
 
 ## Struktura
 
