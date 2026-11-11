@@ -201,3 +201,25 @@ Skrypt testowy `test:orders` w głównym `package.json` celowo wstawiony daleko 
 ## 10. Poza zakresem (na razie)
 
 Integracja z bazą firmy (brak schematu), płatności, wielu najemców, aplikacja mobilna, import starszych lat (do czasu plików), migracja przetargów z Firestore do Postgresa.
+
+
+## 11. Pomysły do dopracowania i przemyślenia (NIE zatwierdzone, bez decyzji)
+
+### Współbieżna praca kilku analityków (pomysł użytkownika, 2026-11-09)
+
+**Status: do dopracowania i przemyślenia.** Dziś zamówienia w starej aplikacji może wpisywać naraz tylko jedna osoba; dzielenie listy przetargów wymaga ciągłego dogadywania się („ja biorę X, ty weź inny, wpisałam Y, nie ruszaj"). W aplikacji webowej druga osoba mogłaby widzieć na liście na żywo, że przetarg jest „w trakcie wpisywania", i wziąć inny.
+
+**Co już istnieje (sprawdzone w kodzie):**
+- Wspólny status przetargu w Firestore, widoczny na żywo dla wszystkich (`onSnapshot`): `toEnter`, `entered`, `toClarify`, `notToEnter` (`src/types/TenderStatus.ts`). Reguły (`firestore.rules`) zapisują, kto (`statusBy`, e-mail) i kiedy (`statusAt`, czas serwera) ustawił status.
+- Twarda blokada duplikatów w bazie: unikalny indeks `orders_source_tender_uq` na `orders.source_tender_id` (dla nieusuniętych). Ten sam przetarg z listy nie trafi do bazy dwa razy.
+
+**Szkic rozwiązania (do przemyślenia):**
+1. Nowy wspólny status `entering` („w trakcie wpisywania") z informacją, kto i od kiedy; karta na liście pokazuje „Anna wpisuje od 12 min", filtr „wolne" ukrywa zajęte.
+2. Zajęcie musi być atomowe (dwie osoby klikają naraz: wygrywa jedna, druga dostaje komunikat). Dziś reguły pozwalają ustawić status bez sprawdzania stanu poprzedniego, więc wymaga to transakcji lub zmiany reguł i testów reguł.
+3. Porzucone zajęcia (zamknięta karta): wygasanie po czasie bez aktywności (np. 30 min), przejęcie przez inną osobę po potwierdzeniu.
+4. Zapis zamówienia w bazie ustawia status `entered` po stronie serwera, żeby lista i baza się nie rozjeżdżały.
+5. Edycja zapisanego zamówienia przez dwie osoby naraz: blokada wersji (`version`, już w planie dla Etapu C) zwraca czytelny komunikat zamiast cichego nadpisania.
+
+**Niewiadome i pytania:** czy zespół dziś używa statusów `toEnter` i `entered` na liście (czy nowy stan trafi w istniejący nawyk); role analityków (pytanie 6 w pkt 7); ręcznie dodawane przetargi spoza trzech źródeł nie mają `source_tender_id`, więc potrzebują innej ochrony przed duplikatem (np. zamawiający + numer przetargu, jako ostrzeżenie); limity i koszty Firestore przy kilku osobach (raczej nieistotne, nie sprawdzano).
+
+**Zależności:** stan `entering` można dodać do listy przetargów niezależnie od formularza wpisywania, jako pierwszą korzyść z modułu; pełne zyski wymagają Etapu C. Zmiany w `firestore.rules` wymagają testów (`npm run test:rules`).
