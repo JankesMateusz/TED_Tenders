@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import { Statistics } from '../utils/calculateStatistics';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig } from '../utils/tenderSources';
@@ -7,29 +7,16 @@ import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { CpvCategoryKey } from '../utils/cpvCategories';
-import { TREND_DAYS, TrendPoint } from '../utils/recentTrend';
+import { TrendPoint } from '../utils/recentTrend';
 import { formatDelta } from '../utils/comparison';
 import { MIN_REPEAT_COUNT } from '../utils/repeatOptions';
 import { HourlyAverage } from '../utils/hourlyAverage';
 import { RankedList, ShareBar } from './statistics/RankedList';
-import { CHART_MAX_HEIGHT, ChartGrid } from './statistics/ChartGrid';
 import { DailySourcesChart } from './statistics/DailySourcesChart';
+import { HourlyActivityChart } from './statistics/HourlyActivityChart';
 import { RecentTrendChart } from './statistics/RecentTrendChart';
 import { StatisticsNotices } from './statistics/StatisticsNotices';
 import styles from './StatisticsTab.module.css';
-
-const parseStatisticDate = (dateStr: string): number => {
-    if (!dateStr || dateStr === 'Brak daty' || dateStr === 'Błąd formatu daty') {
-        return 0;
-    }
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) {
-        return 0;
-    }
-    const [day, month, year] = parts.map(Number);
-    const parsed = new Date(year, month - 1, day);
-    return parsed.getTime();
-};
 
 /** Element statystyk, w który kliknięto, żeby zobaczyć odpowiadające mu przetargi na liście. */
 export type StatisticsDrillDown =
@@ -61,17 +48,6 @@ interface StatisticsTabProps {
     /** Nowe ogłoszenia z ostatnich dni, po tych samych filtrach co statystyki (poza zakresem dat). */
     trend: { points: TrendPoint[]; error: string | null };
 }
-
-/** Godziny pracy pokazywane na wykresie godzinowym; poza nimi tylko wtedy, gdy ktoś coś opublikował. */
-const DEFAULT_FIRST_HOUR = 7;
-const DEFAULT_LAST_HOUR = 19;
-
-/** Wartość listy wyboru dnia oznaczająca średnią z ostatnich dni (zamiast konkretnego dnia). */
-const AVERAGE_OPTION = 'average';
-
-/** Liczba na wykresie godzinowym: całkowita bez zmian, średnia z jednym miejscem po przecinku. */
-const formatCount = (value: number): string =>
-    Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
 
 /** Dane wykresu godzinowego eZamówień: dni do wyboru (DD-MM-RRRR, od najnowszego) i rozkład godzin po dniach. */
 export interface HourlyChartData {
@@ -113,48 +89,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     };
     const reviewedCount = statistics.total - statistics.byStatus.unmarked;
     const reviewedPercent = statistics.total > 0 ? Math.round((reviewedCount / statistics.total) * 100) : 0;
-    const hourlyDates = hourly.days;
-    // Domyślnie najnowszy dzień z wybranego zakresu; inne dni z bazy użytkownik wybiera sam
-    const newestRangeDate = useMemo(
-        () => Object.keys(statistics.ezamowieniaHourlyDistribution)
-            .sort((a, b) => parseStatisticDate(b) - parseStatisticDate(a))[0] || '',
-        [statistics.ezamowieniaHourlyDistribution]
-    );
-    const hasAverage = hourly.average !== null;
-    const [selectedHourlyDate, setSelectedHourlyDate] = useState<string>(hasAverage ? AVERAGE_OPTION : newestRangeDate);
-    // Dopóki użytkownik sam nie wybierze dnia, domyślną opcją jest średnia (gdy tylko są do niej dane)
-    const [hasPickedHourlyDate, setHasPickedHourlyDate] = useState(false);
-    const [hoveredHour, setHoveredHour] = useState<number | null>(null);
-    useEffect(() => {
-        setSelectedHourlyDate(current => {
-            if (current === AVERAGE_OPTION) return hasAverage ? current : newestRangeDate;
-            if (!hasPickedHourlyDate && hasAverage) return AVERAGE_OPTION;
-            return hourlyDates.includes(current) ? current : (hasAverage ? AVERAGE_OPTION : newestRangeDate);
-        });
-    }, [hourlyDates, newestRangeDate, hasAverage, hasPickedHourlyDate]);
-    const isAverageSelected = selectedHourlyDate === AVERAGE_OPTION && hourly.average !== null;
-    const { onSelectDay } = hourly;
-    useEffect(() => {
-        // Średnia nie jest dniem do doczytania z bazy
-        onSelectDay(selectedHourlyDate === AVERAGE_OPTION ? '' : selectedHourlyDate);
-    }, [onSelectDay, selectedHourlyDate]);
-    const hourlyData = useMemo(() => {
-        if (!selectedHourlyDate) {
-            return [];
-        }
-        const raw = isAverageSelected ? hourly.average?.values ?? [] : hourly.distribution[selectedHourlyDate] || [];
-        return Array.from({ length: 24 }, (_, hour) => raw[hour] || 0);
-    }, [hourly.distribution, hourly.average, isAverageSelected, selectedHourlyDate]);
-    const peakHour = isAverageSelected ? hourly.average?.peakHour ?? null : null;
-    const maxHourlyValue = useMemo(() => hourlyData.reduce((max, value) => Math.max(max, value), 0), [hourlyData]);
-    const totalHourlyValue = useMemo(() => hourlyData.reduce((sum, value) => sum + value, 0), [hourlyData]);
-    const hasHourlyData = hourlyDates.length > 0 || hasAverage;
-    const visibleHours = useMemo(() => {
-        const active = hourlyData.flatMap((count, hour) => (count > 0 ? [hour] : []));
-        const first = Math.min(DEFAULT_FIRST_HOUR, ...active);
-        const last = Math.max(DEFAULT_LAST_HOUR, ...active);
-        return hourlyData.map((count, hour) => ({ count, hour })).filter(({ hour }) => hour >= first && hour <= last);
-    }, [hourlyData]);
     const reviewedTotal = statistics.byReviewer.reduce((sum, item) => sum + item.count, 0);
 
     return (
@@ -257,117 +191,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
 
             </div>
 
-            {hasHourlyData && (
-                <div className={`${styles.section} ${styles.fullWidthSection}`}>
-                    <div className={styles.chartHeader}>
-                        <div>
-                            <h3 className={styles.sectionTitle}>Godzinowa aktywność eZamówienia</h3>
-                            <p className={styles.chartSubtitle}>
-                                {isAverageSelected
-                                    ? `Średnia liczba ogłoszeń w każdej godzinie z ostatnich ${TREND_DAYS} dni (tylko dni z kompletnym pobraniem). `
-                                    : 'Liczba ogłoszeń opublikowanych w każdej godzinie wybranego dnia. '}
-                                Widać godziny {DEFAULT_FIRST_HOUR}:00–{DEFAULT_LAST_HOUR}:59, inne tylko gdy coś w nich opublikowano.
-                            </p>
-                        </div>
-                        <select
-                            className={styles.chartSelect}
-                            value={selectedHourlyDate}
-                            onChange={event => {
-                                setHasPickedHourlyDate(true);
-                                setSelectedHourlyDate(event.target.value);
-                            }}
-                        >
-                            {hasAverage && (
-                                <option value={AVERAGE_OPTION}>Średnia ({TREND_DAYS} dni)</option>
-                            )}
-                            {hourlyDates.map(date => (
-                                <option key={date} value={date}>
-                                    {date}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className={styles.chartSummary}>
-                        <span>
-                            {isAverageSelected
-                                ? <>Średnia z <strong>{hourly.average?.dayCount}</strong> dni z pełnymi danymi</>
-                                : <>Wybrany dzień: <strong>{selectedHourlyDate}</strong></>}
-                        </span>
-                        <span>
-                            {hourly.isLoading
-                                ? 'Wczytywanie…'
-                                : hourly.error ?? (isAverageSelected
-                                    ? `Średnio ${formatCount(Math.round(totalHourlyValue * 10) / 10)} dziennie${peakHour !== null ? ` · najlepsza godzina ${String(peakHour).padStart(2, '0')}:00` : ''}`
-                                    : `Łącznie ${totalHourlyValue} ogłoszeń`)}
-                        </span>
-                    </div>
-                    <div className={styles.hourlyRows}>
-                        {visibleHours.map(({ count, hour }) => (
-                            <div key={hour} className={styles.hourlyRow}>
-                                <span className={styles.hourlyRowLabel}>{hour.toString().padStart(2, '0')}:00</span>
-                                <span className={styles.hourlyRowTrack}>
-                                    <span
-                                        className={`${styles.hourlyRowBar} ${hour === peakHour ? styles.hourlyRowBarPeak : ''}`}
-                                        style={{ width: maxHourlyValue > 0 ? `${(count / maxHourlyValue) * 100}%` : 0 }}
-                                    />
-                                </span>
-                                <span className={styles.hourlyRowCount}>{count > 0 ? formatCount(count) : ''}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div className={`${styles.hourlyChartScroll} ${styles.hourlyChartVertical}`}>
-                        <div className={styles.hourlyChartContainer}>
-                            <ChartGrid
-                                className={styles.hourlyChartGrid}
-                                maxValue={maxHourlyValue}
-                                formatLabel={(value) => formatCount(Math.round(value * 10) / 10)}
-                            />
-                            <div className={styles.hourlyChart}>
-                                {visibleHours.map(({ count, hour }) => {
-                                    const height = maxHourlyValue > 0 ? (count / maxHourlyValue) * CHART_MAX_HEIGHT : 0;
-                                    const intensity = maxHourlyValue ? count / maxHourlyValue : 0;
-                                    const isHovered = hoveredHour === hour;
-                                    return (
-                                        <div 
-                                            key={hour} 
-                                            className={styles.hourBarWrapper}
-                                            onMouseEnter={() => setHoveredHour(hour)}
-                                            onMouseLeave={() => setHoveredHour(null)}
-                                        >
-                                            {count > 0 && (
-                                                <span className={`${styles.hourCount} ${isHovered ? styles.hourCountHovered : ''}`}>
-                                                    {formatCount(count)}
-                                                </span>
-                                            )}
-                                            {isHovered && count > 0 && (
-                                                <div className={styles.hourTooltip}>
-                                                    <strong>{hour.toString().padStart(2, '0')}:00</strong>
-                                                    <span>
-                                                        {isAverageSelected
-                                                            ? `średnio ${formatCount(count)} dziennie`
-                                                            : `${count} ${count === 1 ? 'ogłoszenie' : count < 5 ? 'ogłoszenia' : 'ogłoszeń'}`}
-                                                    </span>
-                                                    <span>{((count / totalHourlyValue) * 100).toFixed(1)}%</span>
-                                                </div>
-                                            )}
-                                            <div 
-                                                className={`${styles.hourBar} ${isHovered ? styles.hourBarHovered : ''} ${hour === peakHour ? styles.hourBarPeak : ''}`}
-                                                style={{ 
-                                                    height: `${height}px`,
-                                                    opacity: count > 0 ? 0.6 + intensity * 0.4 : 0
-                                                }}
-                                            />
-                                            <span className={`${styles.hourLabel} ${hour === peakHour ? styles.hourLabelPeak : ''}`}>
-                                                {hour.toString().padStart(2, '0')}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <HourlyActivityChart hourly={hourly} rangeDistribution={statistics.ezamowieniaHourlyDistribution} />
 
             <RecentTrendChart trend={trend} />
 
