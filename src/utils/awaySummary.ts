@@ -24,7 +24,6 @@ export interface AwayEvent {
 
 export interface AwaySummary {
     since: Date;
-    newTenders: number;
     /** Zmiany statusu zrobione przez inne osoby. */
     statusChanges: AwayEvent[];
     docsAvailable: AwayEvent[];
@@ -37,7 +36,7 @@ export const isAwayLongEnough = (lastSeen: Date | null, now: Date): boolean =>
  * Składa podsumowanie. Własne zmiany statusu są pomijane. Gdy przetarg zmienił status kilka razy,
  * zostaje tylko ostatnia zmiana (zdarzenia przychodzą od najnowszych).
  */
-export const buildSummary = (since: Date, newTenders: number, events: AwayEvent[], ownUid: string): AwaySummary => {
+export const buildSummary = (since: Date, events: AwayEvent[], ownUid: string): AwaySummary => {
     const seenStatus = new Set<string>();
     const statusChanges: AwayEvent[] = [];
     const docsAvailable: AwayEvent[] = [];
@@ -50,15 +49,20 @@ export const buildSummary = (since: Date, newTenders: number, events: AwayEvent[
             docsAvailable.push(event);
         }
     }
-    return { since, newTenders, statusChanges, docsAvailable };
+    return { since, statusChanges, docsAvailable };
 };
 
 /** Czy przetarg pobrano po ostatniej wizycie (plakietka „Nowy”). Bez punktu odniesienia albo bez daty pobrania: nie. */
 export const isNewSince = (fetchedAt: Date | undefined, since: Date | null): boolean =>
     fetchedAt !== undefined && since !== null && fetchedAt.getTime() > since.getTime();
 
-export const isSummaryEmpty = (summary: AwaySummary): boolean =>
-    summary.newTenders === 0 && summary.statusChanges.length === 0 && summary.docsAvailable.length === 0;
+/** Ile przetargów z podanej listy jest „nowych” (te same, które dostają plakietkę „Nowy”). */
+export const countNewSince = (tenders: { fetchedAt?: Date }[], since: Date | null): number =>
+    tenders.reduce((count, tender) => (isNewSince(tender.fetchedAt, since) ? count + 1 : count), 0);
+
+/** Nowe przetargi liczy lista (z jej filtrami), więc baner jest pusty dopiero, gdy nie ma też ich. */
+export const isSummaryEmpty = (summary: AwaySummary, newTenders: number): boolean =>
+    newTenders === 0 && summary.statusChanges.length === 0 && summary.docsAvailable.length === 0;
 
 /** Odmiana rzeczownika po liczbie: 1 przetarg, 2–4 przetargi, 5+ przetargów (z wyjątkiem 12–14). */
 export const pluralPl = (count: number, one: string, few: string, many: string): string => {

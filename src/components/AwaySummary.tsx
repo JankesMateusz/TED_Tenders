@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './AwaySummary.module.css';
 import { useAwaySummaryContext } from '../context/AwaySummaryContext';
-import { AwayEvent, formatAway, pluralPl, statusLabel } from '../utils/awaySummary';
+import { AwayEvent, formatAway, isSummaryEmpty, pluralPl, statusLabel } from '../utils/awaySummary';
 
 const MAX_LISTED = 5;
 
@@ -20,10 +20,10 @@ const EventList: React.FC<{ events: AwayEvent[]; describe: (event: AwayEvent) =>
 
 /** Baner „od Twojej ostatniej wizyty”: nowe przetargi, zmiany statusu od innych osób i nowo dostępne dokumenty. */
 const AwaySummary: React.FC = () => {
-    const { summary, dismiss } = useAwaySummaryContext();
-    if (!summary) return null;
+    const { summary, dismiss, newInView: newTenders } = useAwaySummaryContext();
+    if (!summary || isSummaryEmpty(summary, newTenders)) return null;
 
-    const { newTenders, statusChanges, docsAvailable, since } = summary;
+    const { statusChanges, docsAvailable, since } = summary;
     return (
         <aside className={styles.banner} role="status" aria-label="Zmiany od ostatniej wizyty">
             <div className={styles.header}>
@@ -32,7 +32,7 @@ const AwaySummary: React.FC = () => {
             </div>
             {newTenders > 0 && (
                 <p className={styles.line}>
-                    {newTenders} {pluralPl(newTenders, 'nowy przetarg', 'nowe przetargi', 'nowych przetargów')}
+                    {newTenders} {pluralPl(newTenders, 'nowy przetarg', 'nowe przetargi', 'nowych przetargów')} w widoku listy
                 </p>
             )}
             {statusChanges.length > 0 && (
