@@ -5,8 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
-import { TenderComment } from "../types/TenderComment";
-import { DEFAULT_ORDER_TYPES, MESSAGES } from "../constants";
+import { DEFAULT_ORDER_TYPES } from "../constants";
 import { dayToDisplayDate, displayDateToDay, parseDate, toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
 import { CpvCategoryKey } from "../utils/cpvCategories";
@@ -27,17 +26,15 @@ import { useDayTenders, useRefreshedDays } from "../hooks/useHourlyDays";
 import { describePeriod, getComparisonPeriod } from "../utils/comparison";
 import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
-import { pluralizeTenders } from "../utils/pluralPl";
 import { afterRemoval, nextActiveId } from "../utils/cardNavigation";
 import { averageHourlyDistribution } from "../utils/hourlyAverage";
 import { TENDER_STATUSES } from "../utils/tenderStatus";
 import { ActiveFilterChip, buildActiveFilterChips } from "../utils/activeFilters";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
-import TenderCard from "./TenderCard";
+import { TendersList } from "./TendersList";
 import styles from "./Tenders.module.css";
 
-const REFRESHING_MESSAGE = "Pobieranie nowych przetargów";
 
 /** Czy zdarzenie pochodzi z pola, w którym użytkownik pisze (skróty jednoklawiszowe nie mogą mu wtedy przeszkadzać). */
 const isTypingTarget = (target: EventTarget | null): boolean =>
@@ -48,10 +45,7 @@ const isTypingTarget = (target: EventTarget | null): boolean =>
 const isPopupOpen = (): boolean =>
     document.querySelector('button[aria-expanded="true"]:not([data-disclosure])') !== null;
 
-const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznacz przetarg gwiazdką, aby trafił do tej zakładki.";
 
-// Stała referencja, żeby karty bez komentarzy nie renderowały się od nowa przy każdej zmianie
-const NO_COMMENTS: TenderComment[] = [];
 
 const Tenders: React.FC = () => {
     const today = new Date();
@@ -641,89 +635,32 @@ const Tenders: React.FC = () => {
                                     showHiddenAdvertisers={showHiddenAdvertisers}
                                     onShowHiddenAdvertisersChange={setShowHiddenAdvertisers}
                                 />
-                {(activeTab === 'saved' || (activeTab === 'tenders' && !isLoading)) && (
-                    <div className={styles.queueHeader}>
-                        {activeTab === 'saved' ? (
-                            <span className={styles.queueHint}>{MESSAGES.SAVED_HINT}</span>
-                        ) : (
-                            <>
-                                <span>
-                                    <strong>{displayedTenders.length} {pluralizeTenders(displayedTenders.length)}</strong>
-                                    {' · '}do przejrzenia: <strong>{facetCounts.statuses.unmarked ?? 0}</strong>
-                                </span>
-                                {isQueueStatusFilter(statusFilters) && (
-                                    <span className={styles.queueHint}>{MESSAGES.QUEUE_HINT}</span>
-                                )}
-                                <span className={`${styles.queueHint} ${styles.queueHintFull}`}>{MESSAGES.SHORTCUTS_HINT}</span>
-                            </>
-                        )}
-                    </div>
-                )}
-                {activeTab === 'tenders' && isLoading && (
-                    <div className={styles.skeletonContainer}>
-                        {[...Array(3)].map((_, index) => (
-                            <div key={index} className={styles.skeletonCard}>
-                                <div className={styles.skeletonHeader}>
-                                    <div className={styles.skeletonLine} style={{ width: '40%' }} />
-                                    <div className={styles.skeletonLine} style={{ width: '20%' }} />
-                                </div>
-                                <div className={styles.skeletonBadge} />
-                                <div className={styles.skeletonTitle} />
-                                <div className={styles.skeletonInfo}>
-                                    <div className={styles.skeletonLine} style={{ width: '30%' }} />
-                                    <div className={styles.skeletonLine} style={{ width: '30%' }} />
-                                    <div className={styles.skeletonLine} style={{ width: '30%' }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                {activeTab === 'tenders' && loadError && <p className={styles.message} role="alert">{loadError}</p>}
-                {activeTab === 'tenders' && refreshError && <p className={styles.message} role="alert">{refreshError}</p>}
-                {actionError && <p className={styles.message} role="alert">{actionError}</p>}
-                {commentsError && <p className={styles.message} role="alert">{commentsError}</p>}
-                {advertiserError && <p className={styles.message} role="alert">{advertiserError}</p>}
-                {activeTab === 'tenders' && isRefreshing && !isLoading && (
-                    <p className={styles.message}>
-                        {REFRESHING_MESSAGE}
-                        {refreshProgress && refreshProgress.total > 1
-                            ? ` (${refreshProgress.done + 1}/${refreshProgress.total})`
-                            : "..."}
-                    </p>
-                )}
-                {activeTab === 'tenders' && displayedTenders.length === 0 && !isLoading && !isRefreshing && !loadError && (
-                    <p className={styles.message}>
-                        {isQueueEmpty
-                            ? MESSAGES.QUEUE_EMPTY
-                            : isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}
-                    </p>
-                )}
-                {activeTab === 'saved' && favorites.length === 0 && (
-                    <p className={styles.message}>{NO_SAVED_TENDERS_MESSAGE}</p>
-                )}
-                {(activeTab === 'saved' || !isLoading) && (
-                    <ul className={styles.tendersList}>
-                        {displayedTenders.map((tender) => {
-                            const cpvCodes = getDisplayedCpvCodes(tender);
-                            return (
-                                <TenderCard
-                                    key={tender.id}
-                                    tender={tender}
-                                    cpvCodes={cpvCodes}
-                                    canSetStatus={liveTendersById.has(tender.id)}
-                                    comments={commentsByTender[tender.id] ?? NO_COMMENTS}
-                                    canComment={liveTendersById.has(tender.id)}
-                                    onAddComment={addComment}
-                                    onDeleteComment={deleteComment}
-                                    advertiserHidden={isHiddenAdvertiser(tender, advertiserDecisions)}
-                                    onSetAdvertiserDecision={setAdvertiserDecision}
-                                    isActive={tender.id === activeTenderId}
-                                    onActivate={handleActivateTender}
-                                />
-                            );
-                        })}
-                    </ul>
-                )}
+                                    <TendersList
+                                        activeTab={activeTab}
+                                        displayedTenders={displayedTenders}
+                                        isLoading={isLoading}
+                                        isRefreshing={isRefreshing}
+                                        refreshProgress={refreshProgress}
+                                        loadError={loadError}
+                                        refreshError={refreshError}
+                                        actionError={actionError}
+                                        commentsError={commentsError}
+                                        advertiserError={advertiserError}
+                                        unmarkedCount={facetCounts.statuses.unmarked ?? 0}
+                                        showQueueHint={isQueueStatusFilter(statusFilters)}
+                                        isQueueEmpty={isQueueEmpty}
+                                        isFiltered={isFiltered}
+                                        favoritesCount={favorites.length}
+                                        getDisplayedCpvCodes={getDisplayedCpvCodes}
+                                        liveTendersById={liveTendersById}
+                                        commentsByTender={commentsByTender}
+                                        onAddComment={addComment}
+                                        onDeleteComment={deleteComment}
+                                        advertiserDecisions={advertiserDecisions}
+                                        onSetAdvertiserDecision={setAdvertiserDecision}
+                                        activeTenderId={activeTenderId}
+                                        onActivateTender={handleActivateTender}
+                                    />
                             </div>
                         ) : (
                             <StatisticsTab
