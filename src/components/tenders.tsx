@@ -29,11 +29,6 @@ const Tenders: React.FC = () => {
     const [startDate, setStartDate] = useState<Date | null>(today);
     const [endDate, setEndDate] = useState<Date | null>(today);
     const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
-    const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
-        [TenderSource.TED]: 0,
-        [TenderSource.E_ZAMOWIENIA]: 0,
-        [TenderSource.BAZA_KONKURENCYJNOSCI]: 0
-    });
     const { user } = useAuth();
     const uid = user?.uid ?? null;
     const { favorites, isFavorite, toggleFavorite, toggleStatus, actionError } = useUserPreferences();
@@ -177,21 +172,18 @@ const Tenders: React.FC = () => {
         toggleStatus
     });
 
-    useEffect(() => {
-        // Liczenie przetargów per źródło
+    const tendersCountBySource = useMemo(() => {
         const counts: Record<TenderSource, number> = {
             [TenderSource.TED]: 0,
             [TenderSource.E_ZAMOWIENIA]: 0,
             [TenderSource.BAZA_KONKURENCYJNOSCI]: 0
         };
-
-        displayedTenders.forEach(tender => {
+        displayedTenders.forEach((tender) => {
             if (tender.source in counts) {
                 counts[tender.source as TenderSource]++;
             }
         });
-
-        setTendersCountBySource(counts);
+        return counts;
     }, [displayedTenders]);
 
     const { statistics, comparison, trend, hourly } = useStatisticsData({
