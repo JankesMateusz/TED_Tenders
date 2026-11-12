@@ -93,3 +93,37 @@ Testy: logika liczenia jest pokryta (`calculateStatistics`, `comparison`, `hourl
 mają testy), ale same komponenty widoku nie mają testów. Refaktor weryfikować przez `tsc`, istniejące testy
 utili i ręczne przeklikanie zakładki Statystyki (wybór dnia/średniej, tryb zakresu dat, porównanie
 okresów, hover na wykresach). Jeden kawałek na commit.
+
+## Stan wykonania (2026-11-12)
+
+Refaktor wykonany na gałęzi `refactoring`, jeden kawałek na commit. `StatisticsTab.tsx`: 686 → 124 linie.
+Nowe pliki w `src/components/statistics/`, razem z testami renderowania (`@testing-library/react`).
+
+| Krok audytu | Commit | Wynik |
+|---|---|---|
+| #1 `RankedList` + `ShareBar` | `c02fbc6` | 5 powtórzeń list w jednym komponencie |
+| #4 `RecentTrendChart`, #5 `StatisticsNotices` | `996c06a` | proste sekcje bezstanowe |
+| #3 `DailySourcesChart`, #7 `ChartGrid` | `f6964fa` | własny `hoveredDay`, stała `CHART_MAX_HEIGHT`, style tooltipu w CSS, poprawiony podtytuł |
+| #2 `HourlyActivityChart` + `useHourlyChartState` | `e65690e` | wybór dnia i `hoveredHour` w komponencie wykresu |
+| #8 typy | `5735b14` | `statistics/types.ts`; `Tenders` i hooki nie importują już typów z pliku komponentu |
+| #6 `SummaryCards` + `DeltaBadge` | `ed29011` | karty, pasek postępu, źródło i typ zamówienia |
+| duplikat parsera dat | `014ddd4` | `parseStatisticDate` zastąpiony `parseDate` |
+
+Odstępstwa od audytu i rzeczy, które zostały:
+
+- **Kontrakt `onSelectDay` zostaje.** Wybrany dzień nadal jest trzymany w dwóch miejscach (`useHourlyChartState`
+  w komponencie i `hourlyDay` w `useStatisticsData`). Uproszczenie do jednego właściciela zmieniłoby sposób
+  doczytywania dnia spoza zakresu, więc zostawiłem je na osobną decyzję.
+- **`HourlyActivityChart` jest zawsze zamontowany** i sam zwraca `null` bez danych. Dzięki temu wybór dnia
+  przetrwa chwilowy brak danych, jak wcześniej.
+- **Dwa warianty wykresu godzinowego** (wiersze i słupki) są nadal renderowane jednocześnie. CSS (`@media`,
+  próg 768 px) ukrywa jeden z nich, więc to celowe, ale oba liczą z tych samych danych.
+- **Odmiana „ogłoszenie”** w tooltipie korzysta teraz z `pluralizeTenders`; stary kod źle odmieniał np. 22.
+- **Usunięte martwe style:** `statusStats`, `statusItem`, `statusLabel`, `statusValue` i odpowiedniki `deadline*`
+  nie były używane przez żaden komponent.
+- **Podział `StatisticsTab.module.css` (ok. 880 linii) nie został wykonany.** Wszystkie nowe komponenty
+  importują wspólny moduł. Podział na pliki per komponent jest mechaniczny, ale bez przeglądarki nie da się go
+  sprawdzić wizualnie, a `tsc` nie wykrywa brakujących klas CSS.
+
+Weryfikacja: `tsc`, lint zmienionych plików, 33 zestawy testów (244 testy) i `npm run build`. Zakładki Statystyki
+nie klikałem w przeglądarce.

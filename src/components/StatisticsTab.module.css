@@ -205,33 +205,6 @@
     border-radius: 12px;
 }
 
-.statusStats,
-.deadlineStats {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.statusItem,
-.deadlineItem {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-}
-
-.statusLabel,
-.deadlineLabel {
-    font-size: 14px;
-    color: var(--text-primary);
-}
-
-.statusValue,
-.deadlineValue {
-    font-size: 16px;
-    font-weight: 600;
-}
-
 .fullWidthSection {
     margin-bottom: 24px;
 }
