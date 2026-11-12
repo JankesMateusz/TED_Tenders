@@ -53,6 +53,10 @@ export const buildSummary = (since: Date, newTenders: number, events: AwayEvent[
     return { since, newTenders, statusChanges, docsAvailable };
 };
 
+/** Czy przetarg pobrano po ostatniej wizycie (plakietka „Nowy”). Bez punktu odniesienia albo bez daty pobrania: nie. */
+export const isNewSince = (fetchedAt: Date | undefined, since: Date | null): boolean =>
+    fetchedAt !== undefined && since !== null && fetchedAt.getTime() > since.getTime();
+
 export const isSummaryEmpty = (summary: AwaySummary): boolean =>
     summary.newTenders === 0 && summary.statusChanges.length === 0 && summary.docsAvailable.length === 0;
 

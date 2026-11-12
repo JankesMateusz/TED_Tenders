@@ -1,4 +1,4 @@
-import { AwayEvent, MIN_AWAY_MS, buildSummary, formatAway, isAwayLongEnough, isSummaryEmpty, pluralPl, statusLabel } from './awaySummary';
+import { AwayEvent, MIN_AWAY_MS, buildSummary, formatAway, isAwayLongEnough, isNewSince, isSummaryEmpty, pluralPl, statusLabel } from './awaySummary';
 
 const event = (over: Partial<AwayEvent>): AwayEvent => ({
     id: 'e', type: 'status_changed', tenderId: 't1', title: 'Laptopy', actorUid: 'other', actorEmail: 'a@b.pl', status: 'toEnter', ...over
@@ -11,6 +11,17 @@ describe('isAwayLongEnough', () => {
         expect(isAwayLongEnough(null, now)).toBe(false);
         expect(isAwayLongEnough(since, new Date(now.getTime() - 1))).toBe(false);
         expect(isAwayLongEnough(since, now)).toBe(true);
+    });
+});
+
+describe('isNewSince', () => {
+    it('oznacza tylko przetargi pobrane po ostatniej wizycie i tylko gdy znamy punkt odniesienia', () => {
+        const after = new Date(since.getTime() + 1);
+        expect(isNewSince(after, since)).toBe(true);
+        expect(isNewSince(since, since)).toBe(false);
+        expect(isNewSince(new Date(since.getTime() - 1), since)).toBe(false);
+        expect(isNewSince(after, null)).toBe(false);
+        expect(isNewSince(undefined, since)).toBe(false);
     });
 });
 

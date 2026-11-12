@@ -8,6 +8,8 @@ import { isItRelatedCpv } from '../utils/cpvFilter';
 import { useAuth } from '../context/AuthContext';
 import { AdvertiserDecision } from '../utils/advertisers';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import { useAwaySince } from '../context/AwaySummaryContext';
+import { isNewSince } from '../utils/awaySummary';
 import CommentsPopover from './CommentsPopover';
 import StatusMenu from './StatusMenu';
 import LabelMenu from './LabelMenu';
@@ -53,6 +55,9 @@ const VISIBLE_CPV_CHIPS = 2;
 const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment, advertiserHidden, onSetAdvertiserDecision, isActive, onActivate }) => {
     const { user } = useAuth();
     const { isFavorite, toggleFavorite, toggleStatus, toggleLabel } = useUserPreferences();
+
+    const awaySince = useAwaySince();
+    const isNew = isNewSince(tender.fetchedAt, awaySince);
 
     const [expanded, setExpanded] = useState<boolean>(false);
     const cardRef = useRef<HTMLLIElement>(null);
@@ -108,6 +113,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     <span className={styles.sourceBadge} style={{ backgroundColor: srcCfg.backgroundColor, color: srcCfg.color }}>
                         {srcCfg.label}
                     </span>
+                    {isNew && <span className={styles.newBadge} title="Pobrany po Twojej ostatniej wizycie">Nowy</span>}
                     {advertiserHidden && <span className={styles.hiddenAdvertiserBadge}>Ukryty zamawiający</span>}
                     {orderCfg && (
                         <span className={styles.orderTypeBadge} style={{ backgroundColor: orderCfg.backgroundColor, color: orderCfg.color }}>

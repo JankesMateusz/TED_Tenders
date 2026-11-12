@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './AwaySummary.module.css';
-import { useAwaySummary } from '../hooks/useAwaySummary';
+import { useAwaySummaryContext } from '../context/AwaySummaryContext';
 import { AwayEvent, formatAway, pluralPl, statusLabel } from '../utils/awaySummary';
 
 const MAX_LISTED = 5;
@@ -20,7 +20,7 @@ const EventList: React.FC<{ events: AwayEvent[]; describe: (event: AwayEvent) =>
 
 /** Baner „od Twojej ostatniej wizyty”: nowe przetargi, zmiany statusu od innych osób i nowo dostępne dokumenty. */
 const AwaySummary: React.FC = () => {
-    const { summary, dismiss } = useAwaySummary();
+    const { summary, dismiss } = useAwaySummaryContext();
     if (!summary) return null;
 
     const { newTenders, statusChanges, docsAvailable, since } = summary;

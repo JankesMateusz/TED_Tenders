@@ -13,10 +13,13 @@ import {
  * zlicza, co się zmieniło od `userState/{uid}.lastSeenAt`. Moment opuszczenia karty zapisujemy przy ukryciu,
  * a w trakcie pracy odświeżamy go co minutę (na wypadek zamknięcia karty bez zdarzenia).
  */
-export const useAwaySummary = (): { summary: AwaySummary | null; dismiss: () => void } => {
+export const useAwaySummary = (): { summary: AwaySummary | null; since: Date | null; dismiss: () => void } => {
     const { user } = useAuth();
     const uid = user?.uid;
     const [summary, setSummary] = useState<AwaySummary | null>(null);
+    // Ostatnia wizyta sprzed dłuższej nieobecności: stały punkt odniesienia dla plakietek „Nowy” (w przeciwieństwie do
+    // `lastSeenAt` w bazie, który odświeżamy co minutę). Zostaje, także gdy podsumowanie jest puste albo zamknięte.
+    const [since, setSince] = useState<Date | null>(null);
     const dismiss = useCallback(() => setSummary(null), []);
 
     useEffect(() => {
@@ -38,10 +41,11 @@ export const useAwaySummary = (): { summary: AwaySummary | null; dismiss: () => 
                 const lastSeen = ((await getDoc(stateRef)).data()?.lastSeenAt as Timestamp | undefined)?.toDate() ?? null;
                 if (cancelled || !lastSeen || !isAwayLongEnough(lastSeen, new Date())) return;
 
-                const since = Timestamp.fromDate(lastSeen);
+                setSince(lastSeen);
+                const sinceTs = Timestamp.fromDate(lastSeen);
                 const [newTenders, events] = await Promise.all([
-                    getCountFromServer(query(collection(db, 'tenders'), where('fetchedAt', '>', since))),
-                    getDocs(query(collection(db, 'events'), where('createdAt', '>', since), orderBy('createdAt', 'desc'), limit(MAX_EVENTS)))
+                    getCountFromServer(query(collection(db, 'tenders'), where('fetchedAt', '>', sinceTs))),
+                    getDocs(query(collection(db, 'events'), where('createdAt', '>', sinceTs), orderBy('createdAt', 'desc'), limit(MAX_EVENTS)))
                 ]);
                 if (cancelled) return;
                 const result = buildSummary(
@@ -79,5 +83,5 @@ export const useAwaySummary = (): { summary: AwaySummary | null; dismiss: () => 
         };
     }, [uid]);
 
-    return { summary, dismiss };
+    return { summary, since, dismiss };
 };
