@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { isItRelatedCpv } from "../utils/cpvFilter";
 import { useUserPreferences } from "../context/UserPreferencesContext";
 import { useAuth } from "../context/AuthContext";
@@ -18,6 +18,7 @@ import { canRefreshDay, listDays } from "../utils/refreshPlan";
 import { refreshDayWithRetry } from "../utils/refreshWithRetry";
 import { useTendersRefresh } from "../hooks/useTendersRefresh";
 import { useTendersSubscription } from "../hooks/useTendersSubscription";
+import { useCardShortcuts } from "../hooks/useCardShortcuts";
 import { useComments } from "../hooks/useComments";
 import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
 import { isHiddenAdvertiser } from "../utils/advertisers";
@@ -26,26 +27,12 @@ import { useDayTenders, useRefreshedDays } from "../hooks/useHourlyDays";
 import { describePeriod, getComparisonPeriod } from "../utils/comparison";
 import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
-import { afterRemoval, nextActiveId } from "../utils/cardNavigation";
 import { averageHourlyDistribution } from "../utils/hourlyAverage";
-import { TENDER_STATUSES } from "../utils/tenderStatus";
 import { ActiveFilterChip, buildActiveFilterChips } from "../utils/activeFilters";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import { TendersList } from "./TendersList";
 import styles from "./Tenders.module.css";
-
-
-/** Czy zdarzenie pochodzi z pola, w którym użytkownik pisze (skróty jednoklawiszowe nie mogą mu wtedy przeszkadzać). */
-const isTypingTarget = (target: EventTarget | null): boolean =>
-    target instanceof HTMLElement &&
-    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
-
-/** Czy otwarte jest menu lub okienko (status, filtry, komentarze); rozwijanie kodów CPV (`data-disclosure`) się nie liczy. */
-const isPopupOpen = (): boolean =>
-    document.querySelector('button[aria-expanded="true"]:not([data-disclosure])') !== null;
-
-
 
 const Tenders: React.FC = () => {
     const today = new Date();
@@ -77,14 +64,6 @@ const Tenders: React.FC = () => {
     const [selectedLabels, setSelectedLabels] = useState(initialFilters.selectedLabels);
     const [selectedDocs, setSelectedDocs] = useState(initialFilters.selectedDocs);
     const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
-    const searchInputRef = useRef<HTMLInputElement>(null);
-    // Karta, której dotyczą skróty klawiszowe (J/K, 1-4, 0, S)
-    const [activeTenderId, setActiveTenderId] = useState<string | null>(null);
-    const previousIdsRef = useRef<string[]>([]);
-    const handleActivateTender = useCallback(
-        (id: string, toggle: boolean) => setActiveTenderId((current) => (toggle && current === id ? null : id)),
-        []
-    );
 
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
     const startDay = startDate ? toDayString(startDate) : null;
@@ -351,88 +330,13 @@ const Tenders: React.FC = () => {
         setActiveTab('tenders');
     };
 
-    // Obsługa skrótów klawiszowych
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl+F lub Cmd+F (na Mac) - fokus na wyszukiwarkę
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                e.preventDefault();
-                if (searchInputRef.current) {
-                    searchInputRef.current.focus();
-                    searchInputRef.current.select();
-                }
-            }
-            // "/" - fokus na wyszukiwarkę, ale nie podczas pisania w polu (tam to zwykły znak)
-            if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
-                e.preventDefault();
-                searchInputRef.current?.focus();
-                searchInputRef.current?.select();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-
-    // Gdy aktywna karta zniknęła z listy (np. po ocenie w kolejce), aktywna zostaje następna albo ostatnia
-    useEffect(() => {
-        const ids = displayedTenders.map((tender) => tender.id);
-        setActiveTenderId((current) => {
-            if (current === null || ids.includes(current)) return current;
-            const successor = afterRemoval(previousIdsRef.current, current);
-            return successor !== null && ids.includes(successor) ? successor : null;
-        });
-        previousIdsRef.current = ids;
-    }, [displayedTenders]);
-
-    // Kliknięcie poza kartami wyłącza aktywną kartę
-    useEffect(() => {
-        if (activeTenderId === null) return;
-        const handleClick = (event: MouseEvent) => {
-            if (event.target instanceof Element && event.target.closest('[data-tender-card]') === null) {
-                setActiveTenderId(null);
-            }
-        };
-        document.addEventListener('click', handleClick);
-        return () => document.removeEventListener('click', handleClick);
-    }, [activeTenderId]);
-
-    // Skróty do oceny: J/K, 1-4, 0, S. Nie działają w polach tekstowych, przy otwartym menu ani z Ctrl/Alt/Meta.
-    useEffect(() => {
-        if (activeTab === 'statistics') return;
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
-            if (isTypingTarget(e.target) || isPopupOpen()) return;
-
-            const key = e.key.toLowerCase();
-            const ids = displayedTenders.map((tender) => tender.id);
-            if (key === 'j' || key === 'k') {
-                e.preventDefault();
-                setActiveTenderId((current) => nextActiveId(ids, current, key === 'j' ? 'next' : 'prev'));
-                return;
-            }
-
-            const tender = displayedTenders.find((item) => item.id === activeTenderId);
-            if (!tender) return;
-            if (key === 's') {
-                e.preventDefault();
-                toggleFavorite(tender);
-                return;
-            }
-            // Status da się ustawić tylko dla ogłoszeń, które są jeszcze w bazie wspólnej (jak canSetStatus na karcie)
-            if (!liveTendersById.has(tender.id)) return;
-            if (key === '0') {
-                e.preventDefault();
-                if (tender.status) toggleStatus(tender, tender.status);
-            } else if (/^[1-4]$/.test(key)) {
-                e.preventDefault();
-                toggleStatus(tender, TENDER_STATUSES[Number(key) - 1]);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeTab, displayedTenders, activeTenderId, liveTendersById, toggleFavorite, toggleStatus]);
+    const { activeTenderId, onActivate: handleActivateTender, searchInputRef } = useCardShortcuts({
+        displayedTenders,
+        activeTab,
+        liveTendersById,
+        toggleFavorite,
+        toggleStatus
+    });
 
     useEffect(() => {
         // Liczenie przetargów per źródło
