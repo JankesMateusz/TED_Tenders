@@ -84,7 +84,6 @@ const Tenders: React.FC = () => {
     const [selectedCpvCategory, setSelectedCpvCategory] = useState<CpvCategoryKey | null>(null);
     const [sortOrder, setSortOrder] = useState<SortOrder>(initialFilters.sortOrder);
     const { favorites, isFavorite, toggleFavorite, toggleStatus, actionError } = useUserPreferences();
-    // expanded state for CPV cards is now managed inside TenderCard
     const [statusFilters, setStatusFilters] = useState(initialFilters.statusFilters);
     const [selectedLabels, setSelectedLabels] = useState(initialFilters.selectedLabels);
     const [selectedDocs, setSelectedDocs] = useState(initialFilters.selectedDocs);
@@ -403,7 +402,6 @@ const Tenders: React.FC = () => {
                 searchInputRef.current?.focus();
                 searchInputRef.current?.select();
             }
-            // (Ctrl+E export was removed)
         };
 
         window.addEventListener('keydown', handleKeyDown);
