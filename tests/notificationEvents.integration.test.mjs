@@ -21,13 +21,13 @@ const waitFor = async (check, timeoutMs = 15000) => {
 };
 const eventsOf = async (tenderId) => (await db.collection('events').where('tenderId', '==', tenderId).get()).docs.map((d) => d.data());
 
-const TENDER_ID = 'E_ZAMOWIENIA_2026_BZP_88_01';
+const TENDER_ID = 'E_ZAMOWIENIA_2026_BZP_99_01';
 const tender = () => db.doc(`tenders/${TENDER_ID}`);
 
 describe('recordTenderEvents', () => {
     before(async () => {
         await tender().set({
-            source: 'E_ZAMOWIENIA', publicationNumber: '2026/BZP 88/01', publicationDate: '2026-11-12', title: 'Serwery', isIT: false, labels: []
+            source: 'E_ZAMOWIENIA', publicationNumber: '2026/BZP 99/01', publicationDate: '2026-11-12', title: 'Serwery', isIT: false, labels: []
         });
     });
 
