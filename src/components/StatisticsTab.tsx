@@ -12,6 +12,8 @@ import { formatDelta } from '../utils/comparison';
 import { MIN_REPEAT_COUNT } from '../utils/repeatOptions';
 import { HourlyAverage } from '../utils/hourlyAverage';
 import { RankedList, ShareBar } from './statistics/RankedList';
+import { CHART_MAX_HEIGHT, ChartGrid } from './statistics/ChartGrid';
+import { DailySourcesChart } from './statistics/DailySourcesChart';
 import { RecentTrendChart } from './statistics/RecentTrendChart';
 import { StatisticsNotices } from './statistics/StatisticsNotices';
 import styles from './StatisticsTab.module.css';
@@ -123,7 +125,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     // Dopóki użytkownik sam nie wybierze dnia, domyślną opcją jest średnia (gdy tylko są do niej dane)
     const [hasPickedHourlyDate, setHasPickedHourlyDate] = useState(false);
     const [hoveredHour, setHoveredHour] = useState<number | null>(null);
-    const [hoveredDay, setHoveredDay] = useState<string | null>(null);
     useEffect(() => {
         setSelectedHourlyDate(current => {
             if (current === AVERAGE_OPTION) return hasAverage ? current : newestRangeDate;
@@ -155,19 +156,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
         return hourlyData.map((count, hour) => ({ count, hour })).filter(({ hour }) => hour >= first && hour <= last);
     }, [hourlyData]);
     const reviewedTotal = statistics.byReviewer.reduce((sum, item) => sum + item.count, 0);
-    
-    // Daily distribution by source
-    const dailyEntries = useMemo(
-        () => Object.entries(statistics.dailyDistributionBySource),
-        [statistics.dailyDistributionBySource]
-    );
-    const hasDailyData = dailyEntries.length > 1; // Show only if multiple days
-    const maxDailyValue = useMemo(() => {
-        return dailyEntries.reduce((max, [, sources]) => {
-            const total = sources[TenderSource.TED] + sources[TenderSource.E_ZAMOWIENIA] + sources[TenderSource.BAZA_KONKURENCYJNOSCI];
-            return Math.max(max, total);
-        }, 0);
-    }, [dailyEntries]);
 
     return (
         <div className={styles.statisticsContainer}>
@@ -329,19 +317,14 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     </div>
                     <div className={`${styles.hourlyChartScroll} ${styles.hourlyChartVertical}`}>
                         <div className={styles.hourlyChartContainer}>
-                            <div className={styles.hourlyChartGrid}>
-                                {[...Array(5)].map((_, i) => (
-                                    <div key={i} className={styles.gridLine}>
-                                        <span className={styles.gridLabel}>
-                                            {formatCount(Math.round((maxHourlyValue * (5 - i)) / 5 * 10) / 10)}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
+                            <ChartGrid
+                                className={styles.hourlyChartGrid}
+                                maxValue={maxHourlyValue}
+                                formatLabel={(value) => formatCount(Math.round(value * 10) / 10)}
+                            />
                             <div className={styles.hourlyChart}>
                                 {visibleHours.map(({ count, hour }) => {
-                                    const maxChartHeight = 180;
-                                    const height = maxHourlyValue > 0 ? (count / maxHourlyValue) * maxChartHeight : 0;
+                                    const height = maxHourlyValue > 0 ? (count / maxHourlyValue) * CHART_MAX_HEIGHT : 0;
                                     const intensity = maxHourlyValue ? count / maxHourlyValue : 0;
                                     const isHovered = hoveredHour === hour;
                                     return (
@@ -415,115 +398,8 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                 </div>
             )}
 
-            {isDateRange && hasDailyData && (
-                <div className={`${styles.section} ${styles.fullWidthSection}`}>
-                    <div>
-                        <h3 className={styles.sectionTitle}>Porównanie źródeł w czasie</h3>
-                        <p className={styles.chartSubtitle}>
-                            Liczba ogłoszeń z TED i eZamówienia publikowanych każdego dnia
-                        </p>
-                    </div>
-                    <div className={styles.dailyChartScroll}>
-                        <div className={styles.dailyChartContainer}>
-                            <div className={styles.dailyChartGrid}>
-                                {[...Array(5)].map((_, i) => (
-                                    <div key={i} className={styles.gridLine}>
-                                        <span className={styles.gridLabel}>
-                                            {Math.round((maxDailyValue * (5 - i)) / 5)}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className={styles.dailyChart}>
-                                {dailyEntries.map(([date, sources]) => {
-                                    const maxChartHeight = 180;
-                                    const tedCount = sources[TenderSource.TED];
-                                    const ezamCount = sources[TenderSource.E_ZAMOWIENIA];
-                                    const bazaCount = sources[TenderSource.BAZA_KONKURENCYJNOSCI];
-                                    const total = tedCount + ezamCount + bazaCount;
-                                    
-                                    const tedHeight = maxDailyValue > 0 ? (tedCount / maxDailyValue) * maxChartHeight : 0;
-                                    const ezamHeight = maxDailyValue > 0 ? (ezamCount / maxDailyValue) * maxChartHeight : 0;
-                                    const bazaHeight = maxDailyValue > 0 ? (bazaCount / maxDailyValue) * maxChartHeight : 0;
-                                    
-                                    const isHovered = hoveredDay === date;
-                                    
-                                    return (
-                                        <div 
-                                            key={date} 
-                                            className={styles.dayBarWrapper}
-                                            onMouseEnter={() => setHoveredDay(date)}
-                                            onMouseLeave={() => setHoveredDay(null)}
-                                        >
-                                            {isHovered && total > 0 && (
-                                                <div className={styles.dayTooltip}>
-                                                    <strong>{date}</strong>
-                                                    {tedCount > 0 && (
-                                                        <span style={{ color: 'var(--series-ted)' }}>
-                                                            TED: {tedCount}
-                                                        </span>
-                                                    )}
-                                                    {ezamCount > 0 && (
-                                                        <span style={{ color: 'var(--series-ezam)' }}>
-                                                            eZamówienia: {ezamCount}
-                                                        </span>
-                                                    )}
-                                                    {bazaCount > 0 && (
-                                                        <span style={{ color: 'var(--series-baza)' }}>
-                                                            Baza: {bazaCount}
-                                                        </span>
-                                                    )}
-                                                    <span style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '4px', marginTop: '4px' }}>
-                                                        Łącznie: {total}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <div className={styles.dayBarsStack}>
-                                                {tedCount > 0 && (
-                                                    <div 
-                                                        className={`${styles.dayBar} ${styles.dayBarTed} ${isHovered ? styles.dayBarHovered : ''}`}
-                                                        style={{ height: `${tedHeight}px` }}
-                                                    />
-                                                )}
-                                                {ezamCount > 0 && (
-                                                    <div 
-                                                        className={`${styles.dayBar} ${styles.dayBarEzam} ${isHovered ? styles.dayBarHovered : ''}`}
-                                                        style={{ height: `${ezamHeight}px` }}
-                                                    />
-                                                )}
-                                                {bazaCount > 0 && (
-                                                    <div 
-                                                        className={`${styles.dayBar} ${styles.dayBarBaza} ${isHovered ? styles.dayBarHovered : ''}`}
-                                                        style={{ height: `${bazaHeight}px` }}
-                                                    />
-                                                )}
-                                            </div>
-                                            <span className={styles.dayLabel}>
-                                                {date.split('-')[0]}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                    <div className={styles.chartLegend}>
-                        <div className={styles.legendItem}>
-                            <span className={`${styles.legendDot} ${styles.legendDotTed}`}></span>
-                            <span>TED</span>
-                        </div>
-                        <div className={styles.legendItem}>
-                            <span className={`${styles.legendDot} ${styles.legendDotEzam}`}></span>
-                            <span>eZamówienia</span>
-                        </div>
-                        <div className={styles.legendItem}>
-                            <span className={`${styles.legendDot} ${styles.legendDotBaza}`}></span>
-                            <span>Baza Konkurencyjności</span>
-                        </div>
-                    </div>
-                </div>
-            )}
-            
+            {isDateRange && <DailySourcesChart distribution={statistics.dailyDistributionBySource} />}
+
             {statistics.topCpvCodes.length > 0 && (
                 <div className={`${styles.section} ${styles.fullWidthSection}`}>
                     <h3 className={styles.sectionTitle}>Top 10 kodów CPV (IT)</h3>
