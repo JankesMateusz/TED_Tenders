@@ -30,7 +30,3 @@ functions/lib/
 
 # Dane firmy narzeczonej (raport Excel i zrzuty aplikacji), nie do repozytorium
 docs/App/
-
-# Robocze notatki z audytu komponentu Tenders, nie do repozytorium
-docs/tenders-audyt.md
-docs/statistics-audyt.md
