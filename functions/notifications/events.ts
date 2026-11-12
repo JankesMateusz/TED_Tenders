@@ -79,9 +79,13 @@ export const writeEvent = async (event: TenderEvent, now: Date = new Date()): Pr
   }
 };
 
-/** Jeden trigger na zmianę przetargu zapisuje oba rodzaje zdarzeń (status i dokumenty). */
+/**
+ * Jeden trigger na zmianę przetargu zapisuje oba rodzaje zdarzeń (status i dokumenty).
+ * Bez `retry`: nowa funkcja z polityką ponowień wymaga `--force` w nieinteraktywnym wdrożeniu CI. Zdarzenia służą
+ * tylko do podsumowania, a identyfikatory są deterministyczne, więc ewentualne ponowienie można dodać później.
+ */
 export const recordTenderEvents = onDocumentUpdated(
-  { document: 'tenders/{docId}', region: REGION, retry: true },
+  { document: 'tenders/{docId}', region: REGION },
   async (event) => {
     const before = event.data?.before.data();
     const after = event.data?.after.data();
