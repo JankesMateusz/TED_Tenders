@@ -707,6 +707,15 @@
     background: rgba(0, 0, 0, 0.06);
 }
 
+.newBadge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
 .hiddenAdvertiserBadge {
     padding: 2px 8px;
     border: 1px dashed var(--border-color);

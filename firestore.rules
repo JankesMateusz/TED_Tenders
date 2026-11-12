@@ -148,6 +148,23 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Zdarzenia do podsumowania „od ostatniej wizyty” (zmiana statusu, nowe dokumenty): odczyt dla członków,
+    // zapis tylko z Cloud Function. Wpisy wygasają przez TTL na `expireAt`.
+    match /events/{eventId} {
+      allow read: if hasRole();
+      allow write: if false;
+    }
+
+    // Stan użytkownika: moment ostatniej wizyty (`lastSeenAt`, czas serwera), od którego liczymy podsumowanie.
+    // Każdy zapisuje i czyta tylko własny dokument.
+    match /userState/{uid} {
+      allow read: if hasRole() && request.auth.uid == uid;
+      allow create, update: if hasRole() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastSeenAt'])
+        && request.resource.data.lastSeenAt == request.time;
+      allow delete: if false;
+    }
+
     // Pozostałe kolekcje (m.in. blokada odświeżania `meta`) są zamknięte.
     match /{document=**} {
       allow read, write: if false;
