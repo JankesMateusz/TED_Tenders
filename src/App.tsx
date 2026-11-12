@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { UserPreferencesProvider } from './context/UserPreferencesContext';
 import Tenders from './components/tenders';
 import ScrollToTopButton from './components/ScrollToTopButton';
+import AwaySummary from './components/AwaySummary';
+import { AwaySummaryProvider } from './context/AwaySummaryContext';
 import LoginScreen from './components/LoginScreen';
 import NoAccessScreen from './components/NoAccessScreen';
 import { MESSAGES } from './constants';
@@ -20,8 +22,11 @@ const AuthGate: React.FC = () => {
 
   return (
     <UserPreferencesProvider>
-      <Tenders />
-      <ScrollToTopButton />
+      <AwaySummaryProvider>
+        <Tenders />
+        <ScrollToTopButton />
+        <AwaySummary />
+      </AwaySummaryProvider>
     </UserPreferencesProvider>
   );
 };
