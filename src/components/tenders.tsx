@@ -17,6 +17,8 @@ import { useStatisticsData } from "../hooks/useStatisticsData";
 import { useComments } from "../hooks/useComments";
 import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
 import { isHiddenAdvertiser } from "../utils/advertisers";
+import { useAwaySince, useReportNewInView } from "../context/AwaySummaryContext";
+import { countNewSince } from "../utils/awaySummary";
 import { StatisticsTab } from "./StatisticsTab";
 import { StatisticsDrillDown } from "./statistics/types";
 import { FiltersPanel } from "./FiltersPanel";
@@ -139,6 +141,10 @@ const Tenders: React.FC = () => {
         [unsavedTenders, advertiserDecisions]
     );
     const displayedTenders = activeTab === 'saved' ? filteredSavedTenders : filteredTenders;
+
+    // Baner „od ostatniej wizyty” liczy nowe przetargi z tej samej listy, którą widać (z filtrami), tak jak plakietki „Nowy”
+    const awaySince = useAwaySince();
+    useReportNewInView(countNewSince(activeTab === 'statistics' ? [] : displayedTenders, awaySince));
 
     // Listy w panelu bocznym pomijają własny filtr (żeby dało się dobrać kolejne pozycje), ale uwzględniają resztę
     const activeTabTenders = activeTab === 'saved' ? savedTenders : unsavedTenders;
