@@ -4,28 +4,21 @@ import { useUserPreferences } from "../context/UserPreferencesContext";
 import { useAuth } from "../context/AuthContext";
 import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
-import { dayToDisplayDate, displayDateToDay, parseDate, toDayString } from "../utils/dateUtils";
-import { calculateStatistics } from "../utils/calculateStatistics";
-import { useRecentTenders } from "../hooks/useRecentTenders";
+import { toDayString } from "../utils/dateUtils";
 import TabBar, { panelId, tabId } from "./TabBar";
-import { TREND_DAYS, countTendersByDay, lastDays } from "../utils/recentTrend";
 import { countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
 import { isQueueStatusFilter } from "../utils/persistedFilters";
 import { canRefreshDay, listDays } from "../utils/refreshPlan";
-import { refreshDayWithRetry } from "../utils/refreshWithRetry";
 import { useTendersRefresh } from "../hooks/useTendersRefresh";
 import { useTendersSubscription } from "../hooks/useTendersSubscription";
 import { useCardShortcuts } from "../hooks/useCardShortcuts";
 import { useTenderFilters } from "../hooks/useTenderFilters";
+import { useStatisticsData } from "../hooks/useStatisticsData";
 import { useComments } from "../hooks/useComments";
 import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
 import { isHiddenAdvertiser } from "../utils/advertisers";
-import { usePreviousPeriod } from "../hooks/usePreviousPeriod";
-import { useDayTenders, useRefreshedDays } from "../hooks/useHourlyDays";
-import { describePeriod, getComparisonPeriod } from "../utils/comparison";
-import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
+import { StatisticsTab, StatisticsDrillDown } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
-import { averageHourlyDistribution } from "../utils/hourlyAverage";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import { TendersList } from "./TendersList";
@@ -142,10 +135,6 @@ const Tenders: React.FC = () => {
 
     const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, filterOptions), [filterOptions]);
 
-    // Statystyki opisują ocenę przetargów, więc ignorują filtr statusu: domyślny widok "Nieoznaczone" zostawiłby
-    // w nich same nieoznaczone i wyzerował pozostałe statusy.
-    const applyStatisticsFilters = useCallback((list: Tender[]) => filterTenders(list, filterOptions, 'status'), [filterOptions]);
-
     // Obie listy są filtrowane osobno, by licznik "Przetargi" nie zależał od aktywnej zakładki
     const filteredTenders = useMemo(() => applyFilters(unsavedTenders), [applyFilters, unsavedTenders]);
     const filteredSavedTenders = useMemo(() => filterAndSortTenders(savedTenders, savedFilterOptions), [savedTenders, savedFilterOptions]);
@@ -205,99 +194,15 @@ const Tenders: React.FC = () => {
         setTendersCountBySource(counts);
     }, [displayedTenders]);
 
-    // Statystyki dotyczą przetargów z wybranego zakresu dat, bez własnych gwiazdek (te są w "Zapisane")
-    const statistics = useMemo(
-        () => calculateStatistics(applyStatisticsFilters(unsavedTenders)),
-        [applyStatisticsFilters, unsavedTenders]
-    );
-
-    // Porównanie z poprzednim okresem: dane wczytujemy tylko, gdy otwarta jest zakładka statystyk
-    const comparisonPeriod = useMemo(
-        () => (startDay && endDay ? getComparisonPeriod(startDay, endDay, todayDay) : null),
-        [startDay, endDay, todayDay]
-    );
-    const previousPeriod = usePreviousPeriod(
-        activeTab === 'statistics' && comparisonPeriod?.ok ? comparisonPeriod : null,
-        refreshDayWithRetry
-    );
-    // Te same filtry i wyłączenie własnych gwiazdek co w bieżących statystykach, żeby liczby były porównywalne
-    const previousStatistics = useMemo(
-        () => calculateStatistics(applyStatisticsFilters(previousPeriod.tenders.filter((tender) => !isFavorite(tender.id)))),
-        [applyStatisticsFilters, previousPeriod.tenders, isFavorite]
-    );
-    // Wykres godzinowy: dropdown ma dni z całej bazy (według dziennika odświeżeń), a nie tylko z wybranego
-    // zakresu. Dzień spoza zakresu doczytujemy dopiero po wybraniu, przetargi tylko tego jednego dnia.
-    const isStatisticsTab = activeTab === 'statistics';
-    const refreshedDays = useRefreshedDays(isStatisticsTab, todayDay);
-    // Trend nowych ogłoszeń z ostatnich dni: te same filtry i wyłączenie własnych gwiazdek co w statystykach
-    const recent = useRecentTenders(isStatisticsTab, todayDay, TREND_DAYS);
-    const trend = useMemo(
-        () => ({
-            points: countTendersByDay(
-                applyStatisticsFilters(recent.tenders.filter((tender) => !isFavorite(tender.id))),
-                lastDays(todayDay, TREND_DAYS),
-                recent.completeDays
-            ),
-            error: recent.error
-        }),
-        [applyStatisticsFilters, recent.tenders, recent.completeDays, recent.error, isFavorite, todayDay]
-    );
-    // Średnia godzinowa z tych samych 14 dni (te same dane i filtry co trend, bez dodatkowych zapytań do bazy)
-    const hourlyAverage = useMemo(
-        () => averageHourlyDistribution(
-            applyStatisticsFilters(recent.tenders.filter((tender) => !isFavorite(tender.id))),
-            lastDays(todayDay, TREND_DAYS),
-            recent.completeDays
-        ),
-        [applyStatisticsFilters, recent.tenders, recent.completeDays, isFavorite, todayDay]
-    );
-    const [hourlyDay, setHourlyDay] = useState('');
-    const hourlyExtraDay = useMemo(() => {
-        const day = isStatisticsTab ? displayDateToDay(hourlyDay) : null;
-        if (!day) return null;
-        return startDay && endDay && day >= startDay && day <= endDay ? null : day;
-    }, [isStatisticsTab, hourlyDay, startDay, endDay]);
-    const extraDay = useDayTenders(hourlyExtraDay);
-    const isExtraDayLoaded = hourlyExtraDay !== null && extraDay.loadedDay === hourlyExtraDay;
-    const hourlyDistribution = useMemo(() => {
-        // Te same filtry i wyłączenie własnych gwiazdek co w statystykach z wybranego zakresu
-        const extra = isExtraDayLoaded
-            ? calculateStatistics(applyStatisticsFilters(extraDay.tenders.filter((tender) => !isFavorite(tender.id))))
-                .ezamowieniaHourlyDistribution
-            : {};
-        return { ...extra, ...statistics.ezamowieniaHourlyDistribution };
-    }, [isExtraDayLoaded, extraDay.tenders, applyStatisticsFilters, isFavorite, statistics.ezamowieniaHourlyDistribution]);
-    const hourlyDays = useMemo(() => {
-        const days = new Set([...Object.keys(statistics.ezamowieniaHourlyDistribution), ...refreshedDays.map(dayToDisplayDate)]);
-        return Array.from(days).sort((a, b) => parseDate(b).getTime() - parseDate(a).getTime());
-    }, [statistics.ezamowieniaHourlyDistribution, refreshedDays]);
-
-    let comparison: StatisticsComparison | null = null;
-    if (comparisonPeriod && endDay) {
-        if (!comparisonPeriod.ok) {
-            comparison = { status: 'unavailable', reason: comparisonPeriod.reason };
-        } else if (previousPeriod.missingDays === null) {
-            comparison = previousPeriod.error
-                ? { status: 'unavailable', reason: previousPeriod.error }
-                : { status: 'loading' };
-        } else {
-            const label = describePeriod(comparisonPeriod.startDay, comparisonPeriod.endDay);
-            comparison = previousPeriod.missingDays.length > 0
-                ? {
-                    status: 'missing',
-                    label,
-                    isFetching: previousPeriod.isFetching,
-                    error: previousPeriod.error,
-                    onFetch: previousPeriod.fetchMissing
-                }
-                : {
-                    status: 'ready',
-                    label,
-                    statistics: previousStatistics,
-                    isCurrentPeriodOngoing: endDay >= todayDay
-                };
-        }
-    }
+    const { statistics, comparison, trend, hourly } = useStatisticsData({
+        isStatisticsTab: activeTab === 'statistics',
+        startDay,
+        endDay,
+        todayDay,
+        unsavedTenders,
+        filterOptions,
+        isFavorite
+    });
 
     return (
         <div className={styles.app}>
@@ -419,14 +324,7 @@ const Tenders: React.FC = () => {
                                 onClearFilters={handleClearFilters}
                                 comparison={comparison}
                                 trend={trend}
-                                hourly={{
-                                    days: hourlyDays,
-                                    distribution: hourlyDistribution,
-                                    average: hourlyAverage,
-                                    isLoading: hourlyExtraDay !== null && !isExtraDayLoaded && !extraDay.error,
-                                    error: extraDay.error,
-                                    onSelectDay: setHourlyDay
-                                }}
+                                hourly={hourly}
                             />
                         )}
                     </div>
