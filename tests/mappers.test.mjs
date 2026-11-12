@@ -8,6 +8,7 @@ import { extractCpvCodes, mapEzamowieniaNotice } from '../functions/lib/tenders/
 import { IT_CPV_CODES_8, isItTender } from '../functions/lib/tenders/itCpvCodes.js';
 import { buildInitialSnapshot, buildSnapshot, statusChanged, MAX_STATUS_HISTORY } from '../functions/lib/labels/labelSnapshot.js';
 import { tenderId } from '../functions/lib/tenders/model.js';
+import { scheduledRefreshTarget } from '../functions/lib/tenders/schedule.js';
 import { classifySector } from '../functions/lib/tenders/sector.js';
 import { mapTedNotice } from '../functions/lib/tenders/ted.js';
 
@@ -406,5 +407,33 @@ describe('labelSnapshot', () => {
     it('migawka startowa tylko dla przetargów ze statusem', () => {
         assert.equal(buildInitialSnapshot('E_x', tender()), null);
         assert.equal(buildInitialSnapshot('E_x', withStatus('entered', 1)).status, 'entered');
+    });
+});
+
+describe('scheduledRefreshTarget (który dzień odświeża harmonogram)', () => {
+    it('w ciągu dnia odświeża dzisiejszy dzień', () => {
+        // 09:30 czasu warszawskiego (zima)
+        assert.deepEqual(scheduledRefreshTarget(new Date('2026-11-12T08:30:00Z')), { day: '2026-11-12', finalizing: false });
+        // 23:50: ostatni przebieg dnia nadal dotyczy bieżącego dnia
+        assert.deepEqual(scheduledRefreshTarget(new Date('2026-11-12T22:50:00Z')), { day: '2026-11-12', finalizing: false });
+    });
+
+    it('w godzinie po polskiej północy domyka poprzedni dzień (czas zimowy)', () => {
+        // 00:05 czasu warszawskiego 12.11 to jeszcze 11.11 w UTC
+        assert.deepEqual(scheduledRefreshTarget(new Date('2026-11-11T23:05:00Z')), { day: '2026-11-11', finalizing: true });
+        assert.deepEqual(scheduledRefreshTarget(new Date('2026-11-11T23:50:00Z')), { day: '2026-11-11', finalizing: true });
+    });
+
+    it('w godzinie po polskiej północy domyka poprzedni dzień (czas letni)', () => {
+        assert.deepEqual(scheduledRefreshTarget(new Date('2026-07-01T22:10:00Z')), { day: '2026-07-01', finalizing: true });
+    });
+
+    it('domyka też ostatni dzień miesiąca i roku', () => {
+        assert.deepEqual(scheduledRefreshTarget(new Date('2026-12-31T23:10:00Z')), { day: '2026-12-31', finalizing: true });
+        assert.deepEqual(scheduledRefreshTarget(new Date('2026-02-28T23:10:00Z')), { day: '2026-02-28', finalizing: true });
+    });
+
+    it('godzina 1:00 i późniejsze nie domykają dnia', () => {
+        assert.deepEqual(scheduledRefreshTarget(new Date('2026-11-12T00:00:00Z')), { day: '2026-11-12', finalizing: false });
     });
 });
