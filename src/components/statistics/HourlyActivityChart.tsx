@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Statistics } from '../../utils/calculateStatistics';
 import { TREND_DAYS } from '../../utils/recentTrend';
 import { pluralizeTenders } from '../../utils/pluralPl';
-import type { HourlyChartData } from '../StatisticsTab';
+import type { HourlyChartData } from './types';
 import { CHART_MAX_HEIGHT, ChartGrid } from './ChartGrid';
 import { formatCount } from './formatCount';
 import { AVERAGE_OPTION, DEFAULT_FIRST_HOUR, DEFAULT_LAST_HOUR, useHourlyChartState } from './useHourlyChartState';

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { StatisticsComparison } from '../StatisticsTab';
+import type { StatisticsComparison } from './types';
 import styles from '../StatisticsTab.module.css';
 
 interface StatisticsNoticesProps {

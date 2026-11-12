@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Statistics } from '../../utils/calculateStatistics';
-import type { HourlyChartData } from '../StatisticsTab';
+import type { HourlyChartData } from './types';
 
 /** Godziny pracy pokazywane na wykresie godzinowym; poza nimi tylko wtedy, gdy ktoś coś opublikował. */
 export const DEFAULT_FIRST_HOUR = 7;
