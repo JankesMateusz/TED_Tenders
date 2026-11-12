@@ -1,18 +1,14 @@
 import React from 'react';
 import { Statistics } from '../utils/calculateStatistics';
-import { TenderSource } from '../types/TenderSource';
-import { getSourceConfig } from '../utils/tenderSources';
-import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
-import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { CpvCategoryKey } from '../utils/cpvCategories';
-import { formatDelta } from '../utils/comparison';
 import { MIN_REPEAT_COUNT } from '../utils/repeatOptions';
-import { RankedList, ShareBar } from './statistics/RankedList';
+import { RankedList } from './statistics/RankedList';
 import { DailySourcesChart } from './statistics/DailySourcesChart';
 import { HourlyActivityChart } from './statistics/HourlyActivityChart';
 import { RecentTrendChart } from './statistics/RecentTrendChart';
 import { StatisticsNotices } from './statistics/StatisticsNotices';
+import { SummaryCards } from './statistics/SummaryCards';
 import { HourlyChartData, StatisticsComparison, StatisticsDrillDown, StatisticsTrend } from './statistics/types';
 import styles from './StatisticsTab.module.css';
 
@@ -39,124 +35,13 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
     hourly,
     trend
 }) => {
-    const previous = comparison?.status === 'ready' ? comparison.statistics : null;
-    const isPeriodOngoing = comparison?.status === 'ready' && comparison.isCurrentPeriodOngoing;
-    // Dopóki bieżący okres trwa, jego liczby są niepełne i różnica względem całego poprzedniego okresu
-    // byłaby prawie zawsze ujemna, więc pokazujemy samą wartość z poprzedniego okresu.
-    const renderDelta = (current: number, previousValue: number | undefined) => {
-        if (previousValue === undefined) return null;
-        if (isPeriodOngoing) {
-            return (
-                <span className={styles.delta} title="Bieżący okres jeszcze trwa, więc różnica byłaby zaniżona">
-                    poprzednio: {previousValue}
-                </span>
-            );
-        }
-        return <span className={styles.delta} title={`Poprzednio: ${previousValue}`}>{formatDelta(current, previousValue)}</span>;
-    };
-    const reviewedCount = statistics.total - statistics.byStatus.unmarked;
-    const reviewedPercent = statistics.total > 0 ? Math.round((reviewedCount / statistics.total) * 100) : 0;
     const reviewedTotal = statistics.byReviewer.reduce((sum, item) => sum + item.count, 0);
 
     return (
         <div className={styles.statisticsContainer}>
             <StatisticsNotices hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} comparison={comparison} />
 
-            {statistics.total > 0 && (
-                <div className={styles.progress}>
-                    <div className={styles.progressHeader}>
-                        <span><strong>{reviewedCount}</strong> z {statistics.total} ocenionych</span>
-                        <span>{reviewedPercent}%</span>
-                    </div>
-                    <div
-                        className={styles.progressTrack}
-                        role="progressbar"
-                        aria-label="Postęp oceniania przetargów"
-                        aria-valuemin={0}
-                        aria-valuemax={statistics.total}
-                        aria-valuenow={reviewedCount}
-                    >
-                        <span className={styles.progressBar} style={{ width: `${reviewedPercent}%` }} />
-                    </div>
-                </div>
-            )}
-
-            <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                    <div className={styles.statValue}>{statistics.total}</div>
-                    {renderDelta(statistics.total, previous?.total)}
-                    <div className={styles.statLabel}>Wszystkich przetargów</div>
-                </div>
-
-                {TENDER_STATUSES.map((status) => (
-                    <button
-                        key={status}
-                        type="button"
-                        className={`${styles.statCard} ${styles.clickable} ${statistics.byStatus[status] === 0 ? styles.statCardZero : ''}`}
-                        onClick={() => onDrillDown({ kind: 'status', status })}
-                    >
-                        <div className={styles.statValue} style={{ color: STATUS_CONFIG[status].color }}>
-                            {statistics.byStatus[status]}
-                        </div>
-                        {renderDelta(statistics.byStatus[status], previous?.byStatus[status])}
-                        <div className={styles.statLabel}>{STATUS_CONFIG[status].label}</div>
-                    </button>
-                ))}
-            </div>
-
-            <div className={styles.sectionsGrid}>
-                <div className={styles.section}>
-                    <h3 className={styles.sectionTitle}>Według źródła</h3>
-                    <div className={styles.sourceStats}>
-                        {Object.entries(statistics.bySource).map(([source, count]) => {
-                            const config = getSourceConfig(source as TenderSource);
-                            return (
-                                <button
-                                    key={source}
-                                    type="button"
-                                    className={`${styles.sourceItem} ${styles.clickable}`}
-                                    onClick={() => onDrillDown({ kind: 'source', source: source as TenderSource })}
-                                >
-                                    <span 
-                                        className={styles.sourceBadge}
-                                        style={{
-                                            backgroundColor: config.backgroundColor,
-                                            color: config.color
-                                        }}
-                                    >
-                                        {config.label}
-                                    </span>
-                                    <span className={styles.sourceCount}>
-                                        {count} {renderDelta(count, previous?.bySource[source as TenderSource])}
-                                    </span>
-                                    <ShareBar count={count} total={statistics.total} />
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-                
-                {Object.keys(statistics.byOrderType).length > 0 && (
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Według typu zamówienia</h3>
-                        <div className={styles.orderTypeStats}>
-                            {Object.entries(statistics.byOrderType).map(([type, count]) => (
-                                <button
-                                    key={type}
-                                    type="button"
-                                    className={`${styles.orderTypeItem} ${styles.clickable}`}
-                                    onClick={() => onDrillDown({ kind: 'orderType', orderType: type as OrderType })}
-                                >
-                                    <span className={styles.orderTypeLabel}>{getOrderTypeConfig(type as OrderType).label}</span>
-                                    <span className={styles.orderTypeCount}>{count}</span>
-                                    <ShareBar count={count} total={statistics.total} />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-            </div>
+            <SummaryCards statistics={statistics} comparison={comparison} onDrillDown={onDrillDown} />
 
             <HourlyActivityChart hourly={hourly} rangeDistribution={statistics.ezamowieniaHourlyDistribution} />
 
