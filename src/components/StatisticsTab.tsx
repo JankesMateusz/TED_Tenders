@@ -8,11 +8,12 @@ import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { CpvCategoryKey } from '../utils/cpvCategories';
 import { TREND_DAYS, TrendPoint } from '../utils/recentTrend';
-import { dayToDisplayDate } from '../utils/dateUtils';
 import { formatDelta } from '../utils/comparison';
 import { MIN_REPEAT_COUNT } from '../utils/repeatOptions';
 import { HourlyAverage } from '../utils/hourlyAverage';
 import { RankedList, ShareBar } from './statistics/RankedList';
+import { RecentTrendChart } from './statistics/RecentTrendChart';
+import { StatisticsNotices } from './statistics/StatisticsNotices';
 import styles from './StatisticsTab.module.css';
 
 const parseStatisticDate = (dateStr: string): number => {
@@ -69,9 +70,6 @@ const AVERAGE_OPTION = 'average';
 /** Liczba na wykresie godzinowym: całkowita bez zmian, średnia z jednym miejscem po przecinku. */
 const formatCount = (value: number): string =>
     Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
-
-/** Wysokość (px) najwyższego słupka trendu. */
-const TREND_BAR_MAX_HEIGHT = 100;
 
 /** Dane wykresu godzinowego eZamówień: dni do wyboru (DD-MM-RRRR, od najnowszego) i rozkład godzin po dniach. */
 export interface HourlyChartData {
@@ -156,7 +154,6 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
         const last = Math.max(DEFAULT_LAST_HOUR, ...active);
         return hourlyData.map((count, hour) => ({ count, hour })).filter(({ hour }) => hour >= first && hour <= last);
     }, [hourlyData]);
-    const maxTrendValue = useMemo(() => trend.points.reduce((max, point) => Math.max(max, point.count), 0), [trend.points]);
     const reviewedTotal = statistics.byReviewer.reduce((sum, item) => sum + item.count, 0);
     
     // Daily distribution by source
@@ -174,36 +171,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
 
     return (
         <div className={styles.statisticsContainer}>
-            {hasActiveFilters && (
-                <div className={styles.filterNotice} role="status">
-                    <span>Statystyki dotyczą przefiltrowanej listy (aktywne są filtry).</span>
-                    <button type="button" onClick={onClearFilters}>Wyczyść filtry</button>
-                </div>
-            )}
-            {comparison && (
-                <div className={styles.comparisonNotice} role="status">
-                    {comparison.status === 'unavailable' && <span>Porównanie niedostępne: {comparison.reason}</span>}
-                    {comparison.status === 'loading' && <span>Wczytywanie danych do porównania...</span>}
-                    {comparison.status === 'missing' && (
-                        <>
-                            <span>
-                                Porównanie z: <strong>{comparison.label}</strong>. Brakuje kompletnych danych z tego okresu,
-                                więc liczby byłyby zaniżone.
-                                {comparison.error && <> {comparison.error}</>}
-                            </span>
-                            <button type="button" onClick={comparison.onFetch} disabled={comparison.isFetching}>
-                                {comparison.isFetching ? 'Pobieranie...' : 'Pobierz dane z tego okresu'}
-                            </button>
-                        </>
-                    )}
-                    {comparison.status === 'ready' && (
-                        <span>
-                            Zmiana względem: <strong>{comparison.label}</strong>
-                            {comparison.isCurrentPeriodOngoing && '. Bieżący okres jeszcze trwa, więc pokazujemy liczby z poprzedniego okresu zamiast różnicy.'}
-                        </span>
-                    )}
-                </div>
-            )}
+            <StatisticsNotices hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} comparison={comparison} />
 
             {statistics.total > 0 && (
                 <div className={styles.progress}>
@@ -418,36 +386,7 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                 </div>
             )}
 
-            <div className={`${styles.section} ${styles.fullWidthSection}`}>
-                <h3 className={styles.sectionTitle}>Nowe ogłoszenia, ostatnie {TREND_DAYS} dni</h3>
-                <p className={styles.chartSubtitle}>
-                    Liczba ogłoszeń opublikowanych każdego dnia, bez względu na wybrany zakres dat. Kreskowany słupek oznacza dzień, którego dane mogą być niekompletne.
-                </p>
-                {trend.error ? (
-                    <p className={styles.chartSubtitle}>{trend.error}</p>
-                ) : (
-                    <ol className={styles.trendChart} aria-label={`Nowe ogłoszenia w ostatnich ${TREND_DAYS} dniach`}>
-                        {trend.points.map(({ day, count, complete }) => {
-                            const label = dayToDisplayDate(day);
-                            const height = maxTrendValue > 0 ? (count / maxTrendValue) * TREND_BAR_MAX_HEIGHT : 0;
-                            return (
-                                <li
-                                    key={day}
-                                    className={styles.trendColumn}
-                                    title={`${label}: ${count}${complete ? '' : ' (dane mogą być niekompletne)'}`}
-                                >
-                                    <span className={styles.trendCount}>{count > 0 ? count : ''}</span>
-                                    <span
-                                        className={`${styles.trendBar} ${complete ? '' : styles.trendBarIncomplete}`}
-                                        style={{ height: `${Math.max(height, 2)}px` }}
-                                    />
-                                    <span className={styles.trendDay}>{label.slice(0, 2)}</span>
-                                </li>
-                            );
-                        })}
-                    </ol>
-                )}
-            </div>
+            <RecentTrendChart trend={trend} />
 
             {statistics.byCpvCategory.length > 0 && (
                 <div className={`${styles.section} ${styles.fullWidthSection}`}>
