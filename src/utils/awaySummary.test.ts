@@ -1,4 +1,4 @@
-import { AwayEvent, MIN_AWAY_MS, buildSummary, formatAway, isAwayLongEnough, isNewSince, isSummaryEmpty, pluralPl, statusLabel } from './awaySummary';
+import { AwayEvent, MIN_AWAY_MS, buildSummary, formatAway, isAwayLongEnough, countNewSince, isNewSince, isSummaryEmpty, pluralPl, statusLabel } from './awaySummary';
 
 const event = (over: Partial<AwayEvent>): AwayEvent => ({
     id: 'e', type: 'status_changed', tenderId: 't1', title: 'Laptopy', actorUid: 'other', actorEmail: 'a@b.pl', status: 'toEnter', ...over
@@ -27,27 +27,26 @@ describe('isNewSince', () => {
 
 describe('buildSummary', () => {
     it('pomija własne zmiany statusu', () => {
-        const summary = buildSummary(since, 0, [event({ actorUid: 'me' })], 'me');
+        const summary = buildSummary(since, [event({ actorUid: 'me' })], 'me');
         expect(summary.statusChanges).toEqual([]);
     });
 
     it('zostawia ostatnią zmianę statusu tego samego przetargu (zdarzenia od najnowszych)', () => {
         const newest = event({ id: 'new', status: 'entered' });
         const older = event({ id: 'old', status: 'toEnter' });
-        expect(buildSummary(since, 0, [newest, older], 'me').statusChanges).toEqual([newest]);
+        expect(buildSummary(since, [newest, older], 'me').statusChanges).toEqual([newest]);
     });
 
     it('rozdziela zdarzenia dokumentów i nie dedupuje ich po statusie', () => {
         const docs = event({ id: 'd', type: 'docs_available', actorUid: null, status: null });
-        const summary = buildSummary(since, 3, [docs, event({ tenderId: 't2' })], 'me');
+        const summary = buildSummary(since, [docs, event({ tenderId: 't2' })], 'me');
         expect(summary.docsAvailable).toEqual([docs]);
         expect(summary.statusChanges).toHaveLength(1);
-        expect(summary.newTenders).toBe(3);
     });
 
     it('rozpoznaje puste podsumowanie', () => {
-        expect(isSummaryEmpty(buildSummary(since, 0, [], 'me'))).toBe(true);
-        expect(isSummaryEmpty(buildSummary(since, 1, [], 'me'))).toBe(false);
+        expect(isSummaryEmpty(buildSummary(since, [], 'me'), 0)).toBe(true);
+        expect(isSummaryEmpty(buildSummary(since, [], 'me'), 1)).toBe(false);
     });
 });
 
@@ -69,5 +68,18 @@ describe('formatowanie', () => {
     it('nazywa status, a nieznany opisuje ogólnie', () => {
         expect(statusLabel('toEnter')).toBe('Do wpisania');
         expect(statusLabel(null)).toBe('nowy status');
+    });
+});
+
+describe('countNewSince', () => {
+    const since = new Date('2026-01-01T10:00:00Z');
+    it('liczy tylko przetargi pobrane po ostatniej wizycie', () => {
+        const list = [
+            { fetchedAt: new Date('2026-01-01T11:00:00Z') },
+            { fetchedAt: new Date('2026-01-01T09:00:00Z') },
+            {}
+        ];
+        expect(countNewSince(list, since)).toBe(1);
+        expect(countNewSince(list, null)).toBe(0);
     });
 });
