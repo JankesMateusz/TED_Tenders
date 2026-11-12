@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { HourlyChartData } from '../StatisticsTab';
+import type { HourlyChartData } from './types';
 import { HourlyActivityChart } from './HourlyActivityChart';
 
 const hours = (byHour: Record<number, number>): number[] => Array.from({ length: 24 }, (_, hour) => byHour[hour] ?? 0);

@@ -10,7 +10,7 @@ import { ALL_SOURCES, NO_STATUS_FILTERS, loadFilters, saveFilters } from "../uti
 import { ActiveFilterChip, buildActiveFilterChips } from "../utils/activeFilters";
 import { toggleInArray } from "../utils/toggleInArray";
 import { useAdvertiserDecisions } from "./useAdvertiserDecisions";
-import type { StatisticsDrillDown } from "../components/StatisticsTab";
+import type { StatisticsDrillDown } from "../components/statistics/types";
 
 type AdvertiserDecisions = ReturnType<typeof useAdvertiserDecisions>["advertiserDecisions"];
 

@@ -10,7 +10,7 @@ import { refreshDayWithRetry } from "../utils/refreshWithRetry";
 import { usePreviousPeriod } from "./usePreviousPeriod";
 import { useRecentTenders } from "./useRecentTenders";
 import { useDayTenders, useRefreshedDays } from "./useHourlyDays";
-import type { StatisticsComparison } from "../components/StatisticsTab";
+import type { StatisticsComparison } from "../components/statistics/types";
 
 type FilterOptions = Parameters<typeof filterTenders>[1];
 

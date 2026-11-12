@@ -3,37 +3,18 @@ import { Statistics } from '../utils/calculateStatistics';
 import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig } from '../utils/tenderSources';
 import { STATUS_CONFIG, TENDER_STATUSES } from '../utils/tenderStatus';
-import { TenderStatus } from '../types/TenderStatus';
 import { OrderType, getOrderTypeConfig } from '../utils/tenderSources';
 import { getCpvName } from '../utils/cpvMapping';
 import { CpvCategoryKey } from '../utils/cpvCategories';
-import { TrendPoint } from '../utils/recentTrend';
 import { formatDelta } from '../utils/comparison';
 import { MIN_REPEAT_COUNT } from '../utils/repeatOptions';
-import { HourlyAverage } from '../utils/hourlyAverage';
 import { RankedList, ShareBar } from './statistics/RankedList';
 import { DailySourcesChart } from './statistics/DailySourcesChart';
 import { HourlyActivityChart } from './statistics/HourlyActivityChart';
 import { RecentTrendChart } from './statistics/RecentTrendChart';
 import { StatisticsNotices } from './statistics/StatisticsNotices';
+import { HourlyChartData, StatisticsComparison, StatisticsDrillDown, StatisticsTrend } from './statistics/types';
 import styles from './StatisticsTab.module.css';
-
-/** Element statystyk, w który kliknięto, żeby zobaczyć odpowiadające mu przetargi na liście. */
-export type StatisticsDrillDown =
-    | { kind: 'source'; source: TenderSource }
-    | { kind: 'orderType'; orderType: OrderType }
-    | { kind: 'status'; status: TenderStatus | 'unmarked' }
-    | { kind: 'city'; city: string }
-    | { kind: 'buyer'; buyer: string }
-    | { kind: 'cpv'; code: string }
-    | { kind: 'cpvCategory'; category: CpvCategoryKey };
-
-/** Stan porównania wybranego okresu z poprzednim (poprzedni dzień roboczy lub okres tej samej długości). */
-export type StatisticsComparison =
-    | { status: 'unavailable'; reason: string }
-    | { status: 'loading' }
-    | { status: 'missing'; label: string; isFetching: boolean; error: string | null; onFetch: () => void }
-    | { status: 'ready'; label: string; statistics: Statistics; isCurrentPeriodOngoing: boolean };
 
 interface StatisticsTabProps {
     statistics: Statistics;
@@ -45,21 +26,7 @@ interface StatisticsTabProps {
     /** `null`, gdy nie ma wybranego zakresu dat. */
     comparison: StatisticsComparison | null;
     hourly: HourlyChartData;
-    /** Nowe ogłoszenia z ostatnich dni, po tych samych filtrach co statystyki (poza zakresem dat). */
-    trend: { points: TrendPoint[]; error: string | null };
-}
-
-/** Dane wykresu godzinowego eZamówień: dni do wyboru (DD-MM-RRRR, od najnowszego) i rozkład godzin po dniach. */
-export interface HourlyChartData {
-    days: string[];
-    distribution: Record<string, number[]>;
-    /** Średnia z ostatnich dni z kompletnymi danymi; null, gdy żaden dzień nie jest kompletny. */
-    average: HourlyAverage | null;
-    /** Wybrany dzień jest spoza zakresu dat i jego przetargi są jeszcze wczytywane. */
-    isLoading: boolean;
-    error: string | null;
-    /** Woła komponent po każdej zmianie wybranego dnia, żeby rodzic doczytał dzień spoza zakresu. */
-    onSelectDay: (day: string) => void;
+    trend: StatisticsTrend;
 }
 
 export const StatisticsTab: React.FC<StatisticsTabProps> = ({
