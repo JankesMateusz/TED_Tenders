@@ -7,6 +7,7 @@ import { fetchBaza } from './bazakonkurencyjnosci';
 import { fetchEzamowienia } from './ezamowienia';
 import { SourceResult, TENDER_SOURCES, TenderSource } from './model';
 import { expiryFrom, saveNewTenders } from './store';
+import { scheduledRefreshTarget } from './schedule';
 import { fetchTed } from './ted';
 
 const LOCK_PATH = 'meta/refreshLock';
@@ -159,10 +160,29 @@ export const refreshTenders = onCall(
   }
 );
 
-/** Przebieg zadania cyklicznego: błąd jest logowany, a zajęta blokada (trwa inne odświeżanie) pomijana. */
-const runScheduledRefresh = async (label: string, sources?: TenderSource[]): Promise<void> => {
+/** Czy dziennik potwierdza, że dzień został pobrany po jego zakończeniu. */
+const isDayComplete = async (day: string): Promise<boolean> => {
+  const snapshot = await getFirestore().doc(`${REFRESH_LOG_COLLECTION}/${day}`).get();
+  return snapshot.data()?.complete === true;
+};
+
+/**
+ * Przebieg zadania cyklicznego: błąd jest logowany, a zajęta blokada (trwa inne odświeżanie) pomijana.
+ * Z `finalizePreviousDay` przebieg w godzinie po północy domyka poprzedni dzień (patrz `scheduledRefreshTarget`);
+ * gdy dziennik już go oznacza jako kompletny, kolejne przebiegi tej godziny nic nie robią, a po błędzie ponawiają.
+ */
+const runScheduledRefresh = async (
+  label: string,
+  sources?: TenderSource[],
+  finalizePreviousDay = false
+): Promise<void> => {
   try {
-    const result = await refreshDay(todayInWarsaw(), SCHEDULER_UID, { sources });
+    const target = finalizePreviousDay ? scheduledRefreshTarget() : { day: todayInWarsaw(), finalizing: false };
+    if (target.finalizing && (await isDayComplete(target.day))) {
+      console.log(`Pominięto: ${label.toLowerCase()} (dzień ${target.day} jest już kompletny).`);
+      return;
+    }
+    const result = await refreshDay(target.day, SCHEDULER_UID, { sources });
     console.log(`${label} zakończone:`, JSON.stringify(result));
   } catch (error) {
     // Blokada zajęta (ręczne odświeżenie w toku) to nie błąd: kolejny przebieg nadrobi
@@ -177,17 +197,19 @@ const runScheduledRefresh = async (label: string, sources?: TenderSource[]): Pro
 /**
  * Cykliczne odświeżanie dzisiejszego dnia (TED i eZamówienia), żeby lista była aktualna bez otwartej aplikacji.
  * Harmonogram (cron, strefa czasowa) łatwo zmienić poniżej: co 10 minut, od 9:00 do 23:50 czasu warszawskiego.
+ * W godzinie po północy (0:00-0:50) przebiegi domykają poprzedni dzień, żeby wykres trendu nie pokazywał
+ * zakończonych dni jako niekompletnych.
  */
 export const scheduledRefresh = onSchedule(
   {
     region: REGION,
-    schedule: '*/10 9-23 * * *',
+    schedule: '*/10 0,9-23 * * *',
     timeZone: 'Europe/Warsaw',
     timeoutSeconds: FUNCTION_TIMEOUT_SECONDS,
     memory: '512MiB',
     retryCount: 0,
   },
-  () => runScheduledRefresh('Zaplanowane odświeżenie')
+  () => runScheduledRefresh('Zaplanowane odświeżenie', undefined, true)
 );
 
 /**
