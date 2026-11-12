@@ -16,3 +16,6 @@ export {
   listOrdersCallable as listOrders,
   searchBuyersCallable as searchBuyers,
 } from './orders/callables';
+
+// Zdarzenia do podsumowania „od ostatniej wizyty” (kolekcja `events`).
+export { recordTenderEvents } from './notifications/events';

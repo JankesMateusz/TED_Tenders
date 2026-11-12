@@ -7,6 +7,8 @@ import OrdersModule from './features/orders/OrdersModule';
 import { useHashRoute } from './hooks/useHashRoute';
 import { moduleForHash } from './modules';
 import ScrollToTopButton from './components/ScrollToTopButton';
+import AwaySummary from './components/AwaySummary';
+import { AwaySummaryProvider } from './context/AwaySummaryContext';
 import LoginScreen from './components/LoginScreen';
 import NoAccessScreen from './components/NoAccessScreen';
 import { MESSAGES } from './constants';
@@ -29,8 +31,11 @@ const AuthGate: React.FC = () => {
 
   return (
     <UserPreferencesProvider>
-      <ModuleSwitch />
-      <ScrollToTopButton />
+      <AwaySummaryProvider>
+        <ModuleSwitch />
+        <ScrollToTopButton />
+        <AwaySummary />
+      </AwaySummaryProvider>
     </UserPreferencesProvider>
   );
 };
