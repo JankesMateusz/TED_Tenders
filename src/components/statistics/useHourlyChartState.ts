@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Statistics } from '../../utils/calculateStatistics';
+import { parseDate } from '../../utils/dateUtils';
 import type { HourlyChartData } from './types';
 
 /** Godziny pracy pokazywane na wykresie godzinowym; poza nimi tylko wtedy, gdy ktoś coś opublikował. */
@@ -8,19 +9,6 @@ export const DEFAULT_LAST_HOUR = 19;
 
 /** Wartość listy wyboru dnia oznaczająca średnią z ostatnich dni (zamiast konkretnego dnia). */
 export const AVERAGE_OPTION = 'average';
-
-const parseStatisticDate = (dateStr: string): number => {
-    if (!dateStr || dateStr === 'Brak daty' || dateStr === 'Błąd formatu daty') {
-        return 0;
-    }
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) {
-        return 0;
-    }
-    const [day, month, year] = parts.map(Number);
-    const parsed = new Date(year, month - 1, day);
-    return parsed.getTime();
-};
 
 /**
  * Stan wykresu godzinowego: wybór dnia (albo średniej) i dane do narysowania. Dopóki użytkownik sam nie wybierze dnia,
@@ -31,7 +19,7 @@ export const useHourlyChartState = (hourly: HourlyChartData, rangeDistribution: 
     const hourlyDates = hourly.days;
     // Domyślnie najnowszy dzień z wybranego zakresu; inne dni z bazy użytkownik wybiera sam
     const newestRangeDate = useMemo(
-        () => Object.keys(rangeDistribution).sort((a, b) => parseStatisticDate(b) - parseStatisticDate(a))[0] || '',
+        () => Object.keys(rangeDistribution).sort((a, b) => parseDate(b).getTime() - parseDate(a).getTime())[0] || '',
         [rangeDistribution]
     );
     const hasAverage = hourly.average !== null;
