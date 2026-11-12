@@ -2,23 +2,21 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { isItRelatedCpv } from "../utils/cpvFilter";
 import { useUserPreferences } from "../context/UserPreferencesContext";
 import { useAuth } from "../context/AuthContext";
-import { OrderType } from "../utils/tenderSources";
 import { TenderSource } from "../types/TenderSource";
 import { Tender } from "../types/Tender";
-import { DEFAULT_ORDER_TYPES } from "../constants";
 import { dayToDisplayDate, displayDateToDay, parseDate, toDayString } from "../utils/dateUtils";
 import { calculateStatistics } from "../utils/calculateStatistics";
-import { CpvCategoryKey } from "../utils/cpvCategories";
 import { useRecentTenders } from "../hooks/useRecentTenders";
 import TabBar, { panelId, tabId } from "./TabBar";
 import { TREND_DAYS, countTendersByDay, lastDays } from "../utils/recentTrend";
-import { SortOrder, countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
-import { ALL_SOURCES, NO_STATUS_FILTERS, isQueueStatusFilter, loadFilters, saveFilters } from "../utils/persistedFilters";
+import { countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
+import { isQueueStatusFilter } from "../utils/persistedFilters";
 import { canRefreshDay, listDays } from "../utils/refreshPlan";
 import { refreshDayWithRetry } from "../utils/refreshWithRetry";
 import { useTendersRefresh } from "../hooks/useTendersRefresh";
 import { useTendersSubscription } from "../hooks/useTendersSubscription";
 import { useCardShortcuts } from "../hooks/useCardShortcuts";
+import { useTenderFilters } from "../hooks/useTenderFilters";
 import { useComments } from "../hooks/useComments";
 import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
 import { isHiddenAdvertiser } from "../utils/advertisers";
@@ -28,7 +26,6 @@ import { describePeriod, getComparisonPeriod } from "../utils/comparison";
 import { StatisticsTab, StatisticsDrillDown, StatisticsComparison } from "./StatisticsTab";
 import { FiltersPanel } from "./FiltersPanel";
 import { averageHourlyDistribution } from "../utils/hourlyAverage";
-import { ActiveFilterChip, buildActiveFilterChips } from "../utils/activeFilters";
 import Header from "./header";
 import BuyersSidebar from "./BuyersSidebar";
 import { TendersList } from "./TendersList";
@@ -39,9 +36,6 @@ const Tenders: React.FC = () => {
     const [startDate, setStartDate] = useState<Date | null>(today);
     const [endDate, setEndDate] = useState<Date | null>(today);
     const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    // Domyślnie tylko przetargi z kodami CPV związanymi z IT; przycisk „All tenders” pokazuje wszystkie branże
-    const [isFiltered, setIsFiltered] = useState<boolean>(true);
     const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
         [TenderSource.TED]: 0,
         [TenderSource.E_ZAMOWIENIA]: 0,
@@ -49,20 +43,7 @@ const Tenders: React.FC = () => {
     });
     const { user } = useAuth();
     const uid = user?.uid ?? null;
-    // Filtry (poza frazą wyszukiwania) są zapamiętywane w przeglądarce osobno dla każdego konta
-    const [initialFilters] = useState(() => loadFilters(uid));
-    const [selectedSources, setSelectedSources] = useState<TenderSource[]>(initialFilters.selectedSources);
-    const [selectedOrderTypes, setSelectedOrderTypes] = useState<OrderType[]>(initialFilters.selectedOrderTypes);
-    const [selectedBuyers, setSelectedBuyers] = useState<string[]>(initialFilters.selectedBuyers);
-    const [selectedCities, setSelectedCities] = useState<string[]>(initialFilters.selectedCities);
-    const [selectedCpvs, setSelectedCpvs] = useState<string[]>(initialFilters.selectedCpvs);
-    // Kategoria CPV ze statystyk: dotyczy tylko bieżącej sesji, w przeciwieństwie do zapamiętywanych filtrów
-    const [selectedCpvCategory, setSelectedCpvCategory] = useState<CpvCategoryKey | null>(null);
-    const [sortOrder, setSortOrder] = useState<SortOrder>(initialFilters.sortOrder);
     const { favorites, isFavorite, toggleFavorite, toggleStatus, actionError } = useUserPreferences();
-    const [statusFilters, setStatusFilters] = useState(initialFilters.statusFilters);
-    const [selectedLabels, setSelectedLabels] = useState(initialFilters.selectedLabels);
-    const [selectedDocs, setSelectedDocs] = useState(initialFilters.selectedDocs);
     const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
 
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
@@ -74,8 +55,20 @@ const Tenders: React.FC = () => {
 
     const { commentsByTender, commentsError, addComment, deleteComment } = useComments(startDay, endDay);
     const { advertiserDecisions, advertiserError, setAdvertiserDecision } = useAdvertiserDecisions();
-    // Firmy prywatne i NGO są domyślnie ukryte; przełącznik w filtrach pokazuje je na czas przeglądania
-    const [showHiddenAdvertisers, setShowHiddenAdvertisers] = useState<boolean>(false);
+    const filters = useTenderFilters(uid, advertiserDecisions);
+    const {
+        searchQuery,
+        isFiltered,
+        selectedSources,
+        selectedBuyers,
+        selectedCities,
+        statusFilters,
+        filterOptions,
+        savedFilterOptions,
+        hasActiveStatisticsFilters,
+        activeChips,
+        handleClearFilters
+    } = filters;
 
     const { tenders, isLoading, loadError } = useTendersSubscription(startDay, endDay);
 
@@ -116,33 +109,17 @@ const Tenders: React.FC = () => {
         if (!isFiltered) {
             refresh(true);
         } else {
-            setIsFiltered(false);
+            filters.setIsFiltered(false);
         }
     };
 
     const handleFilterClick = () => {
         // Filter tylko zmienia widok, nie odświeża danych
-        setIsFiltered(true);
+        filters.setIsFiltered(true);
     };
 
     const handleRefresh = () => {
         refresh(true);
-    };
-
-    const handleSourceToggle = (source: TenderSource) => {
-        setSelectedSources(prev =>
-            prev.includes(source)
-                ? prev.filter(s => s !== source)
-                : [...prev, source]
-        );
-    };
-
-    const handleOrderTypeToggle = (orderType: OrderType) => {
-        setSelectedOrderTypes(prev =>
-            prev.includes(orderType)
-                ? prev.filter(t => t !== orderType)
-                : [...prev, orderType]
-        );
     };
 
     const getDisplayedCpvCodes = (tender: Tender): string[] => {
@@ -162,40 +139,6 @@ const Tenders: React.FC = () => {
         [favorites, liveTendersById]
     );
     const unsavedTenders = useMemo(() => tenders.filter((tender) => !isFavorite(tender.id)), [tenders, isFavorite]);
-
-    useEffect(() => {
-        saveFilters(uid, {
-            selectedSources,
-            selectedOrderTypes,
-            selectedBuyers,
-            selectedCities,
-            selectedCpvs,
-            statusFilters,
-            selectedLabels,
-            selectedDocs,
-            sortOrder
-        });
-    }, [uid, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, statusFilters, selectedLabels, selectedDocs, sortOrder]);
-
-    const filterOptions = useMemo(() => ({
-        selectedSources,
-        selectedOrderTypes,
-        selectedBuyers,
-        selectedCities,
-        selectedCpvs,
-        selectedCpvCategory,
-        isFiltered,
-        searchQuery,
-        statusFilters,
-        selectedLabels,
-        selectedDocs,
-        sortOrder,
-        advertiserDecisions,
-        showHiddenAdvertisers
-    }), [selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, selectedCpvCategory, isFiltered, searchQuery, statusFilters, selectedLabels, selectedDocs, sortOrder, advertiserDecisions, showHiddenAdvertisers]);
-
-    // Zapisane (gwiazdką) zostają widoczne nawet po ukryciu zamawiającego: ktoś świadomie je wybrał
-    const savedFilterOptions = useMemo(() => ({ ...filterOptions, showHiddenAdvertisers: true }), [filterOptions]);
 
     const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, filterOptions), [filterOptions]);
 
@@ -225,108 +168,15 @@ const Tenders: React.FC = () => {
     );
     const facetCounts = useMemo(() => countFacets(activeTabTenders, activeTabOptions), [activeTabTenders, activeTabOptions]);
 
-    // Filtry z panelu, paska bocznego i statystyk; przełącznik "Wszystkie / IT" w nagłówku to tryb widoku,
-    // więc nie jest tu liczony ani czyszczony.
-    const hasActiveStatisticsFilters =
-        searchQuery.trim() !== "" ||
-        selectedBuyers.length > 0 ||
-        selectedCities.length > 0 ||
-        selectedCpvs.length > 0 ||
-        selectedCpvCategory !== null ||
-        selectedSources.length !== ALL_SOURCES.length ||
-        selectedOrderTypes.length !== DEFAULT_ORDER_TYPES.length;
-
     // Kolejka jest pusta, gdy są ogłoszenia pasujące do pozostałych filtrów, ale wszystkie mają już status
     const isQueueEmpty =
         isQueueStatusFilter(statusFilters) &&
         Object.values(facetCounts.statuses).some((count) => (count ?? 0) > 0);
 
-    const handleClearFilters = () => {
-        setSearchQuery("");
-        setSelectedSources([...ALL_SOURCES]);
-        setSelectedOrderTypes([...DEFAULT_ORDER_TYPES]);
-        setSelectedBuyers([]);
-        setSelectedCities([]);
-        setSelectedCpvs([]);
-        setSelectedCpvCategory(null);
-        setStatusFilters(NO_STATUS_FILTERS);
-        setSelectedLabels([]);
-        setSelectedDocs([]);
-    };
-
-    const activeChips = useMemo(() => buildActiveFilterChips({
-        statusFilters,
-        selectedSources,
-        selectedOrderTypes,
-        selectedBuyers,
-        selectedCities,
-        selectedCpvs,
-        selectedCpvCategory,
-        selectedLabels,
-        selectedDocs
-    }), [statusFilters, selectedLabels, selectedDocs, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, selectedCpvCategory]);
-
-    const handleRemoveChip = (chip: ActiveFilterChip) => {
-        switch (chip.kind) {
-            case 'status':
-                setStatusFilters(prev => ({ ...prev, [chip.value as keyof typeof prev]: false }));
-                break;
-            case 'label':
-                setSelectedLabels(prev => prev.filter(item => item !== chip.value));
-                break;
-            case 'docs':
-                setSelectedDocs(prev => prev.filter(item => item !== chip.value));
-                break;
-            case 'allStatuses':
-                setStatusFilters(NO_STATUS_FILTERS);
-                break;
-            case 'sources':
-                setSelectedSources([...ALL_SOURCES]);
-                break;
-            case 'orderTypes':
-                setSelectedOrderTypes([...DEFAULT_ORDER_TYPES]);
-                break;
-            case 'buyer':
-                setSelectedBuyers(prev => prev.filter(item => item !== chip.value));
-                break;
-            case 'city':
-                setSelectedCities(prev => prev.filter(item => item !== chip.value));
-                break;
-            case 'cpv':
-                setSelectedCpvs(prev => prev.filter(item => item !== chip.value));
-                break;
-            case 'cpvCategory':
-                setSelectedCpvCategory(null);
-                break;
-        }
-    };
-
-    // Kliknięcie elementu statystyk: ustawia odpowiadający mu filtr (zastępując poprzedni wybór tego samego
-    // rodzaju) i przechodzi do listy, żeby od razu pokazać pasujące przetargi.
+    // Kliknięcie elementu statystyk ustawia odpowiadający mu filtr i przechodzi do listy, żeby od razu pokazać
+    // pasujące przetargi.
     const handleStatisticsDrillDown = (target: StatisticsDrillDown) => {
-        switch (target.kind) {
-            case 'source':
-                setSelectedSources([target.source]);
-                break;
-            case 'orderType':
-                setSelectedOrderTypes([target.orderType]);
-                break;
-            case 'status':
-                setStatusFilters({ ...NO_STATUS_FILTERS, [target.status]: true });
-                break;
-            case 'city':
-                setSelectedCities([target.city]);
-                break;
-            case 'buyer':
-                setSelectedBuyers([target.buyer]);
-                break;
-            case 'cpv':
-                setSelectedCpvs([target.code]);
-                break;
-            case 'cpvCategory':
-                setSelectedCpvCategory(target.category);
-                break;
-        }
+        filters.applyDrillDown(target);
         setActiveTab('tenders');
     };
 
@@ -469,7 +319,7 @@ const Tenders: React.FC = () => {
                 canRefresh={canRefreshAny}
                 lastRefreshAt={lastRefreshAt}
                 searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
+                onSearchChange={filters.setSearchQuery}
                 searchInputRef={searchInputRef}
             />
             <div className={styles.tabsBar}>
@@ -497,8 +347,8 @@ const Tenders: React.FC = () => {
                         cityOptionTenders={cityOptionTenders}
                         selectedBuyers={selectedBuyers}
                         selectedCities={selectedCities}
-                        onBuyersChange={setSelectedBuyers}
-                        onCitiesChange={setSelectedCities}
+                        onBuyersChange={filters.setSelectedBuyers}
+                        onCitiesChange={filters.setSelectedCities}
                     />
                 )}
                 <div className={styles.contentArea}>
@@ -512,59 +362,53 @@ const Tenders: React.FC = () => {
                             <div className={styles.container}>
                                 <FiltersPanel
                                     selectedSources={selectedSources}
-                                    onSourceToggle={handleSourceToggle}
-                                    selectedOrderTypes={selectedOrderTypes}
-                                    onOrderTypeToggle={handleOrderTypeToggle}
+                                    onSourceToggle={filters.handleSourceToggle}
+                                    selectedOrderTypes={filters.selectedOrderTypes}
+                                    onOrderTypeToggle={filters.handleOrderTypeToggle}
                                     statusFilters={statusFilters}
-                                    onStatusFilterChange={(filter) =>
-                                        setStatusFilters(prev => ({...prev, [filter]: !prev[filter]}))
-                                    }
-                                    selectedLabels={selectedLabels}
-                                    onLabelToggle={(label) =>
-                                        setSelectedLabels(prev => prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label])
-                                    }
-                                    selectedDocs={selectedDocs}
-                                    onDocsToggle={(docs) =>
-                                        setSelectedDocs(prev => prev.includes(docs) ? prev.filter(item => item !== docs) : [...prev, docs])
-                                    }
-                                    onShowAllStatuses={() => setStatusFilters({ toEnter: true, entered: true, toClarify: true, notToEnter: true, unmarked: true })}
+                                    onStatusFilterChange={filters.handleStatusFilterToggle}
+                                    selectedLabels={filters.selectedLabels}
+                                    onLabelToggle={filters.handleLabelToggle}
+                                    selectedDocs={filters.selectedDocs}
+                                    onDocsToggle={filters.handleDocsToggle}
+                                    onShowAllStatuses={filters.handleShowAllStatuses}
                                     facetCounts={facetCounts}
-                                    sortOrder={sortOrder}
-                                    onSortOrderChange={setSortOrder}
+                                    sortOrder={filters.sortOrder}
+                                    onSortOrderChange={filters.setSortOrder}
                                     activeChips={activeChips}
-                                    onRemoveChip={handleRemoveChip}
+                                    onRemoveChip={filters.handleRemoveChip}
                                     hasActiveFilters={activeChips.length > 0 || searchQuery.trim() !== ""}
                                     onClearFilters={handleClearFilters}
                                     hiddenAdvertisersCount={hiddenAdvertisersCount}
-                                    showHiddenAdvertisers={showHiddenAdvertisers}
-                                    onShowHiddenAdvertisersChange={setShowHiddenAdvertisers}
+                                    showHiddenAdvertisers={filters.showHiddenAdvertisers}
+                                    onShowHiddenAdvertisersChange={filters.setShowHiddenAdvertisers}
                                 />
-                                    <TendersList
-                                        activeTab={activeTab}
-                                        displayedTenders={displayedTenders}
-                                        isLoading={isLoading}
-                                        isRefreshing={isRefreshing}
-                                        refreshProgress={refreshProgress}
-                                        loadError={loadError}
-                                        refreshError={refreshError}
-                                        actionError={actionError}
-                                        commentsError={commentsError}
-                                        advertiserError={advertiserError}
-                                        unmarkedCount={facetCounts.statuses.unmarked ?? 0}
-                                        showQueueHint={isQueueStatusFilter(statusFilters)}
-                                        isQueueEmpty={isQueueEmpty}
-                                        isFiltered={isFiltered}
-                                        favoritesCount={favorites.length}
-                                        getDisplayedCpvCodes={getDisplayedCpvCodes}
-                                        liveTendersById={liveTendersById}
-                                        commentsByTender={commentsByTender}
-                                        onAddComment={addComment}
-                                        onDeleteComment={deleteComment}
-                                        advertiserDecisions={advertiserDecisions}
-                                        onSetAdvertiserDecision={setAdvertiserDecision}
-                                        activeTenderId={activeTenderId}
-                                        onActivateTender={handleActivateTender}
-                                    />
+                                <TendersList
+                                    activeTab={activeTab}
+                                    displayedTenders={displayedTenders}
+                                    isLoading={isLoading}
+                                    isRefreshing={isRefreshing}
+                                    refreshProgress={refreshProgress}
+                                    loadError={loadError}
+                                    refreshError={refreshError}
+                                    actionError={actionError}
+                                    commentsError={commentsError}
+                                    advertiserError={advertiserError}
+                                    unmarkedCount={facetCounts.statuses.unmarked ?? 0}
+                                    showQueueHint={isQueueStatusFilter(statusFilters)}
+                                    isQueueEmpty={isQueueEmpty}
+                                    isFiltered={isFiltered}
+                                    favoritesCount={favorites.length}
+                                    getDisplayedCpvCodes={getDisplayedCpvCodes}
+                                    liveTendersById={liveTendersById}
+                                    commentsByTender={commentsByTender}
+                                    onAddComment={addComment}
+                                    onDeleteComment={deleteComment}
+                                    advertiserDecisions={advertiserDecisions}
+                                    onSetAdvertiserDecision={setAdvertiserDecision}
+                                    activeTenderId={activeTenderId}
+                                    onActivateTender={handleActivateTender}
+                                />
                             </div>
                         ) : (
                             <StatisticsTab
