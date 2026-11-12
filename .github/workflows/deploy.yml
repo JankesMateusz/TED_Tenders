@@ -47,6 +47,8 @@ jobs:
           REACT_APP_FIREBASE_APP_ID: ${{ secrets.REACT_APP_FIREBASE_APP_ID }}
           # Moduł Zamówienia (POC) jest widoczny tylko w środowisku testowym; produkcja zostaje bez menu modułów.
           REACT_APP_ENABLE_ORDERS: ${{ github.ref_name == 'develop' && 'true' || 'false' }}
+          # Podsumowanie od ostatniej wizyty (baner i plakietki Nowy) jest włączone w obu środowiskach.
+          REACT_APP_ENABLE_NOTIFICATIONS: 'true'
 
       # Jawny --project, żeby wdrożenie zawsze trafiało w projekt przypisany do środowiska.
       - name: Deploy hosting, functions and Firestore rules/indexes
