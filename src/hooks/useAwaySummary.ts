@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-    Timestamp, collection, doc, getCountFromServer, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, where
+    Timestamp, collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, where
 } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import {
-    AWAY_SUMMARY_ENABLED, AwayEvent, AwaySummary, HEARTBEAT_MS, MAX_EVENTS, buildSummary, isAwayLongEnough, isSummaryEmpty
+    AWAY_SUMMARY_ENABLED, AwayEvent, AwaySummary, HEARTBEAT_MS, MAX_EVENTS, buildSummary, isAwayLongEnough
 } from '../utils/awaySummary';
 
 /**
@@ -43,18 +43,17 @@ export const useAwaySummary = (): { summary: AwaySummary | null; since: Date | n
 
                 setSince(lastSeen);
                 const sinceTs = Timestamp.fromDate(lastSeen);
-                const [newTenders, events] = await Promise.all([
-                    getCountFromServer(query(collection(db, 'tenders'), where('fetchedAt', '>', sinceTs))),
-                    getDocs(query(collection(db, 'events'), where('createdAt', '>', sinceTs), orderBy('createdAt', 'desc'), limit(MAX_EVENTS)))
-                ]);
+                // Nowych przetargów tu nie liczymy: liczy je lista z jej filtrami (inaczej baner i plakietki się rozjeżdżają)
+                const events = await getDocs(
+                    query(collection(db, 'events'), where('createdAt', '>', sinceTs), orderBy('createdAt', 'desc'), limit(MAX_EVENTS))
+                );
                 if (cancelled) return;
                 const result = buildSummary(
                     lastSeen,
-                    newTenders.data().count,
                     events.docs.map((d) => ({ id: d.id, ...d.data() }) as AwayEvent),
                     uid
                 );
-                setSummary(isSummaryEmpty(result) ? null : result);
+                setSummary(result);
             } catch (error) {
                 console.warn('Nie udało się przygotować podsumowania od ostatniej wizyty:', error);
             } finally {
