@@ -15,10 +15,10 @@ import TabBar, { panelId, tabId } from "./TabBar";
 import { TREND_DAYS, countTendersByDay, lastDays } from "../utils/recentTrend";
 import { SortOrder, countFacets, filterAndSortTenders, filterTenders } from "../utils/tenderFilters";
 import { ALL_SOURCES, NO_STATUS_FILTERS, isQueueStatusFilter, loadFilters, saveFilters } from "../utils/persistedFilters";
-import { subscribeToTenders } from "../utils/tendersApi";
 import { canRefreshDay, listDays } from "../utils/refreshPlan";
 import { refreshDayWithRetry } from "../utils/refreshWithRetry";
 import { useTendersRefresh } from "../hooks/useTendersRefresh";
+import { useTendersSubscription } from "../hooks/useTendersSubscription";
 import { useComments } from "../hooks/useComments";
 import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
 import { isHiddenAdvertiser } from "../utils/advertisers";
@@ -37,7 +37,6 @@ import BuyersSidebar from "./BuyersSidebar";
 import TenderCard from "./TenderCard";
 import styles from "./Tenders.module.css";
 
-const LOAD_ERROR_MESSAGE = "Nie udało się wczytać przetargów z bazy.";
 const REFRESHING_MESSAGE = "Pobieranie nowych przetargów";
 
 /** Czy zdarzenie pochodzi z pola, w którym użytkownik pisze (skróty jednoklawiszowe nie mogą mu wtedy przeszkadzać). */
@@ -55,15 +54,11 @@ const NO_SAVED_TENDERS_MESSAGE = "Nie masz jeszcze zapisanych przetargów. Oznac
 const NO_COMMENTS: TenderComment[] = [];
 
 const Tenders: React.FC = () => {
-    const [tenders, setTenders] = useState<Tender[]>([]);
     const today = new Date();
     const [startDate, setStartDate] = useState<Date | null>(today);
     const [endDate, setEndDate] = useState<Date | null>(today);
     const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
     const [searchQuery, setSearchQuery] = useState<string>("");
-    // True do czasu pierwszej odpowiedzi bazy dla wybranego zakresu dat
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
     // Domyślnie tylko przetargi z kodami CPV związanymi z IT; przycisk „All tenders” pokazuje wszystkie branże
     const [isFiltered, setIsFiltered] = useState<boolean>(true);
     const [tendersCountBySource, setTendersCountBySource] = useState<Record<TenderSource, number>>({
@@ -109,30 +104,7 @@ const Tenders: React.FC = () => {
     // Firmy prywatne i NGO są domyślnie ukryte; przełącznik w filtrach pokazuje je na czas przeglądania
     const [showHiddenAdvertisers, setShowHiddenAdvertisers] = useState<boolean>(false);
 
-    // Nasłuch przetargów z bazy dla wybranego zakresu dat (zmiany od innych użytkowników widać na bieżąco)
-    useEffect(() => {
-        if (!startDay || !endDay) {
-            setTenders([]);
-            setIsLoading(false);
-            return;
-        }
-
-        setIsLoading(true);
-        setLoadError(null);
-        return subscribeToTenders(
-            startDay,
-            endDay,
-            (loadedTenders) => {
-                setTenders(loadedTenders);
-                setIsLoading(false);
-            },
-            (error) => {
-                console.error("Błąd wczytywania przetargów z bazy:", error);
-                setLoadError(LOAD_ERROR_MESSAGE);
-                setIsLoading(false);
-            }
-        );
-    }, [startDay, endDay]);
+    const { tenders, isLoading, loadError } = useTendersSubscription(startDay, endDay);
 
     const { isRefreshing, refreshError, refreshProgress, refresh, lastRefreshAt } = useTendersRefresh(startDay, endDay, useDateRange, todayDay);
 
