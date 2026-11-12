@@ -12,6 +12,7 @@ import { dayToDisplayDate } from '../utils/dateUtils';
 import { formatDelta } from '../utils/comparison';
 import { MIN_REPEAT_COUNT } from '../utils/repeatOptions';
 import { HourlyAverage } from '../utils/hourlyAverage';
+import { RankedList, ShareBar } from './statistics/RankedList';
 import styles from './StatisticsTab.module.css';
 
 const parseStatisticDate = (dateStr: string): number => {
@@ -71,13 +72,6 @@ const formatCount = (value: number): string =>
 
 /** Wysokość (px) najwyższego słupka trendu. */
 const TREND_BAR_MAX_HEIGHT = 100;
-
-/** Pasek udziału: jaka część całości przypada na daną pozycję. */
-const ShareBar: React.FC<{ count: number; total: number }> = ({ count, total }) => (
-    <span className={styles.shareTrack} aria-hidden="true">
-        <span className={styles.shareBar} style={{ width: `${total > 0 ? Math.min(100, (count / total) * 100) : 0}%` }} />
-    </span>
-);
 
 /** Dane wykresu godzinowego eZamówień: dni do wyboru (DD-MM-RRRR, od najnowszego) i rozkład godzin po dniach. */
 export interface HourlyChartData {
@@ -461,21 +455,11 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     <p className={styles.chartSubtitle}>
                         Liczba przetargów z kodem CPV z danej kategorii. Przetarg może mieć kody z kilku kategorii, więc sumy się nie dodają.
                     </p>
-                    <ul className={styles.list}>
-                        {statistics.byCpvCategory.map(({ key, label, count }) => (
-                            <li key={key} className={styles.listItem}>
-                                <button
-                                    type="button"
-                                    className={`${styles.listButton} ${styles.clickable}`}
-                                    onClick={() => onDrillDown({ kind: 'cpvCategory', category: key })}
-                                >
-                                    <span className={styles.listName}>{label}</span>
-                                    <span className={styles.listCount}>{count}</span>
-                                    <ShareBar count={count} total={statistics.total} />
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                    <RankedList
+                        items={statistics.byCpvCategory.map(({ key, label, count }) => ({ key, name: label, count }))}
+                        shareTotal={statistics.total}
+                        onSelect={(key) => onDrillDown({ kind: 'cpvCategory', category: key as CpvCategoryKey })}
+                    />
                 </div>
             )}
 
@@ -485,17 +469,10 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     <p className={styles.chartSubtitle}>
                         Przetargi według osoby, która ustawiła obecny status (przy zmianie statusu liczy się ostatnia osoba).
                     </p>
-                    <ul className={styles.list}>
-                        {statistics.byReviewer.map(({ reviewer, count }) => (
-                            <li key={reviewer} className={styles.listItem}>
-                                <div className={styles.listRow}>
-                                    <span className={styles.listName}>{reviewer}</span>
-                                    <span className={styles.listCount}>{count}</span>
-                                    <ShareBar count={count} total={reviewedTotal} />
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                    <RankedList
+                        items={statistics.byReviewer.map(({ reviewer, count }) => ({ key: reviewer, name: reviewer, count }))}
+                        shareTotal={reviewedTotal}
+                    />
                 </div>
             )}
 
@@ -614,21 +591,11 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                     <p className={styles.chartSubtitle}>
                         Liczba przetargów zawierających dany kod. Przetarg może mieć kilka kodów, więc sumy się nie dodają.
                     </p>
-                    <ul className={styles.list}>
-                        {statistics.topCpvCodes.map(({ code, count }, index) => (
-                            <li key={code} className={styles.listItem}>
-                                <button
-                                    type="button"
-                                    className={`${styles.listButton} ${styles.clickable}`}
-                                    onClick={() => onDrillDown({ kind: 'cpv', code })}
-                                >
-                                    <span className={styles.listRank}>{index + 1}.</span>
-                                    <span className={styles.listName}>{getCpvName(code)} ({code})</span>
-                                    <span className={styles.listCount}>{count}</span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                    <RankedList
+                        showRank
+                        items={statistics.topCpvCodes.map(({ code, count }) => ({ key: code, name: `${getCpvName(code)} (${code})`, count }))}
+                        onSelect={(code) => onDrillDown({ kind: 'cpv', code })}
+                    />
                 </div>
             )}
 
@@ -636,21 +603,11 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                 {statistics.topCities.length > 0 && (
                     <div className={styles.section}>
                         <h3 className={styles.sectionTitle}>Top 10 miast</h3>
-                        <ul className={styles.list}>
-                            {statistics.topCities.map(({ city, count }, index) => (
-                                <li key={city} className={styles.listItem}>
-                                    <button
-                                        type="button"
-                                        className={`${styles.listButton} ${styles.clickable}`}
-                                        onClick={() => onDrillDown({ kind: 'city', city })}
-                                    >
-                                        <span className={styles.listRank}>{index + 1}.</span>
-                                        <span className={styles.listName}>{city}</span>
-                                        <span className={styles.listCount}>{count}</span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
+                        <RankedList
+                            showRank
+                            items={statistics.topCities.map(({ city, count }) => ({ key: city, name: city, count }))}
+                            onSelect={(city) => onDrillDown({ kind: 'city', city })}
+                        />
                     </div>
                 )}
                 
@@ -660,21 +617,11 @@ export const StatisticsTab: React.FC<StatisticsTabProps> = ({
                         Zamawiający z co najmniej {MIN_REPEAT_COUNT} ogłoszeniami w wybranym okresie: to oni wracają.
                     </p>
                     {statistics.repeatBuyers.length > 0 ? (
-                        <ul className={styles.list}>
-                            {statistics.repeatBuyers.map(({ buyer, count }, index) => (
-                                <li key={buyer} className={styles.listItem}>
-                                    <button
-                                        type="button"
-                                        className={`${styles.listButton} ${styles.clickable}`}
-                                        onClick={() => onDrillDown({ kind: 'buyer', buyer })}
-                                    >
-                                        <span className={styles.listRank}>{index + 1}.</span>
-                                        <span className={styles.listName}>{buyer}</span>
-                                        <span className={styles.listCount}>{count}</span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
+                        <RankedList
+                            showRank
+                            items={statistics.repeatBuyers.map(({ buyer, count }) => ({ key: buyer, name: buyer, count }))}
+                            onSelect={(buyer) => onDrillDown({ kind: 'buyer', buyer })}
+                        />
                     ) : (
                         <p className={styles.chartSubtitle}>Brak zamawiających z więcej niż jednym ogłoszeniem.</p>
                     )}
