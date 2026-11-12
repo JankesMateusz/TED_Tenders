@@ -47,3 +47,31 @@ Docelowo `Tenders` składałby hooki i trzy komponenty: ok. 150–200 linii.
 4. Przy okazji `tendersCountBySource` → `useMemo`.
 
 Testy: w `src/` są testy czystych utili, ale nie ma testu samego `Tenders`. Refaktor opieramy więc na `tsc` i ręcznym przeklikaniu. Robić małymi krokami, jeden hook na commit.
+
+## Stan wykonania (2026-11-12)
+
+Refaktor wykonany na gałęzi `refactoring`, jeden etap na commit. `tenders.tsx`: 880 → 329 linii.
+
+| Etap | Commit | Wynik |
+|---|---|---|
+| Martwe komentarze | `e8326a6` | usunięte 2 komentarze |
+| #1 odświeżanie | `d038c1d` | `utils/refreshWithRetry.ts`, `hooks/useTendersRefresh.ts` |
+| #2 wczytywanie z bazy | `6c82db3` | `hooks/useTendersSubscription.ts` |
+| #6 widok listy | `dfca314` | `components/TendersList.tsx` (z `TendersSkeleton` i `AlertMessage`) |
+| #4 skróty i aktywna karta | `76bb2fe` | `hooks/useCardShortcuts.ts` |
+| #3 filtry | `924d681` | `hooks/useTenderFilters.ts`, `utils/toggleInArray.ts` (+ test) |
+| #5 statystyki | `ce355fd` | `hooks/useStatisticsData.ts`, jeden `filterUnsaved` zamiast 4 powtórzeń |
+| `tendersCountBySource` | `33223ed` | `useMemo` zamiast `useEffect` |
+
+Odstępstwa od planu:
+
+- `TabsBar` (#7) pominięty, jak zakładał audyt.
+- `toggleInArray` zastąpił 4 wystąpienia wzorca (nie 5, jak w audycie).
+- Dwa osobne `keydown` na `window` zostały rozdzielone: drugi handler sprawdza `e.defaultPrevented`, więc ich
+  połączenie zmieniłoby zachowanie.
+- `useStatisticsData` jest wywoływany w `Tenders`, a nie tylko dla zakładki statystyk: `statistics` liczy się
+  przy każdej zmianie przetargów, także poza zakładką. Dane spoza bieżącego okresu (porównanie, trend, dodatkowy
+  dzień) już są wczytywane tylko przy otwartej zakładce.
+- `TendersList` ma ok. 24 propsów (karty potrzebują komentarzy, decyzji o zamawiających i aktywnej karty).
+
+Weryfikacja: `tsc`, lint zmienionych plików, 28 zestawów testów jednostkowych (218 testów) i `npm run build`.
