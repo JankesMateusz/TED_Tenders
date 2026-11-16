@@ -60,3 +60,5 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT_ID: ${{ secrets.REACT_APP_FIREBASE_PROJECT_ID }}
+          # Funkcje Zamówień (wymagają sekretu ORDERS_DATABASE_URL) wdrażamy tylko na środowisko testowe.
+          ENABLE_ORDERS_FUNCTIONS: ${{ github.ref_name == 'develop' && 'true' || 'false' }}

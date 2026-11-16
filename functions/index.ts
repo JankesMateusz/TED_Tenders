@@ -8,14 +8,18 @@ export { snapshotLabelOnStatusChange } from './labels/labelSnapshot';
 export { resolveDocumentsCallable as resolveDocuments } from './analysis/resolveCallable';
 export { checkDocsNow, checkDocumentsTask, enqueueDocsCheckOnCreate, enqueueDocsChecks } from './analysis/docsCheck/docsCheck';
 
-// Funkcje modułu zamówień. Wymagają sekretu ORDERS_DATABASE_URL w projekcie, na który wdrażamy (patrz db/README.md).
-export {
-  getBuyerCallable as getBuyer,
-  getDictionariesCallable as getDictionaries,
-  getOrderCallable as getOrder,
-  listOrdersCallable as listOrders,
-  searchBuyersCallable as searchBuyers,
-} from './orders/callables';
+// Funkcje modułu zamówień. Eksportowane tylko przy ENABLE_ORDERS_FUNCTIONS=true (ustawia to deploy.yml dla środowiska
+// testowego), bo wymagają sekretu ORDERS_DATABASE_URL w projekcie, na który wdrażamy (patrz db/README.md).
+// Bez zmiennej funkcje nie istnieją w tym wdrożeniu, więc projekt bez sekretu (produkcja) wdraża się normalnie.
+if (process.env.ENABLE_ORDERS_FUNCTIONS === 'true') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const orders = require('./orders/callables');
+  exports.getBuyer = orders.getBuyerCallable;
+  exports.getDictionaries = orders.getDictionariesCallable;
+  exports.getOrder = orders.getOrderCallable;
+  exports.listOrders = orders.listOrdersCallable;
+  exports.searchBuyers = orders.searchBuyersCallable;
+}
 
 // Zdarzenia do podsumowania „od ostatniej wizyty” (kolekcja `events`).
 export { recordTenderEvents } from './notifications/events';
