@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototyp: wpisywanie zamówienia</title>
+<style>
+:root {
+  --surface:#fff; --raised:#eef1f8; --text:#18202f; --muted:#576078; --border:#d8dfec;
+  --accent:#1f5fe0; --accent-bg:rgba(31,95,224,.12); --danger:#e74c3c; --danger-bg:rgba(231,76,60,.1);
+  --warn-bg:rgba(243,156,18,.14); --warn-border:rgba(243,156,18,.5); --ok:#2ecc71; --bg:#f6f8fc;
+}
+[data-theme="dark"] {
+  --surface:#161c2a; --raised:#1d2435; --text:#e7ebf3; --muted:#9aa4ba; --border:#2a3349;
+  --accent:#6aa5ff; --accent-bg:rgba(106,165,255,.16); --bg:#0f1420;
+}
+* { box-sizing:border-box; }
+body { margin:0; font:14px/1.45 system-ui,Segoe UI,sans-serif; color:var(--text); background:var(--bg); }
+.proto { background:var(--warn-bg); border-bottom:1px solid var(--warn-border); padding:6px 16px; font-size:12px; display:flex; gap:12px; align-items:center; }
+.proto button { margin-left:auto; }
+header.top { position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--border); padding:10px 16px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+header.top h1 { font-size:17px; margin:0; }
+header.top .meta { color:var(--muted); font-size:13px; }
+.spacer { flex:1; }
+.badge { padding:2px 10px; border-radius:999px; font-size:12px; background:var(--raised); border:1px solid var(--border); }
+.badge.dirty { background:var(--warn-bg); border-color:var(--warn-border); }
+.badge.saved { background:rgba(46,204,113,.15); border-color:var(--ok); }
+main { max-width:1280px; margin:0 auto; padding:16px; }
+section.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:16px; }
+section.card > h2 { font-size:15px; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+.step { background:var(--accent-bg); color:var(--accent); border-radius:999px; width:22px; height:22px; display:inline-grid; place-items:center; font-size:12px; font-weight:700; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px 16px; }
+label.f { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); }
+label.f.wide { grid-column:span 2; }
+input,select,textarea { font:inherit; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:6px 8px; min-width:0; }
+input:focus,select:focus,textarea:focus { outline:2px solid var(--accent); outline-offset:-1px; }
+input[type=checkbox] { accent-color:var(--accent); }
+button { font:inherit; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:6px 12px; cursor:pointer; }
+button:hover:not(:disabled) { border-color:var(--accent); }
+button:disabled { opacity:.5; cursor:default; }
+button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+button.danger { color:var(--danger); }
+button.link { border:0; background:none; color:var(--accent); padding:2px 4px; }
+.note { font-size:12px; padding:6px 10px; border-radius:9px; margin-top:8px; }
+.note.warn { background:var(--warn-bg); border:1px solid var(--warn-border); }
+.note.info { background:var(--accent-bg); }
+.hidden { display:none !important; }
+/* zamawiający */
+.search { position:relative; max-width:520px; }
+.search input { width:100%; }
+.suggest { position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--surface); border:1px solid var(--border); border-radius:9px; box-shadow:0 12px 32px rgba(0,0,0,.18); z-index:4; max-height:260px; overflow:auto; }
+.suggest div { padding:8px 10px; cursor:pointer; }
+.suggest div:hover,.suggest div.sel { background:var(--accent-bg); }
+.suggest small { color:var(--muted); display:block; }
+.buyer { display:flex; gap:24px; flex-wrap:wrap; margin-top:12px; align-items:flex-start; }
+.buyer .box { background:var(--raised); border-radius:9px; padding:10px 14px; min-width:260px; }
+.contacts { display:flex; flex-direction:column; gap:6px; min-width:300px; }
+.contact { display:flex; gap:8px; align-items:flex-start; padding:6px 10px; border:1px solid var(--border); border-radius:9px; cursor:pointer; }
+.contact.sel { border-color:var(--accent); background:var(--accent-bg); }
+.contact small { color:var(--muted); display:block; }
+/* pozycje */
+.toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+.toolbar .sep { width:1px; height:22px; background:var(--border); margin:0 4px; }
+.scroll { overflow-x:auto; }
+table.pos { width:100%; border-collapse:collapse; font-size:13px; }
+table.pos th { text-align:left; font-size:12px; color:var(--muted); padding:4px 4px; white-space:nowrap; }
+table.pos td { padding:3px 3px; border-top:1px solid var(--border); vertical-align:middle; }
+table.pos td input,table.pos td select { width:100%; padding:4px 6px; border-color:transparent; background:transparent; }
+table.pos td input:hover,table.pos td select:hover { border-color:var(--border); }
+table.pos td input:focus,table.pos td select:focus { background:var(--surface); }
+table.pos tr.sel td { background:var(--accent-bg); }
+table.pos tr.del td { opacity:.55; text-decoration:line-through; }
+table.pos tr.del td:last-child,table.pos tr.del td:first-child { text-decoration:none; opacity:1; }
+td.n { width:36px; text-align:center; color:var(--muted); }
+td.chk { width:30px; text-align:center; }
+.rowact { white-space:nowrap; }
+.rowact button { padding:2px 8px; font-size:12px; }
+details.post { border:1px dashed var(--border); border-radius:12px; padding:12px 16px; background:var(--surface); margin-bottom:16px; }
+details.post summary { cursor:pointer; font-weight:600; }
+.toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#18202f; color:#fff; padding:10px 14px; border-radius:10px; display:flex; gap:14px; align-items:center; box-shadow:0 8px 24px rgba(0,0,0,.35); z-index:10; }
+.toast button { background:none; border:1px solid #6aa5ff; color:#6aa5ff; padding:2px 10px; }
+.kbd { font:11px monospace; background:var(--raised); border:1px solid var(--border); border-radius:5px; padding:0 5px; }
+.hint { color:var(--muted); font-size:12px; margin-top:6px; }
+@media (max-width:760px){ label.f.wide{grid-column:auto;} .buyer .box,.contacts{min-width:0;width:100%;} }
+</style>
+</head>
+<body>
+<div class="proto">
+  <strong>PROTOTYP</strong> Dane fikcyjne, nic nie jest zapisywane. Pokazuje pomysł na przepływ wpisywania, nie gotowy wygląd.
+  <button id="theme" type="button">Ciemny / jasny</button>
+</div>
+
+<header class="top">
+  <h1>Nowe zamówienie</h1>
+  <span class="meta">MDP ID: nadawany przy zapisie</span>
+  <span id="state" class="badge saved">Brak zmian</span>
+  <span class="spacer"></span>
+  <button type="button" id="reset">Wyczyść formularz</button>
+  <button type="button" id="save" class="primary">Zapisz zamówienie</button>
+</header>
+
+<main>
+  <section class="card" id="s-order">
+    <h2><span class="step">1</span> Zamówienie</h2>
+    <div class="grid">
+      <label class="f">Nr przetargu (u zamawiającego)<input id="bidNo" placeholder="np. ZP/12/2026"></label>
+      <label class="f wide">Nazwa<input id="name" placeholder="Krótki opis przedmiotu zamówienia"></label>
+      <label class="f">Data rejestracji<input id="regDate" type="date"></label>
+      <label class="f">Data publikacji<input id="pubDate" type="date"></label>
+      <label class="f">Termin ofert<input id="bidDate" type="date"></label>
+      <label class="f">Typ konta
+        <select id="acct"><option value="">wybierz</option><option>Public</option><option>Local govt</option><option>Central govt</option><option>Education</option><option>Healthcare</option></select></label>
+      <label class="f">Budżet<input id="budget" placeholder="np. poniżej 500 000 PLN"></label>
+      <label class="f wide">Link do SIWZ<input id="siwz" type="url" placeholder="https://"></label>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="eu"> Finansowanie UE</label>
+    </div>
+    <div id="orderWarn"></div>
+  </section>
+
+  <section class="card" id="s-buyer">
+    <h2><span class="step">2</span> Zamawiający i osoba kontaktowa</h2>
+    <div class="search">
+      <input id="buyerSearch" placeholder="Szukaj zamawiającego: nazwa, miasto lub NIP (wpisz np. „miasto”, „szpital”, „gmina”)" autocomplete="off">
+      <div id="suggest" class="suggest hidden"></div>
+    </div>
+    <div class="hint">Najpierw szukamy istniejącego zamawiającego, żeby nie tworzyć duplikatów. Nowego dodasz dopiero, gdy nie ma go na liście.</div>
+    <div id="buyerBox" class="buyer hidden"></div>
+  </section>
+
+  <section class="card" id="s-pos">
+    <h2><span class="step">3</span> Pozycje <span class="badge" id="posCount">0</span></h2>
+    <div class="toolbar">
+      <button type="button" id="add">+ Dodaj pozycję</button>
+      <span class="sep"></span>
+      <button type="button" id="dup" disabled>Duplikuj zaznaczone</button>
+      <label style="display:inline-flex;gap:6px;align-items:center">×<input id="copies" type="number" min="1" max="50" value="1" style="width:60px"></label>
+      <span class="sep"></span>
+      <select id="bulkLob"><option value="">Ustaw LoB zaznaczonym…</option></select>
+      <button type="button" id="bulkApply" disabled>Zastosuj</button>
+      <span class="sep"></span>
+      <button type="button" id="del" class="danger" disabled>Usuń zaznaczone</button>
+      <span class="spacer"></span>
+      <label style="display:inline-flex;gap:6px;align-items:center;color:var(--muted)"><input type="checkbox" id="showDeleted"> Pokaż usunięte (<span id="delCount">0</span>)</label>
+    </div>
+    <div class="scroll">
+      <table class="pos">
+        <thead><tr>
+          <th class="chk"><input type="checkbox" id="all" aria-label="Zaznacz wszystkie"></th>
+          <th>Nr</th><th>LoB</th><th>Ilość</th><th>Architektura</th><th>CPU</th><th>OS</th><th>Forma nabycia</th><th>Uwagi</th><th></th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="hint">
+      <span class="kbd">Tab</span> przechodzi do następnego pola, <span class="kbd">Enter</span> w ostatnim polu dodaje nową pozycję (z wartościami poprzedniej).
+      Usunięte pozycje można przywrócić; nic nie jest kasowane na stałe.
+    </div>
+    <div id="posWarn"></div>
+  </section>
+
+  <details class="post">
+    <summary>4. Po rozstrzygnięciu (zwycięzca, vendor, status, wartość) <span class="badge">wypełnia analityczka później</span></summary>
+    <p class="hint">Ta część jest zwinięta przy wpisywaniu zamówienia. Uzupełnia się ją osobno z widoku „Do rozstrzygnięcia”, gdzie zamówienia po terminie ofert czekają w kolejce.</p>
+    <div class="grid">
+      <label class="f">Status pozycji<select disabled><option>Pending</option></select></label>
+      <label class="f">Zwycięzca<input disabled placeholder="wybór z listy z podpowiedziami"></label>
+      <label class="f">Vendor<input disabled placeholder="wybór z listy"></label>
+      <label class="f">Data listu<input type="date" disabled></label>
+    </div>
+  </details>
+</main>
+
+<script>
+const BUYERS = [
+  { id:1, name:'Urząd Miasta Przykładowo', town:'Przykładowo', nip:'1111111111', contacts:[
+    { id:11, name:'Anna Wzorowa', mail:'a.wzorowa@przykladowo.example', phone:'+48 11 111 11 11' },
+    { id:12, name:'Jan Testowy', mail:'j.testowy@przykladowo.example', phone:'+48 11 111 11 12' } ] },
+  { id:2, name:'Szpital Powiatowy w Wymyślonie', town:'Wymyślone', nip:'2222222222', contacts:[
+    { id:21, name:'Ewa Przykładowa', mail:'zamowienia@szpital-wymyslone.example', phone:'+48 22 222 22 22' } ] },
+  { id:3, name:'Gmina Fikcyjna', town:'Fikcyjna', nip:'3333333333', contacts:[
+    { id:31, name:'Piotr Demonstracyjny', mail:'p.demo@fikcyjna.example', phone:'+48 33 333 33 33' } ] },
+  { id:4, name:'Gmina Fikcyjna — Zakład Gospodarki Komunalnej', town:'Fikcyjna', nip:'3333333333', contacts:[] },
+  { id:5, name:'Politechnika Testowa', town:'Testowo', nip:'4444444444', contacts:[
+    { id:51, name:'Maria Prototypowa', mail:'dzp@pt.example', phone:'+48 44 444 44 44' } ] },
+];
+const EXISTING = [{ bidNo:'ZP/12/2026', buyerId:1, mdp:'7701', reg:'2026-11-02' }];
+const LOB = ['Notebook','Desktop','Workstation','Server','Monitor','Phone','Tablet','Other'];
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let positions = []; let nextId = 1; let buyer = null; let contactId = null; let dirty = false; let toastTimer = null;
+
+const markDirty = () => { dirty = true; const s = $('state'); s.className = 'badge dirty'; s.textContent = 'Niezapisane zmiany'; };
+const markSaved = () => { dirty = false; const s = $('state'); s.className = 'badge saved'; s.textContent = 'Zapisano (symulacja)'; };
+
+function newPos(from) {
+  return { id: nextId++, lob: from?.lob ?? '', qty: from?.qty ?? '', arch: from?.arch ?? '', cpu: from?.cpu ?? '',
+           os: from?.os ?? '', form: from?.form ?? '', remarks: from?.remarks ?? '', deleted: false, selected: false };
+}
+const visible = () => positions.filter((p) => !p.deleted || $('showDeleted').checked);
+const live = () => positions.filter((p) => !p.deleted);
+const lobSel = (v) => `<select data-k="lob"><option value=""></option>${LOB.map((l) => `<option${l === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+
+function renderRows(focusId) {
+  let n = 0;
+  $('rows').innerHTML = visible().map((p) => {
+    const num = p.deleted ? '–' : ++n;
+    return `<tr data-id="${p.id}" class="${p.selected ? 'sel' : ''} ${p.deleted ? 'del' : ''}">
+      <td class="chk"><input type="checkbox" data-sel ${p.selected ? 'checked' : ''} ${p.deleted ? 'disabled' : ''}></td>
+      <td class="n">${num}</td>
+      <td>${lobSel(p.lob)}</td>
+      <td><input data-k="qty" type="number" min="1" value="${esc(p.qty)}" style="max-width:80px"></td>
+      <td><input data-k="arch" value="${esc(p.arch)}" placeholder="x86 / ARM"></td>
+      <td><input data-k="cpu" value="${esc(p.cpu)}"></td>
+      <td><input data-k="os" value="${esc(p.os)}"></td>
+      <td><input data-k="form" value="${esc(p.form)}" placeholder="zakup / leasing"></td>
+      <td><input data-k="remarks" value="${esc(p.remarks)}"></td>
+      <td class="rowact">${p.deleted
+        ? '<button type="button" data-restore>Przywróć</button>'
+        : '<button type="button" data-dup1 title="Duplikuj tę pozycję">⧉</button> <button type="button" data-del1 class="danger" title="Usuń">✕</button>'}</td>
+    </tr>`;
+  }).join('');
+  updateUi();
+  if (focusId) { const el = document.querySelector(`tr[data-id="${focusId}"] [data-k="lob"]`); if (el) el.focus(); }
+}
+
+function updateUi() {
+  const l = live(); const sel = l.filter((p) => p.selected);
+  $('posCount').textContent = String(l.length);
+  $('delCount').textContent = String(positions.length - l.length);
+  $('dup').disabled = sel.length === 0; $('del').disabled = sel.length === 0; $('bulkApply').disabled = sel.length === 0 || !$('bulkLob').value;
+  $('all').checked = l.length > 0 && sel.length === l.length;
+  $('posWarn').innerHTML = l.length === 0 ? '<div class="note info">Dodaj co najmniej jedną pozycję. Zamówienie bez pozycji nie trafi do raportów.</div>' : '';
+}
+
+function toast(msg, undo) {
+  clearTimeout(toastTimer); document.querySelector('.toast')?.remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status');
+  t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button type="button">Cofnij</button>' : ''}`;
+  if (undo) t.querySelector('button').onclick = () => { undo(); t.remove(); };
+  document.body.appendChild(t); toastTimer = setTimeout(() => t.remove(), 7000);
+}
+
+function addPos(from) { const p = newPos(from); positions.push(p); markDirty(); renderRows(p.id); return p; }
+const idOf = (el) => Number(el.closest('tr').dataset.id);
+const byId = (id) => positions.find((p) => p.id === id);
+
+function softDelete(ids) {
+  const items = ids.map(byId); items.forEach((p) => { p.deleted = true; p.selected = false; }); markDirty(); renderRows();
+  toast(`Usunięto pozycji: ${items.length}`, () => { items.forEach((p) => { p.deleted = false; }); renderRows(); });
+}
+
+$('rows').addEventListener('input', (e) => { const k = e.target.dataset.k; if (k) { byId(idOf(e.target))[k] = e.target.value; markDirty(); } });
+$('rows').addEventListener('change', (e) => {
+  if (e.target.matches('[data-sel]')) { byId(idOf(e.target)).selected = e.target.checked; renderRows(); }
+});
+$('rows').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return; const id = idOf(b);
+  if (b.matches('[data-del1]')) softDelete([id]);
+  if (b.matches('[data-dup1]')) addPos(byId(id));
+  if (b.matches('[data-restore]')) { byId(id).deleted = false; markDirty(); renderRows(); }
+});
+$('rows').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !e.target.dataset.k) return;
+  const tr = e.target.closest('tr'); const last = tr.querySelector('[data-k="remarks"]');
+  if (e.target === last) { e.preventDefault(); addPos(byId(idOf(e.target))); }
+});
+$('add').onclick = () => addPos(live().at(-1));
+$('dup').onclick = () => {
+  const n = Math.max(1, Math.min(50, Number($('copies').value) || 1)); const src = live().filter((p) => p.selected);
+  src.forEach((p) => { for (let i = 0; i < n; i++) positions.push(newPos(p)); }); markDirty(); renderRows();
+  toast(`Dodano ${src.length * n} pozycji (kopie ${src.length} × ${n})`);
+};
+$('del').onclick = () => softDelete(live().filter((p) => p.selected).map((p) => p.id));
+$('all').onchange = (e) => { live().forEach((p) => { p.selected = e.target.checked; }); renderRows(); };
+$('showDeleted').onchange = () => renderRows();
+LOB.forEach((l) => { const o = document.createElement('option'); o.textContent = l; $('bulkLob').appendChild(o); });
+$('bulkLob').onchange = updateUi;
+$('bulkApply').onclick = () => { const v = $('bulkLob').value; live().filter((p) => p.selected).forEach((p) => { p.lob = v; }); markDirty(); renderRows(); toast(`Ustawiono LoB „${v}” w zaznaczonych pozycjach`); };
+
+/* zamawiający */
+function renderBuyer() {
+  const box = $('buyerBox');
+  if (!buyer) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  const others = BUYERS.filter((b) => b.id !== buyer.id && b.nip === buyer.nip);
+  box.innerHTML = `
+    <div class="box"><strong>${esc(buyer.name)}</strong><br>${esc(buyer.town)}<br>NIP ${esc(buyer.nip)}
+      <div><button type="button" class="link" id="changeBuyer">Zmień zamawiającego</button></div>
+      ${others.length ? `<div class="note info">Ten sam NIP mają jeszcze: ${others.map((o) => esc(o.name)).join('; ')}. To mogą być osobne jednostki; sprawdź, czy wybrano właściwą.</div>` : ''}
+    </div>
+    <div class="contacts"><strong style="font-size:12px;color:var(--muted)">Osoba kontaktowa (tylko tego zamawiającego)</strong>
+      ${buyer.contacts.length ? buyer.contacts.map((c) => `<label class="contact ${c.id === contactId ? 'sel' : ''}"><input type="radio" name="contact" value="${c.id}" ${c.id === contactId ? 'checked' : ''}>
+        <span>${esc(c.name)}<small>${esc(c.mail)} · ${esc(c.phone)}</small></span></label>`).join('') : '<div class="hint">Brak zapisanych kontaktów.</div>'}
+      <button type="button" id="newContact">+ Nowy kontakt</button>
+      <div id="contactForm" class="hidden grid" style="margin-top:6px">
+        <label class="f">Imię i nazwisko<input id="ncName"></label><label class="f">E-mail<input id="ncMail" type="email"></label>
+        <label class="f">Telefon<input id="ncPhone"></label><div style="align-self:end"><button type="button" id="ncAdd" class="primary">Dodaj kontakt</button></div>
+      </div>
+    </div>`;
+}
+$('buyerBox').addEventListener('click', (e) => {
+  if (e.target.id === 'changeBuyer') { buyer = null; contactId = null; renderBuyer(); $('buyerSearch').value = ''; $('buyerSearch').focus(); checkDuplicate(); }
+  if (e.target.id === 'newContact') $('contactForm').classList.toggle('hidden');
+  if (e.target.id === 'ncAdd') {
+    const name = $('ncName').value.trim(); if (!name) { $('ncName').focus(); return; }
+    const c = { id: Date.now(), name, mail: $('ncMail').value.trim() || 'brak e-maila', phone: $('ncPhone').value.trim() || 'brak telefonu' };
+    buyer.contacts.push(c); contactId = c.id; markDirty(); renderBuyer(); toast(`Dodano kontakt: ${name}`);
+  }
+});
+$('buyerBox').addEventListener('change', (e) => { if (e.target.name === 'contact') { contactId = Number(e.target.value); markDirty(); renderBuyer(); } });
+const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
+let sIdx = -1;
+function showSuggest() {
+  const q = norm($('buyerSearch').value.trim()); const box = $('suggest');
+  if (q.length < 2) { box.classList.add('hidden'); return; }
+  const res = BUYERS.filter((b) => norm(`${b.name} ${b.town} ${b.nip}`).includes(q));
+  box.innerHTML = res.length ? res.map((b, i) => `<div data-id="${b.id}" class="${i === sIdx ? 'sel' : ''}">${esc(b.name)}<small>${esc(b.town)} · NIP ${esc(b.nip)} · kontaktów: ${b.contacts.length}</small></div>`).join('')
+    : '<div style="cursor:default">Brak wyników. <button type="button" class="link" id="createBuyer">Dodaj nowego zamawiającego</button></div>';
+  box.classList.remove('hidden'); box._res = res;
+}
+function pickBuyer(b) { buyer = b; contactId = b.contacts[0]?.id ?? null; $('suggest').classList.add('hidden'); $('buyerSearch').value = b.name; markDirty(); renderBuyer(); checkDuplicate(); }
+$('buyerSearch').addEventListener('input', () => { sIdx = -1; showSuggest(); });
+$('buyerSearch').addEventListener('keydown', (e) => {
+  const box = $('suggest'); const res = box._res || [];
+  if (e.key === 'ArrowDown') { sIdx = Math.min(res.length - 1, sIdx + 1); showSuggest(); e.preventDefault(); }
+  if (e.key === 'ArrowUp') { sIdx = Math.max(0, sIdx - 1); showSuggest(); e.preventDefault(); }
+  if (e.key === 'Enter' && res[Math.max(0, sIdx)]) { pickBuyer(res[Math.max(0, sIdx)]); e.preventDefault(); }
+  if (e.key === 'Escape') box.classList.add('hidden');
+});
+$('suggest').addEventListener('click', (e) => {
+  const d = e.target.closest('[data-id]'); if (d) pickBuyer(BUYERS.find((b) => b.id === Number(d.dataset.id)));
+  if (e.target.id === 'createBuyer') toast('W prawdziwej wersji: formularz nowego zamawiającego (nazwa, adres, NIP).');
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('.search')) $('suggest').classList.add('hidden'); });
+
+/* walidacja zamówienia */
+function checkOrder() {
+  const pub = $('pubDate').value; const bid = $('bidDate').value; const msgs = [];
+  if (pub && bid && bid < pub) msgs.push('Termin ofert jest wcześniejszy niż data publikacji. Sprawdź daty (możesz zapisać mimo to).');
+  const url = $('siwz').value.trim(); if (url && !/^https?:\/\//i.test(url)) msgs.push('Link do SIWZ powinien zaczynać się od http:// lub https://.');
+  $('orderWarn').innerHTML = msgs.map((m) => `<div class="note warn">${esc(m)}</div>`).join('') + $('orderWarn').dataset.dup;
+}
+function checkDuplicate() {
+  const no = $('bidNo').value.trim().toLowerCase(); const hit = buyer && no && EXISTING.find((x) => x.buyerId === buyer.id && x.bidNo.toLowerCase() === no);
+  $('orderWarn').dataset.dup = hit ? `<div class="note warn">Takie zamówienie już istnieje: MDP ${esc(hit.mdp)}, zarejestrowane ${esc(hit.reg)} (ten sam zamawiający i numer przetargu). <button type="button" class="link">Otwórz istniejące</button></div>` : '';
+  checkOrder();
+}
+['bidNo'].forEach((id) => $(id).addEventListener('input', checkDuplicate));
+['pubDate', 'bidDate', 'siwz'].forEach((id) => $(id).addEventListener('input', checkOrder));
+document.querySelectorAll('#s-order input,#s-order select').forEach((el) => el.addEventListener('input', markDirty));
+
+$('save').onclick = () => {
+  const miss = [];
+  if (!$('bidDate').value) miss.push('termin ofert'); if (!buyer) miss.push('zamawiający'); if (live().length === 0) miss.push('co najmniej jedna pozycja');
+  if (miss.length) { toast(`Do uzupełnienia: ${miss.join(', ')}.`); return; }
+  markSaved(); toast('Zapisano (symulacja). W prawdziwej wersji tu nadawany jest MDP ID.');
+};
+$('reset').onclick = () => { location.reload(); };
+window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+$('theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'dark' ? '' : 'dark'; };
+if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
+
+$('regDate').value = new Date().toISOString().slice(0, 10);
+$('orderWarn').dataset.dup = '';
+/* start: dwie przykładowe pozycje, żeby było co kopiować */
+positions.push(Object.assign(newPos(), { lob: 'Notebook', qty: 20, arch: 'x86', cpu: 'i5', os: 'Windows 11 Pro', form: 'zakup' }));
+positions.push(Object.assign(newPos(), { lob: 'Monitor', qty: 20, form: 'zakup' }));
+renderRows(); dirty = false; markSaved(); $('state').textContent = 'Brak zmian'; $('state').className = 'badge saved';
+</script>
+</body>
+</html>
