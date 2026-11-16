@@ -25,14 +25,18 @@ export const PLACEHOLDER_TEXTS = {
 } as const;
 
 export const MESSAGES = {
-    NO_TENDERS: "Brak zamówień dla wybranej daty.",
-    NO_IT_TENDERS: "Brak zamówień IT dla wybranej daty.",
     LOADING: "Ładowanie danych...",
     NO_BUYERS: "Brak zamawiających",
     NO_CITIES: "Brak miast",
-    QUEUE_EMPTY: "Kolejka jest pusta: wszystkie pasujące ogłoszenia są ocenione. Zmień filtr statusu, żeby je zobaczyć.",
-    QUEUE_HINT: "Domyślnie widzisz kolejkę: ogłoszenia, których nikt jeszcze nie ocenił.",
-    SHORTCUTS_HINT: "Skróty: J/K — poprzednie/następne, 1–4 — status, 0 — usuń status, S — gwiazdka, / — szukaj.",
+    // Puste stany listy: osobny komunikat dla każdej przyczyny (patrz utils/emptyState.ts)
+    EMPTY_NO_DATA: "Brak ogłoszeń dla wybranej daty.",
+    EMPTY_QUEUE: "Kolejka jest pusta: wszystkie pasujące ogłoszenia mają już status.",
+    EMPTY_FILTERED: "Żadne ogłoszenie nie pasuje do wybranych filtrów ani frazy.",
+    EMPTY_NO_IT: "W wybranym okresie nie ma ogłoszeń z kodami CPV z branży IT.",
+    EMPTY_OTHER: "Brak ogłoszeń do pokazania. Ogłoszenia z gwiazdką są w zakładce „Zapisane”, a ukryci zamawiający są pominięci.",
+    QUEUE_CHIP: "Tylko nieocenione",
+    QUEUE_CHIP_TITLE: "Domyślny widok: ogłoszenia, których nikt jeszcze nie ocenił",
+    SHORTCUTS_HINT: "Skróty: J — następne, K — poprzednie, 1–4 — status, 0 — usuń status, S — gwiazdka, / — szukaj.",
     SHORTCUTS_OFF_HINT: "Skróty klawiszowe są wyłączone.",
     SHORTCUTS_TITLE: "Skróty: J/K, 1–4, 0, S, /",
     SAVED_HINT: "Gwiazdka jest prywatna, status jest wspólny dla zespołu."

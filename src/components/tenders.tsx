@@ -300,9 +300,15 @@ const Tenders: React.FC = () => {
                                     commentsError={commentsError}
                                     advertiserError={advertiserError}
                                     unmarkedCount={facetCounts.statuses.unmarked ?? 0}
-                                    showQueueHint={isQueueStatusFilter(statusFilters)}
+                                    rangeCount={unsavedTenders.length}
                                     isQueueEmpty={isQueueEmpty}
                                     isFiltered={isFiltered}
+                                    hasActiveFilters={activeChips.length > 0 || searchQuery.trim() !== ""}
+                                    canRefresh={canRefreshAny}
+                                    onRefresh={handleRefresh}
+                                    onShowAllStatuses={filters.handleShowAllStatuses}
+                                    onClearFilters={handleClearFilters}
+                                    onShowNonIt={() => filters.setIsFiltered(false)}
                                     favoritesCount={favorites.length}
                                     getDisplayedCpvCodes={getDisplayedCpvCodes}
                                     liveTendersById={liveTendersById}

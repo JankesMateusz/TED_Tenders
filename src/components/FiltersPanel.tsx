@@ -3,7 +3,7 @@ import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
 import { DEFAULT_ORDER_TYPES } from '../constants';
 import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
-import { ALL_SOURCES } from '../utils/persistedFilters';
+import { ALL_SOURCES, isQueueStatusFilter } from '../utils/persistedFilters';
 import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
 import { TenderLabel } from '../types/TenderLabel';
 import { DocsFilter } from '../types/DocsCheck';
@@ -228,6 +228,8 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 onRemove={onRemoveChip}
                 hasActiveFilters={hasActiveFilters}
                 onClearFilters={onClearFilters}
+                queueActive={isQueueStatusFilter(statusFilters)}
+                onShowRated={onShowAllStatuses}
             />
         </>
     );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActiveFilterChip } from '../utils/activeFilters';
+import { MESSAGES } from '../constants';
 import styles from './Tenders.module.css';
 
 interface ActiveFilterChipsProps {
@@ -8,6 +9,9 @@ interface ActiveFilterChipsProps {
     /** Czy cokolwiek zawęża listę (także fraza wyszukiwania i domyślna kolejka); steruje przyciskiem czyszczenia. */
     hasActiveFilters: boolean;
     onClearFilters: () => void;
+    /** Czy widać domyślną kolejkę (tylko nieocenione); wtedy pierwszy chip to mówi, a jego ✕ pokazuje też ocenione. */
+    queueActive?: boolean;
+    onShowRated?: () => void;
 }
 
 const CloseIcon: React.FC = () => (
@@ -17,8 +21,22 @@ const CloseIcon: React.FC = () => (
 );
 
 /** Jeden rząd chipów z tym, co zawęża listę, plus "Wyczyść filtry". Zmiany są zapowiadane czytnikom ekranu (aria-live). */
-export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ chips, onRemove, hasActiveFilters, onClearFilters }) => (
+export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ chips, onRemove, hasActiveFilters, onClearFilters, queueActive, onShowRated }) => (
     <div className={styles.activeChips} aria-live="polite">
+        {queueActive && onShowRated && (
+            <span className={styles.activeChip} title={MESSAGES.QUEUE_CHIP_TITLE}>
+                {MESSAGES.QUEUE_CHIP}
+                <button
+                    type="button"
+                    className={styles.activeChipRemove}
+                    onClick={onShowRated}
+                    aria-label="Pokaż też ocenione ogłoszenia"
+                    title="Pokaż też ocenione"
+                >
+                    <CloseIcon />
+                </button>
+            </span>
+        )}
         {chips.map((chip) => (
             <span key={chip.id} className={styles.activeChip}>
                 {chip.label}
