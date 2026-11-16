@@ -1,3 +1,5 @@
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { initializeApp } from 'firebase-admin/app';
 
 initializeApp();
@@ -8,10 +10,11 @@ export { snapshotLabelOnStatusChange } from './labels/labelSnapshot';
 export { resolveDocumentsCallable as resolveDocuments } from './analysis/resolveCallable';
 export { checkDocsNow, checkDocumentsTask, enqueueDocsCheckOnCreate, enqueueDocsChecks } from './analysis/docsCheck/docsCheck';
 
-// Funkcje modułu zamówień. Eksportowane tylko przy ENABLE_ORDERS_FUNCTIONS=true (ustawia to deploy.yml dla środowiska
-// testowego), bo wymagają sekretu ORDERS_DATABASE_URL w projekcie, na który wdrażamy (patrz db/README.md).
-// Bez zmiennej funkcje nie istnieją w tym wdrożeniu, więc projekt bez sekretu (produkcja) wdraża się normalnie.
-if (process.env.ENABLE_ORDERS_FUNCTIONS === 'true') {
+// Funkcje modułu zamówień. Eksportowane tylko, gdy istnieje plik functions/orders.enabled (tworzy go deploy.yml dla
+// środowiska testowego), bo wymagają sekretu ORDERS_DATABASE_URL w projekcie, na który wdrażamy (patrz db/README.md).
+// Bez pliku funkcje nie istnieją w tym wdrożeniu, więc projekt bez sekretu (produkcja) wdraża się normalnie.
+// Zmienna środowiskowa się nie nadaje: Firebase CLI nie przekazuje jej do wykrywania funkcji podczas wdrożenia.
+if (existsSync(join(__dirname, '..', 'orders.enabled'))) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const orders = require('./orders/callables');
   exports.getBuyer = orders.getBuyerCallable;
