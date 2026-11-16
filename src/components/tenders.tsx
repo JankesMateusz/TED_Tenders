@@ -34,7 +34,7 @@ const Tenders: React.FC = () => {
     const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
     const { user } = useAuth();
     const uid = user?.uid ?? null;
-    const { favorites, isFavorite, toggleFavorite, toggleStatus, actionError } = useUserPreferences();
+    const { favorites, toggleFavorite, toggleStatus, wasChangedByMe, actionError } = useUserPreferences();
     const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
 
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
@@ -123,22 +123,20 @@ const Tenders: React.FC = () => {
     // Przetargi z bazy wspólnej po id; tylko dla nich można zmienić status (kopie z "Zapisane" mogły już wygasnąć)
     const liveTendersById = useMemo(() => new Map(tenders.map((tender) => [tender.id, tender])), [tenders]);
 
-    // Własne gwiazdki znikają z głównej listy i są w zakładce "Zapisane", gdzie (jeśli przetarg jest
-    // jeszcze w bazie) widać też aktualny wspólny status.
+    // Własne gwiazdki trafiają też do zakładki "Zapisane" (przetarg tam zostaje po wygaśnięciu w bazie wspólnej),
+    // ale karta zostaje na wspólnej liście z wypełnioną gwiazdką, żeby licznik i kolejka nie zależały od prywatnych oznaczeń.
     const savedTenders = useMemo(
         () => favorites.map((favorite) => liveTendersById.get(favorite.id) ?? favorite),
         [favorites, liveTendersById]
     );
-    const unsavedTenders = useMemo(() => tenders.filter((tender) => !isFavorite(tender.id)), [tenders, isFavorite]);
-
     const applyFilters = useCallback((list: Tender[]) => filterAndSortTenders(list, filterOptions), [filterOptions]);
 
     // Obie listy są filtrowane osobno, by licznik "Przetargi" nie zależał od aktywnej zakładki
-    const filteredTenders = useMemo(() => applyFilters(unsavedTenders), [applyFilters, unsavedTenders]);
+    const filteredTenders = useMemo(() => applyFilters(tenders), [applyFilters, tenders]);
     const filteredSavedTenders = useMemo(() => filterAndSortTenders(savedTenders, savedFilterOptions), [savedTenders, savedFilterOptions]);
     const hiddenAdvertisersCount = useMemo(
-        () => unsavedTenders.filter((tender) => isHiddenAdvertiser(tender, advertiserDecisions)).length,
-        [unsavedTenders, advertiserDecisions]
+        () => tenders.filter((tender) => isHiddenAdvertiser(tender, advertiserDecisions)).length,
+        [tenders, advertiserDecisions]
     );
     const displayedTenders = activeTab === 'saved' ? filteredSavedTenders : filteredTenders;
 
@@ -147,7 +145,7 @@ const Tenders: React.FC = () => {
     useReportNewInView(countNewSince(activeTab === 'statistics' ? [] : displayedTenders, awaySince));
 
     // Listy w panelu bocznym pomijają własny filtr (żeby dało się dobrać kolejne pozycje), ale uwzględniają resztę
-    const activeTabTenders = activeTab === 'saved' ? savedTenders : unsavedTenders;
+    const activeTabTenders = activeTab === 'saved' ? savedTenders : tenders;
     const activeTabOptions = activeTab === 'saved' ? savedFilterOptions : filterOptions;
     const buyerOptionTenders = useMemo(
         () => filterTenders(activeTabTenders, activeTabOptions, 'buyer'),
@@ -176,7 +174,8 @@ const Tenders: React.FC = () => {
         activeTab,
         liveTendersById,
         toggleFavorite,
-        toggleStatus
+        toggleStatus,
+        wasChangedByMe
     });
 
     const tendersCountBySource = useMemo(() => {
@@ -198,9 +197,8 @@ const Tenders: React.FC = () => {
         startDay,
         endDay,
         todayDay,
-        unsavedTenders,
-        filterOptions,
-        isFavorite
+        rangeTenders: tenders,
+        filterOptions
     });
 
     return (
@@ -299,9 +297,15 @@ const Tenders: React.FC = () => {
                                     commentsError={commentsError}
                                     advertiserError={advertiserError}
                                     unmarkedCount={facetCounts.statuses.unmarked ?? 0}
-                                    showQueueHint={isQueueStatusFilter(statusFilters)}
+                                    rangeCount={tenders.length}
                                     isQueueEmpty={isQueueEmpty}
                                     isFiltered={isFiltered}
+                                    hasActiveFilters={activeChips.length > 0 || searchQuery.trim() !== ""}
+                                    canRefresh={canRefreshAny}
+                                    onRefresh={handleRefresh}
+                                    onShowAllStatuses={filters.handleShowAllStatuses}
+                                    onClearFilters={handleClearFilters}
+                                    onShowNonIt={() => filters.setIsFiltered(false)}
                                     favoritesCount={favorites.length}
                                     getDisplayedCpvCodes={getDisplayedCpvCodes}
                                     liveTendersById={liveTendersById}

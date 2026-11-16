@@ -5,6 +5,8 @@ import { MESSAGES } from "../constants";
 import { pluralizeTenders } from "../utils/pluralPl";
 import { isHiddenAdvertiser } from "../utils/advertisers";
 import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
+import { setShortcutsEnabled, useShortcutsEnabled } from "../hooks/useShortcutsSetting";
+import { EmptyStateKind, getEmptyStateKind } from "../utils/emptyState";
 import TenderCard from "./TenderCard";
 import styles from "./Tenders.module.css";
 
@@ -32,10 +34,19 @@ type Props = {
     advertiserError: string | null;
     // Nagłówek kolejki i puste stany
     unmarkedCount: number;
-    showQueueHint: boolean;
+    /** Ile ogłoszeń z wybranego zakresu może trafić na listę, zanim zadziałają filtry. */
+    rangeCount: number;
     isQueueEmpty: boolean;
     isFiltered: boolean;
+    /** Czy cokolwiek zawęża listę: chipy filtrów albo fraza wyszukiwania. */
+    hasActiveFilters: boolean;
     favoritesCount: number;
+    /** Akcje z pustych stanów i błędów. */
+    canRefresh: boolean;
+    onRefresh: () => void;
+    onShowAllStatuses: () => void;
+    onClearFilters: () => void;
+    onShowNonIt: () => void;
     // Karty
     getDisplayedCpvCodes: (tender: Tender) => string[];
     liveTendersById: Map<string, Tender>;
@@ -68,8 +79,26 @@ const TendersSkeleton: React.FC = () => (
     </div>
 );
 
-const AlertMessage: React.FC<{ message: string | null }> = ({ message }) =>
-    message ? <p className={styles.message} role="alert">{message}</p> : null;
+/** Komunikat o błędzie; z `action` ma przy sobie przycisk następnego kroku (np. "Spróbuj ponownie"). */
+const AlertMessage: React.FC<{ message: string | null; action?: { label: string; onClick: () => void } }> = ({ message, action }) =>
+    message ? (
+        <div className={styles.emptyState} role="alert">
+            <p className={styles.emptyText}>{message}</p>
+            {action && (
+                <button type="button" className={styles.emptyAction} onClick={action.onClick}>
+                    {action.label}
+                </button>
+            )}
+        </div>
+    ) : null;
+
+const EMPTY_MESSAGES: Record<EmptyStateKind, string> = {
+    noData: MESSAGES.EMPTY_NO_DATA,
+    queueEmpty: MESSAGES.EMPTY_QUEUE,
+    filtered: MESSAGES.EMPTY_FILTERED,
+    noIt: MESSAGES.EMPTY_NO_IT,
+    other: MESSAGES.EMPTY_OTHER
+};
 
 export const TendersList: React.FC<Props> = ({
     activeTab,
@@ -83,10 +112,16 @@ export const TendersList: React.FC<Props> = ({
     commentsError,
     advertiserError,
     unmarkedCount,
-    showQueueHint,
+    rangeCount,
     isQueueEmpty,
     isFiltered,
+    hasActiveFilters,
     favoritesCount,
+    canRefresh,
+    onRefresh,
+    onShowAllStatuses,
+    onClearFilters,
+    onShowNonIt,
     getDisplayedCpvCodes,
     liveTendersById,
     commentsByTender,
@@ -97,7 +132,19 @@ export const TendersList: React.FC<Props> = ({
     activeTenderId,
     onActivateTender
 }) => {
+    const shortcutsEnabled = useShortcutsEnabled();
     const isTendersTab = activeTab === "tenders";
+    const emptyKind = getEmptyStateKind({ rangeCount, isQueueEmpty, hasActiveFilters, isItOnly: isFiltered });
+
+    // Następny krok zależy od przyczyny: pobranie danych, pokazanie ocenionych, wyczyszczenie filtrów albo wyjście z "Tylko IT"
+    const emptyActions: Record<EmptyStateKind, { label: string; onClick: () => void } | null> = {
+        noData: canRefresh ? { label: "Pobierz nowe ogłoszenia", onClick: onRefresh } : null,
+        queueEmpty: { label: "Pokaż ocenione", onClick: onShowAllStatuses },
+        filtered: { label: "Wyczyść filtry", onClick: onClearFilters },
+        noIt: { label: "Pokaż także spoza IT", onClick: onShowNonIt },
+        other: null
+    };
+    const emptyAction = emptyActions[emptyKind];
 
     return (
         <>
@@ -111,15 +158,20 @@ export const TendersList: React.FC<Props> = ({
                                 <strong>{displayedTenders.length} {pluralizeTenders(displayedTenders.length)}</strong>
                                 {" · "}do przejrzenia: <strong>{unmarkedCount}</strong>
                             </span>
-                            {showQueueHint && <span className={styles.queueHint}>{MESSAGES.QUEUE_HINT}</span>}
-                            <span className={`${styles.queueHint} ${styles.queueHintFull}`}>{MESSAGES.SHORTCUTS_HINT}</span>
+                            <span className={`${styles.queueHint} ${styles.queueHintFull}`}>
+                                {shortcutsEnabled ? MESSAGES.SHORTCUTS_HINT : MESSAGES.SHORTCUTS_OFF_HINT}
+                                {" "}
+                                <button type="button" className={styles.hintAction} onClick={() => setShortcutsEnabled(!shortcutsEnabled)}>
+                                    {shortcutsEnabled ? "Wyłącz skróty" : "Włącz skróty"}
+                                </button>
+                            </span>
                         </>
                     )}
                 </div>
             )}
             {isTendersTab && isLoading && <TendersSkeleton />}
-            {isTendersTab && <AlertMessage message={loadError} />}
-            {isTendersTab && <AlertMessage message={refreshError} />}
+            {isTendersTab && <AlertMessage message={loadError} action={{ label: "Wczytaj stronę ponownie", onClick: () => window.location.reload() }} />}
+            {isTendersTab && <AlertMessage message={refreshError} action={canRefresh ? { label: "Spróbuj ponownie", onClick: onRefresh } : undefined} />}
             <AlertMessage message={actionError} />
             <AlertMessage message={commentsError} />
             <AlertMessage message={advertiserError} />
@@ -132,11 +184,14 @@ export const TendersList: React.FC<Props> = ({
                 </p>
             )}
             {isTendersTab && displayedTenders.length === 0 && !isLoading && !isRefreshing && !loadError && (
-                <p className={styles.message}>
-                    {isQueueEmpty
-                        ? MESSAGES.QUEUE_EMPTY
-                        : isFiltered ? MESSAGES.NO_IT_TENDERS : MESSAGES.NO_TENDERS}
-                </p>
+                <div className={styles.emptyState}>
+                    <p className={styles.emptyText}>{EMPTY_MESSAGES[emptyKind]}</p>
+                    {emptyAction && (
+                        <button type="button" className={styles.emptyAction} onClick={emptyAction.onClick}>
+                            {emptyAction.label}
+                        </button>
+                    )}
+                </div>
             )}
             {activeTab === "saved" && favoritesCount === 0 && (
                 <p className={styles.message}>{NO_SAVED_TENDERS_MESSAGE}</p>

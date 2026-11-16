@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { TenderStatus } from '../types/TenderStatus';
 import { STATUS_CONFIG, TENDER_STATUSES, statusAuthorCaption } from '../utils/tenderStatus';
 import { MESSAGES } from '../constants';
+import StatusIcon from './StatusIcon';
+import { focusLeftContainer } from '../utils/focusOut';
 import styles from './StatusMenu.module.css';
 
 type Props = {
@@ -67,6 +69,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
             <div className={styles.container}>
                 <span className={styles.readOnly} style={{ '--status-color': config.color } as React.CSSProperties}>
                     <span className={styles.dot} aria-hidden="true" />
+                    {status && <StatusIcon status={status} />}
                     {config.label}
                 </span>
                 <span className={styles.caption}>{caption}</span>
@@ -76,7 +79,14 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
 
     return (
         // Puste title wyłącza ewentualne podpowiedzi rodzica nad menu
-        <div ref={containerRef} className={styles.container} title="">
+        <div
+            ref={containerRef}
+            className={styles.container}
+            title=""
+            onBlur={(event) => {
+                if (focusLeftContainer(event)) setOpen(false);
+            }}
+        >
             <button
                 ref={triggerRef}
                 type="button"
@@ -85,17 +95,20 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                 onClick={() => setOpen((prev) => !prev)}
                 aria-haspopup="menu"
                 aria-expanded={open}
+                // Pełna nazwa: status oraz kto i kiedy go ustawił (podpis pod przyciskiem jest tylko wizualny)
+                aria-label={config ? `Status: ${config.label}, ${caption}` : undefined}
                 title={MESSAGES.SHORTCUTS_TITLE}
             >
                 {config && <span className={styles.dot} aria-hidden="true" />}
+                {status && <StatusIcon status={status} />}
                 {config ? config.label : 'Status'}
                 <span className={styles.chevron} aria-hidden="true">▾</span>
             </button>
-            {caption && <span className={styles.caption}>{caption}</span>}
+            {caption && <span className={styles.caption} aria-hidden="true">{caption}</span>}
 
             {open && (
                 <ul ref={menuRef} className={styles.menu} role="menu" onKeyDown={moveFocus}>
-                    {TENDER_STATUSES.map((value) => {
+                    {TENDER_STATUSES.map((value, index) => {
                         const item = STATUS_CONFIG[value];
                         const active = status === value;
                         return (
@@ -106,6 +119,8 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                                     aria-checked={active}
                                     className={`${styles.item} ${active ? styles.itemActive : ''}`}
                                     style={{ '--status-color': item.color } as React.CSSProperties}
+                                    // Skrót 1–4 jest tylko dla czytnika ekranu; na ekranie nazwy statusów zostają bez cyfr
+                                    aria-keyshortcuts={String(index + 1)}
                                     onClick={() => {
                                         onToggle(value);
                                         setOpen(false);
@@ -113,6 +128,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                                     }}
                                 >
                                     <span className={styles.dot} aria-hidden="true" />
+                                    <StatusIcon status={value} />
                                     {item.label}
                                 </button>
                             </li>

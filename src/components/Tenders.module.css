@@ -107,35 +107,6 @@
     color: var(--text-primary);
 }
 
-.exportButtonContainer {
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.exportButton {
-    padding: 10px 20px;
-    background: var(--button-primary);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.exportButton:hover {
-    background: var(--button-primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px var(--accent-shadow);
-}
-
-.exportButton:active {
-    transform: translateY(0);
-}
-
 /* Linia nad listą: liczba ogłoszeń, kolejka do przejrzenia i krótka podpowiedź */
 .queueHeader {
     display: flex;
@@ -153,9 +124,40 @@
     font-size: 13px;
 }
 
-/* Podpowiedź o skrótach zajmuje własny wiersz pod licznikiem */
+/* Podpowiedź o skrótach zajmuje własny wiersz pod licznikiem; na ekranie bez myszy (klawiszy nie ma) jej nie pokazujemy */
 .queueHintFull {
     flex-basis: 100%;
+}
+
+/* "Wyłącz/Włącz skróty" w wierszu podpowiedzi: odnośnik w tekście, nie kolejny przycisk w pasku */
+.hintAction {
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--accent);
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+@media (hover: none) {
+    .queueHintFull {
+        display: none;
+    }
+}
+
+/* Dotyk: plakietka dokumentów i przycisk "Sprawdź teraz" mają cel dotyku co najmniej 40 px, jak reszta odnośników */
+@media (pointer: coarse) {
+    a.systemBadge {
+        min-height: 40px;
+        padding: 0 12px;
+    }
+
+    .systemBadgeButton {
+        min-width: 40px;
+        min-height: 40px;
+    }
 }
 
 .message {
@@ -165,53 +167,43 @@
     color: var(--text-secondary);
 }
 
-.loading {
-    display: none; /* Ukryj stary loading, używamy skeleton screens */
+/* Pusty stan lub błąd: komunikat i jedna akcja prowadząca dalej */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
 }
 
-/* Progress Bar */
-.progressBarContainer {
-    width: 100%;
-    height: 4px;
-    background: var(--bg-secondary);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 20px;
-    position: relative;
+.emptyText {
+    margin: 0;
+    max-width: 52ch;
+    text-align: center;
+    font-size: 16px;
+    color: var(--text-secondary);
 }
 
-.progressBar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--button-primary), var(--button-primary-hover));
-    border-radius: 2px;
-    transition: width 0.3s ease;
-    position: relative;
-    overflow: hidden;
+.emptyAction {
+    min-height: 40px;
+    padding: 0 16px;
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
 }
 
-.progressBar::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-    );
-    animation: shimmer 1.5s infinite;
+.emptyAction:hover {
+    background: var(--raised);
 }
 
-@keyframes shimmer {
-    0% {
-        transform: translateX(-100%);
-    }
-    100% {
-        transform: translateX(100%);
-    }
+.emptyAction:focus-visible {
+    outline: 2px solid var(--button-primary);
+    outline-offset: 2px;
 }
 
 /* Skeleton Screens */
@@ -223,7 +215,7 @@
 
 .skeletonCard {
     background: var(--bg-secondary);
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     padding: 20px;
     box-shadow: var(--card-shadow);
     animation: pulse 1.5s ease-in-out infinite;
@@ -303,17 +295,6 @@
     }
 }
 
-.content {
-    margin-top: 20px;
-}
-
-.tenderDetails {
-    background: var(--bg-secondary);
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: var(--card-shadow);
-}
-
 .tendersList {
     list-style: none;
     padding: 0;
@@ -342,6 +323,16 @@
 
 /* Aktywna karta (skróty klawiszowe) */
 .tenderCardActive {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* Fokus programowy karty (J/K) jest pokazany obrysem aktywnej karty, bez drugiego, domyślnego obrysu przeglądarki */
+.tenderCard:focus {
+    outline: none;
+}
+
+.tenderCardActive:focus {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
 }
@@ -380,24 +371,6 @@
 
 .favoriteActive {
     color: var(--star-color);
-}
-
-.selectButton {
-    background: transparent;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    padding: 4px;
-    transition: color 0.2s ease, transform 0.2s ease;
-}
-
-.selectButton:hover {
-    transform: scale(1.1);
-}
-
-.selectActive {
-    color: var(--button-primary);
 }
 
 .badgesContainer {
@@ -488,7 +461,7 @@
     background: var(--bg-secondary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 7px;
+    border-radius: var(--radius-control);
     font-size: 13px;
 }
 
@@ -554,120 +527,6 @@
     white-space: nowrap;
 }
 
-.relatedCpvCodes {
-    margin-left: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.relatedCpvCode {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--cpv-bg);
-    padding: 4px 12px;
-    border-radius: 6px;
-    opacity: 0.8;
-    font-size: 0.9em;
-}
-
-.relatedCpvCode:hover {
-    opacity: 1;
-    background: var(--cpv-bg-hover);
-}
-
-.notesSection {
-    margin-top: 16px;
-    margin-bottom: 8px;
-}
-
-.notesToggle {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 14px;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    width: 100%;
-    text-align: left;
-}
-
-.notesToggle:hover {
-    background: var(--bg-secondary);
-    border-color: var(--button-primary);
-}
-
-.notesContainer {
-    margin-top: 8px;
-    padding: 12px;
-    background: var(--bg-secondary);
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-}
-
-.notesInput {
-    width: 100%;
-    padding: 10px;
-    font-size: 14px;
-    font-family: inherit;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    resize: vertical;
-    min-height: 60px;
-    margin-bottom: 8px;
-    box-sizing: border-box;
-}
-
-.notesInput:focus {
-    outline: none;
-    border-color: var(--button-primary);
-    box-shadow: 0 0 0 3px var(--accent-ring);
-}
-
-.notesInput::placeholder {
-    color: var(--text-secondary);
-}
-
-.notesActions {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-}
-
-.notesSaveButton,
-.notesDeleteButton {
-    padding: 6px 16px;
-    border: none;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.notesSaveButton {
-    background: var(--button-primary);
-    color: white;
-}
-
-.notesSaveButton:hover {
-    background: var(--button-primary-hover);
-}
-
-.notesDeleteButton {
-    background: var(--danger);
-    color: white;
-}
-
-.notesDeleteButton:hover {
-    background: var(--danger-hover);
-}
-
 .links {
     display: flex;
     flex-wrap: wrap;
@@ -695,27 +554,11 @@
     background: var(--bg-secondary);
 }
 
-.advertiserButton {
-    /* Pasek linków to flex: auto po lewej odsuwa przycisk na prawy brzeg karty */
-    margin-left: auto;
-    padding: 8px 16px;
-    background: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    cursor: pointer;
-    font: inherit;
-    transition: background-color 0.2s ease;
-}
-
-.advertiserButton:hover {
-    background: rgba(0, 0, 0, 0.06);
-}
-
 .newBadge {
     padding: 2px 8px;
     border-radius: 4px;
-    background: var(--accent);
+    /* Biały tekst: tło to --button-primary (w ciemnym motywie --accent jest za jasny, 2.5:1) */
+    background: var(--button-primary);
     color: #fff;
     font-size: 0.85em;
     font-weight: 600;
@@ -808,11 +651,6 @@ a.systemBadge:hover {
         align-items: stretch;
     }
     
-    .exportButton {
-        width: 100%;
-        margin-top: 8px;
-    }
-    
     .tabs {
         gap: 4px;
     }
@@ -854,11 +692,6 @@ a.systemBadge:hover {
         font-size: 14px;
     }
     
-    .loading {
-        padding: 16px;
-        font-size: 14px;
-    }
-    
     .tendersList {
         gap: 12px;
     }
@@ -882,11 +715,6 @@ a.systemBadge:hover {
     
     .favoriteButton {
         font-size: 20px;
-        padding: 6px;
-    }
-    
-    .selectButton {
-        font-size: 18px;
         padding: 6px;
     }
     
@@ -921,15 +749,6 @@ a.systemBadge:hover {
     .cpvName {
         font-size: 12px;
     }
-    
-    .relatedCpvCodes {
-        margin-left: 16px;
-    }
-    
-    .relatedCpvCode {
-        padding: 3px 8px;
-        font-size: 0.85em;
-    }
 }
 
 @media (max-width: 480px) {
@@ -949,11 +768,6 @@ a.systemBadge:hover {
     }
     
     .message {
-        padding: 12px;
-        font-size: 13px;
-    }
-    
-    .loading {
         padding: 12px;
         font-size: 13px;
     }
@@ -978,11 +792,6 @@ a.systemBadge:hover {
     
     .favoriteButton {
         font-size: 18px;
-        padding: 4px;
-    }
-    
-    .selectButton {
-        font-size: 16px;
         padding: 4px;
     }
     
@@ -1017,21 +826,11 @@ a.systemBadge:hover {
     .cpvName {
         font-size: 12px;
     }
-    
-    .relatedCpvCodes {
-        margin-left: 12px;
-    }
-    
-    .relatedCpvCode {
-        padding: 2px 6px;
-        font-size: 0.8em;
-    }
 }
 
 /* Touch device optimizations */
 @media (hover: none) and (pointer: coarse) {
-    .favoriteButton:hover,
-    .selectButton:hover {
+    .favoriteButton:hover {
         transform: none;
     }
     
@@ -1039,16 +838,11 @@ a.systemBadge:hover {
     .cpvCodeContainer:hover {
         background: var(--cpv-bg);
     }
-    
-    .relatedCpvCode:hover {
-        background: var(--cpv-bg);
-        opacity: 0.8;
-    }
 } 
 .clearFiltersButton {
     padding: 6px 14px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     background: transparent;
     color: var(--text-primary);
     font: inherit;
@@ -1216,7 +1010,7 @@ a.systemBadge:hover {
     gap: 10px;
     min-height: 40px;
     padding: 0 10px;
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     font-size: 14px;
     cursor: pointer;
 }
@@ -1315,11 +1109,31 @@ a.systemBadge:hover {
     transform: translateX(16px);
 }
 
+/* Pasek filtrów dla telefonu (jeden przycisk "Filtry") jest domyślnie ukryty; na wąskim ekranie zastępuje pasek menu */
+.toolbarMobile {
+    display: none;
+}
+
 /* Cele dotykowe na wąskim ekranie: przyciski i odnośniki min. 40 px wysokości */
 @media (max-width: 768px) {
+    .toolbarDesktop {
+        display: none;
+    }
+
+    .toolbarMobile {
+        display: flex;
+        margin-bottom: 12px;
+    }
+
+    /* Karta: akcje zawijają się do kolejnego rzędu zamiast wychodzić poza ekran */
+    .cardActions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: 100%;
+    }
+
     .tab,
     .link,
-    .advertiserButton,
     .cpvMore,
     .clearFiltersButton,
     .plainCheckbox {

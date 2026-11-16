@@ -10,7 +10,7 @@ export const TENDER_LABELS: TenderLabel[] = ['important', 'simple', 'hard', 'mis
 
 export const LABEL_CONFIG: Record<TenderLabel, LabelConfig> = {
     important: { label: 'WAŻNY!', color: '#d63384' },
-    simple: { label: 'PROSTY', color: '#16a085' },
+    simple: { label: 'PROSTY', color: '#12806a' },
     hard: { label: 'TRUDNY', color: '#8e44ad' },
     missingDocs: { label: 'BRAK DOKUMENTÓW', color: '#6c757d' }
 };

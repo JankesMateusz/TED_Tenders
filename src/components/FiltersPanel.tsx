@@ -3,7 +3,7 @@ import { TenderSource } from '../types/TenderSource';
 import { getSourceConfig, getOrderTypeConfig, OrderType } from '../utils/tenderSources';
 import { DEFAULT_ORDER_TYPES } from '../constants';
 import { FacetCounts, SortOrder, StatusFilters } from '../utils/tenderFilters';
-import { ALL_SOURCES } from '../utils/persistedFilters';
+import { ALL_SOURCES, isQueueStatusFilter } from '../utils/persistedFilters';
 import { STATUS_CONFIG, TENDER_STATUSES, UNMARKED_COLOR } from '../utils/tenderStatus';
 import { TenderLabel } from '../types/TenderLabel';
 import { DocsFilter } from '../types/DocsCheck';
@@ -12,6 +12,7 @@ import { LABEL_CONFIG, TENDER_LABELS } from '../utils/tenderLabels';
 import { ActiveFilterChip } from '../utils/activeFilters';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { FilterPopover, FilterPopoverOption } from './FilterPopover';
+import { FiltersSheet, FilterSheetGroup } from './FiltersSheet';
 import styles from './Tenders.module.css';
 
 const STATUS_FILTER_KEYS: Array<keyof StatusFilters> = [...TENDER_STATUSES, 'unmarked'];
@@ -126,9 +127,38 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
         selected < total ? selected : undefined;
     const selectedStatusCount = STATUS_FILTER_KEYS.filter((key) => statusFilters[key]).length;
 
+    // Te same grupy trafiają do arkusza filtrów na telefonie, więc logika wyboru jest jedna
+    const sheetGroups: FilterSheetGroup[] = [
+        {
+            key: 'status',
+            label: 'Status',
+            options: statusOptions,
+            onToggle: (key) => onStatusFilterChange(key as keyof StatusFilters),
+            footerAction: { label: 'Pokaż wszystkie statusy', onClick: onShowAllStatuses }
+        },
+        { key: 'labels', label: 'Etykiety', options: labelOptions, onToggle: (key) => onLabelToggle(key as TenderLabel) },
+        { key: 'docs', label: 'Dokumenty', options: docsOptions, onToggle: (key) => onDocsToggle(key as DocsFilter) },
+        { key: 'sources', label: 'Źródło', options: sourceOptions, onToggle: (key) => onSourceToggle(key as TenderSource) },
+        { key: 'orderTypes', label: 'Typ', options: orderTypeOptions, onToggle: (key) => onOrderTypeToggle(key as OrderType) }
+    ];
+
     return (
         <>
-            <div className={styles.toolbar}>
+            <div className={styles.toolbarMobile}>
+                <FiltersSheet
+                    groups={sheetGroups}
+                    activeCount={activeChips.length}
+                    hasActiveFilters={hasActiveFilters}
+                    onClearFilters={onClearFilters}
+                    sortOrder={sortOrder}
+                    sortOptions={SORT_OPTIONS}
+                    onSortOrderChange={onSortOrderChange}
+                    hiddenAdvertisersCount={hiddenAdvertisersCount}
+                    showHiddenAdvertisers={showHiddenAdvertisers}
+                    onShowHiddenAdvertisersChange={onShowHiddenAdvertisersChange}
+                />
+            </div>
+            <div className={`${styles.toolbar} ${styles.toolbarDesktop}`}>
                 <FilterPopover
                     label="Status"
                     options={statusOptions}
@@ -198,6 +228,8 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 onRemove={onRemoveChip}
                 hasActiveFilters={hasActiveFilters}
                 onClearFilters={onClearFilters}
+                queueActive={isQueueStatusFilter(statusFilters)}
+                onShowRated={onShowAllStatuses}
             />
         </>
     );

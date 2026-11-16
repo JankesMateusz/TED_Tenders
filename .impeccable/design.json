@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-16T12:00:00.000Z",
+  "title": "Design System: TED Tenders",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Urzędowy błękit", "canonical": "#1f5fe0", "tonalRamp": ["oklch(18% 0.06 262)", "oklch(29% 0.11 262)", "oklch(40% 0.16 262)", "oklch(51% 0.2 262)", "oklch(62% 0.17 262)", "oklch(74% 0.12 262)", "oklch(86% 0.06 262)", "oklch(95% 0.02 262)"] },
+      "accent-dark": { "role": "primary", "displayName": "Urzędowy błękit, głębszy", "canonical": "#1a4fbc", "tonalRamp": ["oklch(18% 0.06 262)", "oklch(29% 0.11 262)", "oklch(40% 0.16 262)", "oklch(51% 0.2 262)", "oklch(62% 0.17 262)", "oklch(74% 0.12 262)", "oklch(86% 0.06 262)", "oklch(95% 0.02 262)"] },
+      "dark-accent": { "role": "primary", "displayName": "Urzędowy błękit (ciemny motyw)", "canonical": "#6aa5ff", "tonalRamp": ["oklch(18% 0.06 258)", "oklch(29% 0.1 258)", "oklch(40% 0.14 258)", "oklch(51% 0.17 258)", "oklch(62% 0.16 258)", "oklch(74% 0.13 258)", "oklch(86% 0.07 258)", "oklch(95% 0.02 258)"] },
+      "dark-accent-dark": { "role": "primary", "displayName": "Urzędowy błękit, głębszy (ciemny motyw)", "canonical": "#4f8ef0", "tonalRamp": ["oklch(18% 0.06 258)", "oklch(29% 0.1 258)", "oklch(40% 0.14 258)", "oklch(51% 0.17 258)", "oklch(62% 0.16 258)", "oklch(74% 0.13 258)", "oklch(86% 0.07 258)", "oklch(95% 0.02 258)"] },
+      "dark-button-primary": { "role": "primary", "displayName": "Tło przycisku (ciemny motyw)", "canonical": "#2f6fdb", "tonalRamp": ["oklch(18% 0.06 260)", "oklch(29% 0.1 260)", "oklch(40% 0.15 260)", "oklch(51% 0.18 260)", "oklch(62% 0.16 260)", "oklch(74% 0.12 260)", "oklch(86% 0.06 260)", "oklch(95% 0.02 260)"] },
+      "dark-button-primary-hover": { "role": "primary", "displayName": "Tło przycisku, hover (ciemny motyw)", "canonical": "#2559b5", "tonalRamp": ["oklch(18% 0.06 260)", "oklch(29% 0.1 260)", "oklch(40% 0.15 260)", "oklch(51% 0.18 260)", "oklch(62% 0.16 260)", "oklch(74% 0.12 260)", "oklch(86% 0.06 260)", "oklch(95% 0.02 260)"] },
+      "page": { "role": "neutral", "displayName": "Tło strony", "canonical": "#f4f6fb", "tonalRamp": ["oklch(16% 0.02 265)", "oklch(27% 0.025 265)", "oklch(39% 0.03 265)", "oklch(51% 0.03 265)", "oklch(63% 0.025 265)", "oklch(75% 0.02 265)", "oklch(87% 0.015 265)", "oklch(97% 0.007 265)"] },
+      "surface": { "role": "neutral", "displayName": "Powierzchnia", "canonical": "#ffffff", "tonalRamp": ["oklch(16% 0.02 265)", "oklch(27% 0.025 265)", "oklch(39% 0.03 265)", "oklch(51% 0.03 265)", "oklch(63% 0.025 265)", "oklch(75% 0.02 265)", "oklch(87% 0.015 265)", "oklch(100% 0 0)"] },
+      "raised": { "role": "neutral", "displayName": "Powierzchnia podniesiona", "canonical": "#eef1f8", "tonalRamp": ["oklch(16% 0.02 265)", "oklch(27% 0.025 265)", "oklch(39% 0.03 265)", "oklch(51% 0.03 265)", "oklch(63% 0.025 265)", "oklch(75% 0.02 265)", "oklch(87% 0.015 265)", "oklch(95% 0.01 265)"] },
+      "raised-hover": { "role": "neutral", "displayName": "Powierzchnia podniesiona, hover", "canonical": "#e1e6f1", "tonalRamp": ["oklch(16% 0.02 265)", "oklch(27% 0.025 265)", "oklch(39% 0.03 265)", "oklch(51% 0.03 265)", "oklch(63% 0.025 265)", "oklch(75% 0.02 265)", "oklch(87% 0.015 265)", "oklch(92% 0.015 265)"] },
+      "border": { "role": "neutral", "displayName": "Obramowanie", "canonical": "#d8dfec", "tonalRamp": ["oklch(16% 0.02 265)", "oklch(27% 0.025 265)", "oklch(39% 0.03 265)", "oklch(51% 0.03 265)", "oklch(63% 0.025 265)", "oklch(75% 0.02 265)", "oklch(89% 0.02 265)", "oklch(96% 0.008 265)"] },
+      "text-primary": { "role": "neutral", "displayName": "Tekst główny", "canonical": "#18202f", "tonalRamp": ["oklch(16% 0.02 265)", "oklch(24% 0.03 265)", "oklch(39% 0.03 265)", "oklch(51% 0.03 265)", "oklch(63% 0.025 265)", "oklch(75% 0.02 265)", "oklch(87% 0.015 265)", "oklch(96% 0.008 265)"] },
+      "text-secondary": { "role": "neutral", "displayName": "Tekst pomocniczy", "canonical": "#576078", "tonalRamp": ["oklch(16% 0.02 265)", "oklch(27% 0.03 265)", "oklch(39% 0.035 265)", "oklch(49% 0.04 265)", "oklch(63% 0.03 265)", "oklch(75% 0.02 265)", "oklch(87% 0.015 265)", "oklch(96% 0.008 265)"] },
+      "dark-page": { "role": "neutral", "displayName": "Tło strony (ciemny motyw)", "canonical": "#0e131d", "tonalRamp": ["oklch(18% 0.02 262)", "oklch(27% 0.03 262)", "oklch(39% 0.035 262)", "oklch(51% 0.035 262)", "oklch(63% 0.03 262)", "oklch(75% 0.025 262)", "oklch(87% 0.015 262)", "oklch(95% 0.01 262)"] },
+      "dark-surface": { "role": "neutral", "displayName": "Powierzchnia (ciemny motyw)", "canonical": "#161c2a", "tonalRamp": ["oklch(23% 0.028 262)", "oklch(30% 0.03 262)", "oklch(39% 0.035 262)", "oklch(51% 0.035 262)", "oklch(63% 0.03 262)", "oklch(75% 0.025 262)", "oklch(87% 0.015 262)", "oklch(95% 0.01 262)"] },
+      "dark-raised": { "role": "neutral", "displayName": "Powierzchnia podniesiona (ciemny motyw)", "canonical": "#1d2435", "tonalRamp": ["oklch(18% 0.02 262)", "oklch(26% 0.032 262)", "oklch(39% 0.035 262)", "oklch(51% 0.035 262)", "oklch(63% 0.03 262)", "oklch(75% 0.025 262)", "oklch(87% 0.015 262)", "oklch(95% 0.01 262)"] },
+      "dark-border": { "role": "neutral", "displayName": "Obramowanie (ciemny motyw)", "canonical": "#2a3349", "tonalRamp": ["oklch(18% 0.02 262)", "oklch(32% 0.04 262)", "oklch(39% 0.035 262)", "oklch(51% 0.035 262)", "oklch(63% 0.03 262)", "oklch(75% 0.025 262)", "oklch(87% 0.015 262)", "oklch(95% 0.01 262)"] },
+      "dark-text-primary": { "role": "neutral", "displayName": "Tekst główny (ciemny motyw)", "canonical": "#e7ebf3", "tonalRamp": ["oklch(18% 0.02 262)", "oklch(27% 0.03 262)", "oklch(39% 0.035 262)", "oklch(51% 0.035 262)", "oklch(63% 0.03 262)", "oklch(75% 0.025 262)", "oklch(87% 0.015 262)", "oklch(94% 0.011 262)"] },
+      "dark-text-secondary": { "role": "neutral", "displayName": "Tekst pomocniczy (ciemny motyw)", "canonical": "#9aa4ba", "tonalRamp": ["oklch(18% 0.02 262)", "oklch(27% 0.03 262)", "oklch(39% 0.035 262)", "oklch(51% 0.035 262)", "oklch(63% 0.03 262)", "oklch(72% 0.035 262)", "oklch(87% 0.015 262)", "oklch(95% 0.01 262)"] },
+      "status-to-enter": { "role": "secondary", "displayName": "Status: Do wpisania", "canonical": "#3498db", "tonalRamp": ["oklch(18% 0.05 245)", "oklch(29% 0.08 245)", "oklch(40% 0.11 245)", "oklch(52% 0.13 245)", "oklch(65% 0.14 245)", "oklch(76% 0.1 245)", "oklch(87% 0.05 245)", "oklch(95% 0.02 245)"] },
+      "status-entered": { "role": "secondary", "displayName": "Status: Wpisany", "canonical": "#2ecc71", "tonalRamp": ["oklch(18% 0.05 152)", "oklch(29% 0.08 152)", "oklch(40% 0.12 152)", "oklch(52% 0.15 152)", "oklch(64% 0.18 152)", "oklch(75% 0.19 152)", "oklch(87% 0.09 152)", "oklch(95% 0.03 152)"] },
+      "status-to-clarify": { "role": "secondary", "displayName": "Status: Do wyjaśnienia", "canonical": "#f39c12", "tonalRamp": ["oklch(18% 0.04 70)", "oklch(29% 0.07 70)", "oklch(40% 0.1 70)", "oklch(52% 0.13 70)", "oklch(64% 0.15 70)", "oklch(76% 0.16 70)", "oklch(87% 0.09 70)", "oklch(95% 0.03 70)"] },
+      "status-not-to-enter": { "role": "secondary", "displayName": "Status: Nie do wpisania", "canonical": "#e74c3c", "tonalRamp": ["oklch(18% 0.06 28)", "oklch(29% 0.1 28)", "oklch(40% 0.15 28)", "oklch(52% 0.19 28)", "oklch(64% 0.2 28)", "oklch(75% 0.13 28)", "oklch(87% 0.06 28)", "oklch(95% 0.02 28)"] },
+      "status-unmarked": { "role": "secondary", "displayName": "Bez statusu", "canonical": "#7f8c8d", "tonalRamp": ["oklch(18% 0.008 200)", "oklch(29% 0.01 200)", "oklch(40% 0.012 200)", "oklch(52% 0.014 200)", "oklch(62% 0.015 200)", "oklch(75% 0.012 200)", "oklch(87% 0.008 200)", "oklch(95% 0.004 200)"] },
+      "danger": { "role": "tertiary", "displayName": "Czerwień ostrzegawcza", "canonical": "#e74c3c", "tonalRamp": ["oklch(18% 0.06 28)", "oklch(29% 0.1 28)", "oklch(40% 0.15 28)", "oklch(52% 0.19 28)", "oklch(64% 0.2 28)", "oklch(75% 0.13 28)", "oklch(87% 0.06 28)", "oklch(95% 0.02 28)"] },
+      "danger-hover": { "role": "tertiary", "displayName": "Czerwień ostrzegawcza, hover", "canonical": "#c0392b", "tonalRamp": ["oklch(18% 0.06 28)", "oklch(29% 0.1 28)", "oklch(40% 0.15 28)", "oklch(52% 0.18 28)", "oklch(64% 0.2 28)", "oklch(75% 0.13 28)", "oklch(87% 0.06 28)", "oklch(95% 0.02 28)"] },
+      "star": { "role": "tertiary", "displayName": "Żółć gwiazdki", "canonical": "#f1c40f", "tonalRamp": ["oklch(18% 0.04 95)", "oklch(29% 0.06 95)", "oklch(40% 0.09 95)", "oklch(52% 0.11 95)", "oklch(64% 0.14 95)", "oklch(76% 0.16 95)", "oklch(84% 0.17 95)", "oklch(95% 0.05 95)"] },
+      "series-ted": { "role": "secondary", "displayName": "Seria: TED", "canonical": "#e67e22", "tonalRamp": ["oklch(18% 0.04 55)", "oklch(29% 0.07 55)", "oklch(40% 0.11 55)", "oklch(52% 0.14 55)", "oklch(64% 0.16 55)", "oklch(70% 0.16 55)", "oklch(87% 0.07 55)", "oklch(95% 0.03 55)"] },
+      "series-ezam": { "role": "secondary", "displayName": "Seria: eZamówienia", "canonical": "#3498db", "tonalRamp": ["oklch(18% 0.05 245)", "oklch(29% 0.08 245)", "oklch(40% 0.11 245)", "oklch(52% 0.13 245)", "oklch(65% 0.14 245)", "oklch(76% 0.1 245)", "oklch(87% 0.05 245)", "oklch(95% 0.02 245)"] },
+      "series-baza": { "role": "secondary", "displayName": "Seria: Baza Konkurencyjności", "canonical": "#9b59b6", "tonalRamp": ["oklch(18% 0.05 315)", "oklch(29% 0.09 315)", "oklch(40% 0.12 315)", "oklch(52% 0.15 315)", "oklch(58% 0.15 315)", "oklch(75% 0.1 315)", "oklch(87% 0.05 315)", "oklch(95% 0.02 315)"] },
+      "label-important": { "role": "secondary", "displayName": "Etykieta: Ważny", "canonical": "#d63384", "tonalRamp": ["oklch(18% 0.06 355)", "oklch(29% 0.11 355)", "oklch(40% 0.15 355)", "oklch(52% 0.19 355)", "oklch(59% 0.2 355)", "oklch(75% 0.12 355)", "oklch(87% 0.06 355)", "oklch(95% 0.02 355)"] },
+      "label-simple": { "role": "secondary", "displayName": "Etykieta: Prosty", "canonical": "#12806a", "tonalRamp": ["oklch(18% 0.04 175)", "oklch(29% 0.06 175)", "oklch(40% 0.08 175)", "oklch(52% 0.1 175)", "oklch(63% 0.11 175)", "oklch(75% 0.09 175)", "oklch(87% 0.05 175)", "oklch(95% 0.02 175)"] },
+      "label-hard": { "role": "secondary", "displayName": "Etykieta: Trudny", "canonical": "#8e44ad", "tonalRamp": ["oklch(18% 0.06 310)", "oklch(29% 0.1 310)", "oklch(40% 0.14 310)", "oklch(52% 0.17 310)", "oklch(63% 0.15 310)", "oklch(75% 0.1 310)", "oklch(87% 0.05 310)", "oklch(95% 0.02 310)"] },
+      "label-missing-docs": { "role": "secondary", "displayName": "Etykieta: Brak dokumentów", "canonical": "#6c757d", "tonalRamp": ["oklch(18% 0.008 250)", "oklch(29% 0.01 250)", "oklch(40% 0.013 250)", "oklch(55% 0.015 250)", "oklch(63% 0.013 250)", "oklch(75% 0.01 250)", "oklch(87% 0.007 250)", "oklch(95% 0.004 250)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Wyłącznie liczby na kartach statystyk (24 px na telefonie)." },
+      "headline": { "displayName": "Headline", "purpose": "Nazwa aplikacji w pasku." },
+      "title": { "displayName": "Title", "purpose": "Tytuł przetargu na karcie; 16 px ≤768 px, 14 px ≤480 px." },
+      "body": { "displayName": "Body", "purpose": "Kontrolki, opcje menu, notatki." },
+      "meta": { "displayName": "Meta", "purpose": "Linia zamawiającego i dat, liczniki, podpowiedzi." },
+      "label": { "displayName": "Label", "purpose": "Plakietki źródła, typu i etykiet, liczniki w pigułkach, stopka karty." },
+      "mono": { "displayName": "Mono", "purpose": "Znaczek skrótu klawiszowego i kody CPV." }
+    },
+    "shadows": [
+      { "name": "card-shadow", "value": "0 2px 4px rgba(0, 0, 0, 0.1)", "purpose": "Ledwo widoczne odcięcie karty od tła; w ciemnym motywie krycie 0.3." },
+      { "name": "card-hover-shadow", "value": "0 4px 8px rgba(0, 0, 0, 0.15)", "purpose": "Małe menu statusu; w ciemnym motywie krycie 0.4." },
+      { "name": "pop-shadow", "value": "0 12px 32px rgba(24, 32, 47, 0.16)", "purpose": "Popovery filtrów i panel dat; w ciemnym motywie rgba(0, 0, 0, 0.5)." }
+    ],
+    "motion": [
+      { "name": "state-transition", "value": "0.2s ease", "purpose": "Zmiana tła, obramowania i krycia kontrolek na hover." },
+      { "name": "switch-transition", "value": "0.15s ease", "purpose": "Przesunięcie suwaka przełącznika." },
+      { "name": "theme-transition", "value": "0.3s ease", "purpose": "Płynna zmiana kolorów przy przełączaniu motywu." },
+      { "name": "skeleton-loading", "value": "1.5s ease-in-out infinite", "purpose": "Połysk szkieletów kart podczas ładowania." }
+    ],
+    "breakpoints": [
+      { "name": "small-phone", "value": "480px" },
+      { "name": "phone", "value": "768px" },
+      { "name": "tablet", "value": "1024px" },
+      { "name": "content-max", "value": "1600px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Przycisk domyślny",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Kontrolka paska i narzędzi: cienkie obramowanie na powierzchni karty.",
+      "html": "<button class=\"ds-btn\">Odśwież</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 12px; background: var(--surface); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-control); font: inherit; font-size: 14px; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; } .ds-btn:hover { background: var(--bg-secondary); } .ds-btn:focus-visible { outline: 2px solid var(--button-primary); outline-offset: 2px; }"
+    },
+    {
+      "name": "Przycisk główny",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Wypełniony błękit z białym tekstem, tylko dla głównej akcji (eksport, zapis).",
+      "html": "<button class=\"ds-btn-primary\">Eksportuj</button>",
+      "css": ".ds-btn-primary { padding: 10px 20px; background: var(--button-primary); color: #fff; border: none; border-radius: 6px; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background-color 0.2s ease; } .ds-btn-primary:hover { background: var(--button-primary-hover); } .ds-btn-primary:focus-visible { outline: 2px solid var(--button-primary); outline-offset: 2px; }"
+    },
+    {
+      "name": "Wyszukiwarka",
+      "kind": "input",
+      "refersTo": "search-input",
+      "description": "Pole w pasku aplikacji z ikoną i znaczkiem skrótu \"/\".",
+      "html": "<div class=\"ds-search\"><span class=\"ds-search-icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/></svg></span><input class=\"ds-search-input\" placeholder=\"Szukaj przetargów\"><kbd class=\"ds-search-key\">/</kbd></div>",
+      "css": ".ds-search { position: relative; max-width: 460px; } .ds-search-icon { position: absolute; left: 12px; top: 50%; display: flex; color: var(--text-secondary); transform: translateY(-50%); pointer-events: none; } .ds-search-icon svg { width: 18px; height: 18px; } .ds-search-input { width: 100%; min-height: 40px; padding: 0 44px 0 38px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 10px; font: inherit; font-size: 14px; } .ds-search-input::placeholder { color: var(--text-secondary); } .ds-search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); } .ds-search-key { position: absolute; right: 10px; top: 50%; padding: 3px 6px; border: 1px solid var(--border-color); border-bottom-width: 2px; border-radius: 5px; background: var(--surface); color: var(--text-secondary); font: 600 12px/1 ui-monospace, Consolas, monospace; transform: translateY(-50%); }"
+    },
+    {
+      "name": "Zakładki",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Zakładki nad listą; aktywna ma podkreślenie 3 px i licznik w tle akcentu.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">Przetargi <span class=\"ds-tab-count\">42</span></button><button class=\"ds-tab\">Zapisane <span class=\"ds-tab-count\">5</span></button><button class=\"ds-tab\">Statystyki</button></div>",
+      "css": ".ds-tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); } .ds-tab { position: relative; bottom: -2px; padding: 12px 24px; background: transparent; border: none; border-bottom: 3px solid transparent; font: inherit; font-size: 16px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all 0.2s ease; } .ds-tab:hover { color: var(--text-primary); background: var(--bg-secondary); } .ds-tab:focus-visible { outline: 2px solid var(--button-primary); outline-offset: 2px; } .ds-tab-active { color: var(--button-primary); border-bottom-color: var(--button-primary); font-weight: 600; } .ds-tab-count { margin-left: 6px; padding: 1px 8px; border-radius: 20px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 12px; font-weight: 700; } .ds-tab-active .ds-tab-count { background: var(--accent-bg); color: var(--accent); }"
+    },
+    {
+      "name": "Karta przetargu",
+      "kind": "card",
+      "refersTo": "tender-card",
+      "description": "Wpis dziennika: plakietka źródła, tytuł, linia meta, chipy CPV; pasek z lewej w kolorze wspólnego statusu.",
+      "html": "<article class=\"ds-tender\" style=\"--status-color: #3498db\"><span class=\"ds-tender-source\">TED</span><h3 class=\"ds-tender-title\">Dostawa komputerów przenośnych i stacji dokujących</h3><p class=\"ds-tender-meta\"><span class=\"ds-tender-buyer\">Urząd Miasta</span> · Warszawa · termin 12.12.2026</p><div class=\"ds-tender-cpv\"><span class=\"ds-cpv-chip\">30213100-6 Komputery przenośne</span><span class=\"ds-cpv-chip\">30237200-1 Akcesoria komputerowe</span></div></article>",
+      "css": ".ds-tender { background: var(--surface); color: var(--text-primary); border: 1px solid var(--border-color); border-left: 4px solid var(--status-color, var(--border-color)); border-radius: var(--radius-card); padding: 20px; box-shadow: var(--card-shadow); } .ds-tender-source { display: inline-block; padding: 4px 10px; border-radius: 12px; background: #003366; color: #fff; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; } .ds-tender-title { margin: 8px 0 6px; font-size: 18px; font-weight: 600; line-height: 1.4; } .ds-tender-meta { margin: 0 0 12px; color: var(--text-secondary); font-size: 13px; line-height: 1.4; } .ds-tender-buyer { color: var(--text-primary); font-weight: 500; } .ds-tender-cpv { display: flex; flex-wrap: wrap; gap: 6px; } .ds-cpv-chip { padding: 4px 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 7px; font-size: 13px; }"
+    },
+    {
+      "name": "Przycisk statusu",
+      "kind": "custom",
+      "refersTo": "status-trigger",
+      "description": "Przerywana ramka bez statusu; ciągła ramka w kolorze statusu z kropką po ustawieniu.",
+      "html": "<div class=\"ds-status-row\"><button class=\"ds-status\">Ustaw status <span class=\"ds-status-chevron\">▾</span></button><button class=\"ds-status ds-status-set\" style=\"--status-color: #2ecc71\"><span class=\"ds-status-dot\"></span>✓ Wpisany <span class=\"ds-status-chevron\">▾</span></button></div>",
+      "css": ".ds-status-row { display: flex; gap: 12px; flex-wrap: wrap; } .ds-status { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; background: transparent; color: var(--text-secondary); border: 1px dashed var(--border-color); border-radius: 8px; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background-color 0.2s ease, border-color 0.2s ease; } .ds-status:hover { background: var(--bg-primary); } .ds-status:focus-visible { outline: 2px solid var(--button-primary); outline-offset: 2px; } .ds-status-set { color: var(--text-primary); border-style: solid; border-color: var(--status-color); } .ds-status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--status-color); } .ds-status-chevron { font-size: 12px; color: var(--text-secondary); }"
+    },
+    {
+      "name": "Chip aktywnego filtra",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Pigułka w tle akcentu z okrągłym krzyżykiem do usunięcia filtra.",
+      "html": "<span class=\"ds-chip\">Źródło: TED<button class=\"ds-chip-remove\" aria-label=\"Usuń filtr\"><svg viewBox=\"0 0 12 12\" width=\"10\" height=\"10\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M2 2l8 8M10 2l-8 8\"/></svg></button></span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 6px 3px 10px; border-radius: 20px; background: var(--accent-bg); color: var(--accent); font-size: 13px; font-weight: 600; } .ds-chip-remove { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer; } .ds-chip-remove:hover { background: var(--accent); color: var(--bg-primary); } .ds-chip-remove:focus-visible { outline: 2px solid var(--button-primary); outline-offset: 2px; }"
+    },
+    {
+      "name": "Plakietka systemowa",
+      "kind": "chip",
+      "refersTo": "system-badge",
+      "description": "Informacja od systemu (np. stan dokumentów): obramowanie przerywane, wariant ostrzegawczy z bursztynowym tłem.",
+      "html": "<div class=\"ds-sys-row\"><span class=\"ds-sys\">Dokumenty: 4</span><span class=\"ds-sys ds-sys-warn\">Brak dokumentów</span></div>",
+      "css": ".ds-sys-row { display: flex; gap: 8px; } .ds-sys { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px dashed var(--border-color); border-radius: 4px; color: var(--text-secondary); font-size: 12px; } .ds-sys-warn { border-color: var(--warning-border); background: var(--warning-bg); }"
+    },
+    {
+      "name": "Przełącznik",
+      "kind": "input",
+      "refersTo": "",
+      "description": "Stan widać po położeniu suwaka i wypełnieniu toru, nie tylko po kolorze.",
+      "html": "<label class=\"ds-switch\"><input type=\"checkbox\" checked>Tylko IT</label>",
+      "css": ".ds-switch { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 14px; cursor: pointer; } .ds-switch input { position: relative; flex-shrink: 0; width: 36px; height: 20px; margin: 0; border-radius: 20px; background: var(--border-color); appearance: none; -webkit-appearance: none; cursor: pointer; transition: background-color 0.15s ease; } .ds-switch input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.15s ease; } .ds-switch input:checked { background: var(--button-primary); } .ds-switch input:checked::before { transform: translateX(16px); } .ds-switch input:focus-visible { outline: 2px solid var(--button-primary); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Dziennik zamówień",
+    "overview": "Aplikacja wygląda jak rejestr prowadzony dzień po dniu. Każde ogłoszenie to równy wpis: źródło, tytuł, zamawiający, data, a obok decyzja zespołu z informacją, kto i kiedy ją podjął. Interfejs jest tłem dla tych wpisów. Chłodne, niebieskawe szarości tworzą papier dziennika, jeden błękit wskazuje, co jest aktywne, a pozostałe kolory pojawiają się wyłącznie tam, gdzie niosą informację.\n\nSystem jest gęsty, ale spokojny. Kontrolki mają cienkie obramowanie i leżą na powierzchni karty; wypełniony niebieski przycisk dostaje tylko główna akcja. Tekst jest systemowy i mały (13–14 px w kontrolkach i metadanych), bo liczy się, ile wpisów mieści się na ekranie. Motyw jasny i ciemny są równorzędne: każdy token powierzchni, tekstu i akcentu ma parę w obu motywach.\n\nŚwiadomie odrzucone: ozdobne gradienty i poświaty oraz kolor, który nic nie znaczy.",
+    "keyCharacteristics": [
+      "Wpis ponad ozdobę: karta przetargu jest jednostką, wszystko inne jej służy.",
+      "Jeden akcent (Urzędowy błękit) plus kolory znaczące: status, źródło, etykieta, ostrzeżenie.",
+      "Płasko; cień mają tylko warstwy pływające.",
+      "Kontrolki 40 px wysokości, wspólny promień 9 px, karty 12 px.",
+      "Dwa równorzędne motywy przełączane atrybutem `data-theme`.",
+      "Stan widać także po kształcie: ikona statusu, położenie suwaka, linia ciągła albo przerywana."
+    ],
+    "rules": [
+      { "name": "The Znaczący Kolor Rule", "body": "Poza Urzędowym błękitem kolor pojawia się tylko jako status, źródło, etykieta, gwiazdka lub ostrzeżenie. Jeśli barwa niczego nie koduje, zastąp ją neutralną.", "section": "colors" },
+      { "name": "The Para Motywów Rule", "body": "Żadnych surowych wartości w komponentach: każdy kolor powierzchni, tekstu, obramowania i akcentu pochodzi z tokenu zdefiniowanego w obu blokach `data-theme` w `src/styles/theme.css`.", "section": "colors" },
+      { "name": "The Biały Na Niebieskim Rule", "body": "Wypełnione przyciski mają biały tekst, więc ich tło to `--button-primary`, nie `--accent`: w ciemnym motywie akcent jest za jasny na biały tekst.", "section": "colors" },
+      { "name": "The Dwie Szarości Rule", "body": "Tekst ma dokładnie dwa kolory: główny dla treści wpisu i pomocniczy dla wszystkiego wokół. Trzeciego odcienia nie wprowadzaj; przygaszenie stanu wyłączonego robi krycie (0.4–0.6).", "section": "typography" },
+      { "name": "The Cień Tylko Dla Warstw Rule", "body": "Nowy cień wolno dodać tylko elementowi, który przykrywa inną treść. Karty, sekcje i kontrolki w spoczynku zostają płaskie; hover zmienia tło, nie wysokość.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** bierz każdy kolor z tokenów w `src/styles/theme.css` i sprawdzaj oba motywy.",
+      "**Do** używaj `--button-primary` jako tła pod biały tekst, a `--accent` dla tekstu, obrysów i podkreśleń.",
+      "**Do** trzymaj wysokość kontrolek 40 px i promień 9 px; karty i panele 12 px.",
+      "**Do** oznaczaj informacje systemowe linią przerywaną, a decyzje człowieka i elementy klikalne linią ciągłą.",
+      "**Do** pokazuj stan także kształtem lub ikoną (ikona statusu, położenie suwaka), nie samą barwą.",
+      "**Do** zmieniaj na hover tło, nie wysokość; przejścia 0.15–0.2 s i poszanowanie `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "**Don't** używaj koloru, który niczego nie koduje: poza Urzędowym błękitem barwa oznacza status, źródło, etykietę, gwiazdkę albo ostrzeżenie.",
+      "**Don't** dodawaj ozdobnych gradientów, tekstu gradientowego ani poświat. Wyjątkiem są słupki wykresów w statystykach.",
+      "**Don't** dodawaj cienia elementom, które nie przykrywają innej treści.",
+      "**Don't** wprowadzaj grubego kolorowego obramowania poza paskiem statusu karty przetargu.",
+      "**Don't** wpisuj surowych wartości hex w modułach CSS komponentów.",
+      "**Don't** ładuj fontów zewnętrznych; system używa natywnego stosu."
+    ]
+  }
+}

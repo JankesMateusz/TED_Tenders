@@ -1,4 +1,5 @@
 import { orderTypeConfig, tenderSourceConfig } from './tenderSources';
+import { LABEL_CONFIG } from './tenderLabels';
 
 const luminance = (hex: string): number => {
     const [r, g, b] = [1, 3, 5]
@@ -14,6 +15,12 @@ const contrastRatio = (a: string, b: string): number => {
 
 // WCAG 2.1 AA dla zwykłego tekstu
 const MIN_CONTRAST = 4.5;
+
+describe('kontrast etykiet ręcznych (biały tekst)', () => {
+    it.each(Object.entries(LABEL_CONFIG))('%s: biały tekst na tle ma kontrast co najmniej 4.5:1', (_name, config) => {
+        expect(contrastRatio('#ffffff', config.color)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    });
+});
 
 describe('kontrast plakietek i chipów filtrów', () => {
     const configs = [

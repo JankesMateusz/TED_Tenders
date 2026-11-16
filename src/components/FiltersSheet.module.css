@@ -1,0 +1,218 @@
+/* Arkusz filtrów od dołu ekranu (telefon): warstwa pływająca, więc ma cień i tło przyciemniające listę */
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(24, 32, 47, 0.45);
+}
+
+.sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1201;
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
+    max-height: 85dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--surface);
+    color: var(--text-primary);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    box-shadow: var(--pop-shadow);
+    animation: sheetIn 0.2s ease-out;
+}
+
+.sheet:focus {
+    outline: none;
+}
+
+.head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px 4px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.close {
+    min-height: 44px;
+    padding: 0 12px;
+    background: transparent;
+    color: var(--accent);
+    border: none;
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 8px 8px 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.group {
+    margin: 0 0 8px;
+    padding: 0;
+    border: 0;
+}
+
+.legend {
+    display: block;
+    padding: 8px 10px 4px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: var(--radius-control);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.option input {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: var(--button-primary);
+}
+
+.optionEmpty {
+    opacity: 0.5;
+}
+
+.dot {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.count {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.groupAction {
+    display: block;
+    min-height: 44px;
+    padding: 0 10px;
+    background: none;
+    border: 0;
+    color: var(--accent);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.toggleRow {
+    min-height: 44px;
+    padding: 0 10px;
+}
+
+.sortRow {
+    padding: 4px 0 0;
+}
+
+/* 16 px, żeby iOS nie powiększał strony po dotknięciu pola */
+.sortSelect {
+    box-sizing: border-box;
+    width: calc(100% - 20px);
+    min-height: 44px;
+    margin: 0 10px;
+    padding: 0 10px;
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 16px;
+}
+
+.foot {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.done,
+.clear {
+    flex: 1 1 0;
+    min-height: 44px;
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.done {
+    background: var(--button-primary);
+    color: #fff;
+    border: 1px solid var(--button-primary);
+}
+
+.done:hover {
+    background: var(--button-primary-hover);
+}
+
+.clear {
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.clear:hover {
+    background: var(--raised);
+}
+
+.close:focus-visible,
+.groupAction:focus-visible,
+.done:focus-visible,
+.clear:focus-visible,
+.sortSelect:focus-visible,
+.option:focus-within {
+    outline: 2px solid var(--button-primary);
+    outline-offset: 2px;
+}
+
+@keyframes sheetIn {
+    from {
+        transform: translateY(24px);
+        opacity: 0;
+    }
+    to {
+        transform: none;
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sheet {
+        animation: none;
+    }
+}

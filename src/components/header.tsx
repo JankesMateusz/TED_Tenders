@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import styles from "./Header.module.css";
 import { useTheme } from "../context/ThemeContext";
 import UserMenu from "./UserMenu";
@@ -83,6 +83,23 @@ const Header: React.FC<HeaderProps> = ({
     searchInputRef
 }) => {
     const { theme, toggleTheme } = useTheme();
+    // Na telefonie wyszukiwarka chowa się pod ikoną; z wpisaną frazą zostaje widoczna, żeby było widać, że lista jest zawężona
+    const [searchOpen, setSearchOpen] = useState(false);
+    const searchVisible = searchOpen || searchQuery.length > 0;
+
+    const handleSearchToggle = () => {
+        if (searchVisible && searchQuery.length === 0) {
+            setSearchOpen(false);
+            return;
+        }
+        setSearchOpen(true);
+        searchInputRef.current?.focus();
+    };
+
+    // Po rozwinięciu fokus trafia do pola, a klawiatura ekranowa wysuwa się od razu
+    useEffect(() => {
+        if (searchOpen) searchInputRef.current?.focus();
+    }, [searchOpen, searchInputRef]);
 
     return (
         <header className={styles.header}>
@@ -92,7 +109,7 @@ const Header: React.FC<HeaderProps> = ({
                 <span className={styles.brandMark} aria-hidden="true">P</span>
                 <h1 className={styles.title}>Przetargi</h1>
             </div>
-            <div className={styles.search} role="search">
+            <div className={`${styles.search} ${searchVisible ? styles.searchVisible : ''}`} role="search">
                 <span className={styles.searchIcon}><SearchIcon /></span>
                 <input
                     ref={searchInputRef}
@@ -165,6 +182,16 @@ const Header: React.FC<HeaderProps> = ({
                     setUseDateRange={setUseDateRange}
                 />
                 <div className={styles.buttons}>
+                    <button
+                        type="button"
+                        className={`${styles.button} ${styles.iconButton} ${styles.searchToggle} ${searchQuery ? styles.searchToggleActive : ''}`}
+                        onClick={handleSearchToggle}
+                        aria-expanded={searchVisible}
+                        aria-label={searchQuery ? 'Szukaj w przetargach (fraza wpisana)' : 'Szukaj w przetargach'}
+                        title="Szukaj"
+                    >
+                        <SearchIcon />
+                    </button>
                     <button
                         type="button"
                         className={`${styles.button} ${styles.iconButton} ${isRefreshing ? styles.spinning : ''}`}
