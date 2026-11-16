@@ -40,7 +40,7 @@
     background: transparent;
     color: inherit;
     border: none;
-    border-radius: 6px;
+    border-radius: calc(var(--radius-control) - 4px);
     font: inherit;
     cursor: pointer;
 }
@@ -60,7 +60,7 @@
 
 .action:hover,
 .close:hover {
-    background: rgba(128, 128, 128, 0.3);
+    background: color-mix(in srgb, currentColor 20%, transparent);
     opacity: 1;
 }
 

@@ -35,7 +35,7 @@
     height: 16px;
     padding: 0 4px;
     box-sizing: border-box;
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     background: var(--button-primary);
     color: #fff;
     font-size: 12px;
@@ -56,7 +56,7 @@
     background: var(--bg-primary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     box-shadow: var(--card-hover-shadow);
     cursor: default;
     display: flex;
@@ -131,7 +131,7 @@
     padding: 6px 8px;
     background: var(--danger-bg);
     border: 1px solid var(--danger-ring);
-    border-radius: 8px;
+    border-radius: var(--radius-control);
 }
 
 .confirmText {
@@ -144,7 +144,7 @@
     min-height: 32px;
     padding: 0 12px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     font: inherit;
     font-size: 13px;
     cursor: pointer;

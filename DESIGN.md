@@ -68,6 +68,22 @@ typography:
     fontFamily: "ui-monospace, Consolas, monospace"
     fontSize: "12px"
     fontWeight: 600
+  tab:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    fontSize: "16px"
+    fontWeight: 500
+  message:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    fontSize: "16px"
+    fontWeight: 400
+  display-compact:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    fontSize: "24px"
+    fontWeight: 700
+  icon-glyph:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    fontSize: "20px"
+    fontWeight: 400
 rounded:
   badge: "4px"
   control: "9px"
@@ -106,7 +122,7 @@ components:
     backgroundColor: "{colors.raised}"
     textColor: "{colors.text-primary}"
     typography: "{typography.body}"
-    rounded: "10px"
+    rounded: "{rounded.control}"
     padding: "0 44px 0 38px"
     height: "40px"
   tender-card:

@@ -41,15 +41,17 @@
     margin-bottom: 12px;
 }
 
+/* Pole jak pozostałe w aplikacji: 40 px, obramowanie 1 px, tło powierzchni podniesionej */
 .searchInput {
     width: 100%;
-    padding: 8px 12px;
+    min-height: 40px;
+    padding: 0 12px;
     font-size: 14px;
-    border: 2px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-control);
+    background: var(--bg-secondary);
     color: var(--text-primary);
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
     box-sizing: border-box;
 }
 
@@ -136,7 +138,7 @@
     padding: 8px 10px;
     background: transparent;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     cursor: pointer;
     gap: 8px;
 }
@@ -145,10 +147,15 @@
     background: var(--bg-secondary);
 }
 
-.buyerItemSelected,
-.buyerItemSelected:hover {
+/* Wybrana pozycja: tło z akcentu, tekst w akcencie (kontrast ok. 4.7:1 w jasnym i 5.4:1 w ciemnym motywie).
+   Hover dodaje cienką ramkę zamiast ciemniejszego tła, żeby tekst zostawał czytelny, a pozycja płaska. */
+.buyerItemSelected {
     background: var(--accent-bg);
     font-weight: 600;
+}
+
+.buyerItemSelected:hover {
+    box-shadow: inset 0 0 0 1px var(--accent-border);
 }
 
 .buyerItemSelected .buyerName {
@@ -156,22 +163,8 @@
 }
 
 .buyerItemSelected .buyerCount {
-    background: var(--accent);
-    color: var(--bg-primary);
-}
-
-.buyerName {
-    color: white;
-}
-
-.buyerItemSelected .buyerCount {
-    background: rgba(255, 255, 255, 0.3);
-    color: white;
-}
-
-.buyerItemSelected:hover {
-    background: var(--button-primary-hover) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background: var(--button-primary);
+    color: #ffffff;
 }
 
 .buyerName {
@@ -190,7 +183,7 @@
     color: var(--text-secondary);
     background: var(--bg-secondary);
     padding: 2px 8px;
-    border-radius: 10px;
+    border-radius: 20px;
     min-width: 24px;
     text-align: center;
     flex-shrink: 0;
@@ -212,7 +205,7 @@
     background: none;
     color: var(--text-secondary);
     border: 1px dashed var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     font: inherit;
     font-size: 13px;
     cursor: pointer;

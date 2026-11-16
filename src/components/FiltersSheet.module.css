@@ -50,7 +50,7 @@
     border: none;
     border-radius: var(--radius-control);
     font: inherit;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
 }
@@ -85,8 +85,8 @@
     gap: 12px;
     min-height: 44px;
     padding: 0 10px;
-    border-radius: 8px;
-    font-size: 15px;
+    border-radius: var(--radius-control);
+    font-size: 14px;
     cursor: pointer;
 }
 
@@ -165,7 +165,7 @@
     min-height: 44px;
     border-radius: var(--radius-control);
     font: inherit;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
 }
