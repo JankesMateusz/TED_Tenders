@@ -5,6 +5,7 @@ import { afterRemoval, nextActiveId } from "../utils/cardNavigation";
 import { STATUS_CONFIG, TENDER_STATUSES } from "../utils/tenderStatus";
 import { useAuth } from "../context/AuthContext";
 import { useNotice } from "../context/NoticeContext";
+import { useShortcutsEnabled } from "./useShortcutsSetting";
 
 /** Czy zdarzenie pochodzi z pola, w którym użytkownik pisze (skróty jednoklawiszowe nie mogą mu wtedy przeszkadzać). */
 const isTypingTarget = (target: EventTarget | null): boolean =>
@@ -34,6 +35,7 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
     const { user } = useAuth();
     const { showNotice } = useNotice();
     const myEmail = user?.email ?? null;
+    const shortcutsEnabled = useShortcutsEnabled();
     const searchInputRef = useRef<HTMLInputElement>(null);
     // Karta, której dotyczą skróty klawiszowe (J/K, 1-4, 0, S)
     const [activeTenderId, setActiveTenderId] = useState<string | null>(null);
@@ -57,8 +59,8 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
                     searchInputRef.current.select();
                 }
             }
-            // "/" - fokus na wyszukiwarkę, ale nie podczas pisania w polu (tam to zwykły znak)
-            if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
+            // "/" - fokus na wyszukiwarkę, ale nie podczas pisania w polu (tam to zwykły znak) i nie po wyłączeniu skrótów
+            if (shortcutsEnabled && e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
                 e.preventDefault();
                 searchInputRef.current?.focus();
                 searchInputRef.current?.select();
@@ -67,7 +69,7 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [shortcutsEnabled]);
 
     // Gdy aktywna karta zniknęła po własnej ocenie (kolejka "Nieoznaczone"), aktywna zostaje następna albo ostatnia.
     // Gdy zniknęła przez cudzą zmianę, nic nie przeskakuje pod palcami: aktywna karta się wyłącza, a komunikat mówi, co się stało.
@@ -108,7 +110,7 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
 
     // Skróty do oceny: J/K, 1-4, 0, S. Nie działają w polach tekstowych, przy otwartym menu ani z Ctrl/Alt/Meta.
     useEffect(() => {
-        if (activeTab === 'statistics') return;
+        if (activeTab === 'statistics' || !shortcutsEnabled) return;
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
             if (isTypingTarget(e.target) || isPopupOpen()) return;
@@ -141,7 +143,7 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeTab, displayedTenders, activeTenderId, liveTendersById, toggleFavorite, toggleStatus]);
+    }, [activeTab, shortcutsEnabled, displayedTenders, activeTenderId, liveTendersById, toggleFavorite, toggleStatus]);
 
     return { activeTenderId, onActivate: handleActivateTender, searchInputRef };
 };

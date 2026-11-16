@@ -5,6 +5,7 @@ import { MESSAGES } from "../constants";
 import { pluralizeTenders } from "../utils/pluralPl";
 import { isHiddenAdvertiser } from "../utils/advertisers";
 import { useAdvertiserDecisions } from "../hooks/useAdvertiserDecisions";
+import { setShortcutsEnabled, useShortcutsEnabled } from "../hooks/useShortcutsSetting";
 import TenderCard from "./TenderCard";
 import styles from "./Tenders.module.css";
 
@@ -97,6 +98,7 @@ export const TendersList: React.FC<Props> = ({
     activeTenderId,
     onActivateTender
 }) => {
+    const shortcutsEnabled = useShortcutsEnabled();
     const isTendersTab = activeTab === "tenders";
 
     return (
@@ -112,7 +114,13 @@ export const TendersList: React.FC<Props> = ({
                                 {" · "}do przejrzenia: <strong>{unmarkedCount}</strong>
                             </span>
                             {showQueueHint && <span className={styles.queueHint}>{MESSAGES.QUEUE_HINT}</span>}
-                            <span className={`${styles.queueHint} ${styles.queueHintFull}`}>{MESSAGES.SHORTCUTS_HINT}</span>
+                            <span className={`${styles.queueHint} ${styles.queueHintFull}`}>
+                                {shortcutsEnabled ? MESSAGES.SHORTCUTS_HINT : MESSAGES.SHORTCUTS_OFF_HINT}
+                                {" "}
+                                <button type="button" className={styles.hintAction} onClick={() => setShortcutsEnabled(!shortcutsEnabled)}>
+                                    {shortcutsEnabled ? "Wyłącz skróty" : "Włącz skróty"}
+                                </button>
+                            </span>
                         </>
                     )}
                 </div>

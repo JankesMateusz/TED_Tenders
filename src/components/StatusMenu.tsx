@@ -3,6 +3,7 @@ import { TenderStatus } from '../types/TenderStatus';
 import { STATUS_CONFIG, TENDER_STATUSES, statusAuthorCaption } from '../utils/tenderStatus';
 import { MESSAGES } from '../constants';
 import StatusIcon from './StatusIcon';
+import { focusLeftContainer } from '../utils/focusOut';
 import styles from './StatusMenu.module.css';
 
 type Props = {
@@ -78,7 +79,14 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
 
     return (
         // Puste title wyłącza ewentualne podpowiedzi rodzica nad menu
-        <div ref={containerRef} className={styles.container} title="">
+        <div
+            ref={containerRef}
+            className={styles.container}
+            title=""
+            onBlur={(event) => {
+                if (focusLeftContainer(event)) setOpen(false);
+            }}
+        >
             <button
                 ref={triggerRef}
                 type="button"
@@ -87,6 +95,8 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                 onClick={() => setOpen((prev) => !prev)}
                 aria-haspopup="menu"
                 aria-expanded={open}
+                // Pełna nazwa: status oraz kto i kiedy go ustawił (podpis pod przyciskiem jest tylko wizualny)
+                aria-label={config ? `Status: ${config.label}, ${caption}` : undefined}
                 title={MESSAGES.SHORTCUTS_TITLE}
             >
                 {config && <span className={styles.dot} aria-hidden="true" />}
@@ -94,7 +104,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                 {config ? config.label : 'Status'}
                 <span className={styles.chevron} aria-hidden="true">▾</span>
             </button>
-            {caption && <span className={styles.caption}>{caption}</span>}
+            {caption && <span className={styles.caption} aria-hidden="true">{caption}</span>}
 
             {open && (
                 <ul ref={menuRef} className={styles.menu} role="menu" onKeyDown={moveFocus}>

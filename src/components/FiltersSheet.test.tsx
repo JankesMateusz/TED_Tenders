@@ -81,6 +81,8 @@ describe('FiltersSheet', () => {
         fireEvent.click(trigger());
         fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
         expect(screen.queryByRole('dialog')).toBeNull();
+        // Brak jest-dom w projekcie: fokus sprawdzamy bezpośrednio
+        // eslint-disable-next-line testing-library/no-node-access
         expect(document.activeElement).toBe(trigger());
 
         fireEvent.click(trigger());

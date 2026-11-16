@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TenderLabel } from '../types/TenderLabel';
 import { LABEL_CONFIG, TENDER_LABELS } from '../utils/tenderLabels';
+import { focusLeftContainer } from '../utils/focusOut';
 import styles from './StatusMenu.module.css';
 
 type Props = {
@@ -52,7 +53,14 @@ const LabelMenu: React.FC<Props> = ({ labels, editable, onToggle }) => {
     if (!editable) return null;
 
     return (
-        <div ref={containerRef} className={styles.container} title="">
+        <div
+            ref={containerRef}
+            className={styles.container}
+            title=""
+            onBlur={(event) => {
+                if (focusLeftContainer(event)) setOpen(false);
+            }}
+        >
             <button
                 ref={triggerRef}
                 type="button"

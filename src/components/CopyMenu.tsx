@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { focusLeftContainer } from '../utils/focusOut';
 import styles from './StatusMenu.module.css';
 
 export type CopyItem = {
@@ -103,7 +104,13 @@ const CopyMenu: React.FC<Props> = ({ items, actions = [] }) => {
     };
 
     return (
-        <div ref={containerRef} className={styles.container}>
+        <div
+            ref={containerRef}
+            className={styles.container}
+            onBlur={(event) => {
+                if (focusLeftContainer(event)) setOpen(false);
+            }}
+        >
             <button
                 ref={triggerRef}
                 type="button"

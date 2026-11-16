@@ -64,9 +64,14 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
     const [expanded, setExpanded] = useState<boolean>(false);
     const cardRef = useRef<HTMLLIElement>(null);
 
-    // Po przejściu klawiszami karta ma być widoczna; "nearest" nie przewija, gdy już jest na ekranie
+    // Po przejściu klawiszami karta dostaje prawdziwy fokus (czytnik ekranu ją zapowiada, a Tab zaczyna od niej)
+    // i ma być widoczna; "nearest" nie przewija, gdy już jest na ekranie
     useEffect(() => {
-        if (isActive) cardRef.current?.scrollIntoView({ block: 'nearest' });
+        if (!isActive) return;
+        const card = cardRef.current;
+        // Kliknięcie w pole lub przycisk wewnątrz karty ma zostać tam, gdzie jest
+        if (card && !card.contains(document.activeElement)) card.focus({ preventScroll: true });
+        card?.scrollIntoView({ block: 'nearest' });
     }, [isActive]);
 
     const srcCfg = getSourceConfig(tender.source);
@@ -128,6 +133,8 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
         <li
             ref={cardRef}
             data-tender-card=""
+            tabIndex={-1}
+            aria-label={tender.title}
             onClick={(event) => onActivate(tender.id, !isInteractiveTarget(event.target))}
             className={`${styles.tenderCard} ${tender.status ? styles.tenderCardStatus : ''} ${isActive ? styles.tenderCardActive : ''}`}
             style={statusColor ? ({ '--status-color': statusColor } as React.CSSProperties) : undefined}

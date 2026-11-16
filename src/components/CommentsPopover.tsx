@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { TenderComment } from '../types/TenderComment';
 import { MAX_COMMENT_LENGTH } from '../utils/comments';
 import { formatRelativeTime } from '../utils/dateUtils';
+import { focusLeftContainer } from '../utils/focusOut';
 import styles from './Comments.module.css';
 
 type Props = {
@@ -22,6 +23,8 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
     const [confirmingId, setConfirmingId] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Zamknięcie klawiszem Escape lub kliknięciem poza okienkiem
     useEffect(() => {
@@ -29,8 +32,12 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
         const handleKey = (event: KeyboardEvent) => {
             // Pierwszy Escape wycofuje pytanie o usunięcie, dopiero drugi zamyka okienko
             if (event.key === 'Escape') {
-                if (confirmingId !== null) setConfirmingId(null);
-                else setOpen(false);
+                if (confirmingId !== null) {
+                    setConfirmingId(null);
+                } else {
+                    setOpen(false);
+                    triggerRef.current?.focus();
+                }
             }
         };
         const handleClick = (event: MouseEvent) => {
@@ -52,6 +59,11 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
         if (open && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
     }, [open, comments.length]);
 
+    // Po otwarciu fokus trafia do pola komentarza, żeby klawiatura i czytnik ekranu zaczynały od okienka
+    useEffect(() => {
+        if (open) inputRef.current?.focus();
+    }, [open]);
+
     const submit = async () => {
         if (saving || draft.trim().length === 0) return;
         setSaving(true);
@@ -70,8 +82,12 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
             // Puste title wyłącza podpowiedź karty (autor statusu) nad okienkiem
             title=""
             onClick={(e) => e.stopPropagation()}
+            onBlur={(event) => {
+                if (focusLeftContainer(event)) setOpen(false);
+            }}
         >
             <button
+                ref={triggerRef}
                 className={`${styles.commentButton} ${count > 0 ? styles.commentButtonActive : ''}`}
                 onClick={() => setOpen((prev) => !prev)}
                 aria-label={label}
@@ -135,6 +151,7 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
                         </ul>
                     )}
                     <textarea
+                        ref={inputRef}
                         className={styles.input}
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}

@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { focusLeftContainer } from '../utils/focusOut';
 import styles from './Tenders.module.css';
 
 export interface FilterPopoverOption {
@@ -63,7 +64,13 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({ label, options, on
     }, [open]);
 
     return (
-        <div ref={containerRef} className={styles.popover}>
+        <div
+            ref={containerRef}
+            className={styles.popover}
+            onBlur={(event) => {
+                if (focusLeftContainer(event)) setOpen(false);
+            }}
+        >
             <button
                 ref={triggerRef}
                 type="button"

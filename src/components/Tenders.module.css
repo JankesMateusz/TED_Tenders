@@ -158,6 +158,18 @@
     flex-basis: 100%;
 }
 
+/* "Wyłącz/Włącz skróty" w wierszu podpowiedzi: odnośnik w tekście, nie kolejny przycisk w pasku */
+.hintAction {
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--accent);
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
 @media (hover: none) {
     .queueHintFull {
         display: none;
@@ -361,6 +373,16 @@
 
 /* Aktywna karta (skróty klawiszowe) */
 .tenderCardActive {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* Fokus programowy karty (J/K) jest pokazany obrysem aktywnej karty, bez drugiego, domyślnego obrysu przeglądarki */
+.tenderCard:focus {
+    outline: none;
+}
+
+.tenderCardActive:focus {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
 }
@@ -717,7 +739,8 @@
 .newBadge {
     padding: 2px 8px;
     border-radius: 4px;
-    background: var(--accent);
+    /* Biały tekst: tło to --button-primary (w ciemnym motywie --accent jest za jasny, 2.5:1) */
+    background: var(--button-primary);
     color: #fff;
     font-size: 0.85em;
     font-weight: 600;

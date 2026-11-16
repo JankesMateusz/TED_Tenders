@@ -33,7 +33,7 @@ colors:
   series-ezam: "#3498db"
   series-baza: "#9b59b6"
   label-important: "#d63384"
-  label-simple: "#16a085"
+  label-simple: "#12806a"
   label-hard: "#8e44ad"
   label-missing-docs: "#6c757d"
 typography:
