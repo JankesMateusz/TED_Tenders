@@ -25,9 +25,13 @@ const FIELDS = [
   'internal-identifier-proc',
 ];
 
-/** Zapytanie o ogłoszenia o udzielenie zamówienia z Polski opublikowane danego dnia (YYYY-MM-DD). */
+/**
+ * Zapytanie o ogłoszenia o zamówieniu z Polski opublikowane danego dnia (YYYY-MM-DD).
+ * Celowo bez filtra CPV (wcześniej `classification-cpv=teeq`): odcinał on część przetargów usługowych, które
+ * należą do IT. Ogłoszenia nie-IT dostają `isIT: false` (patrz `isItTender`), a kod pobiera je razem z resztą.
+ */
 const buildQuery = (day: string): string =>
-  `buyer-country=POL AND publication-date=${day.replace(/-/g, '')} AND classification-cpv=teeq AND notice-type=cn-standard`;
+  `buyer-country=POL AND publication-date=${day.replace(/-/g, '')} AND notice-type=cn-standard`;
 
 const extractCountry = (title: string | undefined): string =>
   title?.split('–')[0].trim() || 'Nieznany kraj';
