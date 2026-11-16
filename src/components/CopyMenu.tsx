@@ -26,8 +26,17 @@ const copyToClipboard = async (item: CopyItem): Promise<void> => {
     await navigator.clipboard.writeText(item.value);
 };
 
+/** Akcja inna niż kopiowanie (np. ukrycie zamawiającego); menu zamyka się po jej wybraniu. */
+export type MenuAction = {
+    key: string;
+    label: string;
+    onSelect: () => void;
+};
+
 type Props = {
     items: CopyItem[];
+    /** Akcje wpływające na dane (nie na schowek) są pod kreską, żeby nie pomylić ich z kopiowaniem. */
+    actions?: MenuAction[];
 };
 
 const MoreIcon: React.FC = () => (
@@ -38,8 +47,8 @@ const MoreIcon: React.FC = () => (
     </svg>
 );
 
-/** Przycisk "trzy kropki" z menu kopiowania danych przetargu do schowka. */
-const CopyMenu: React.FC<Props> = ({ items }) => {
+/** Przycisk "trzy kropki" z menu kopiowania danych przetargu do schowka i, pod kreską, z akcjami na danych. */
+const CopyMenu: React.FC<Props> = ({ items, actions = [] }) => {
     const [open, setOpen] = useState(false);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -103,7 +112,7 @@ const CopyMenu: React.FC<Props> = ({ items }) => {
                 aria-haspopup="menu"
                 aria-expanded={open}
                 aria-label="Więcej akcji"
-                title="Kopiuj…"
+                title={actions.length > 0 ? 'Kopiuj i inne akcje…' : 'Kopiuj…'}
             >
                 <MoreIcon />
             </button>
@@ -114,6 +123,22 @@ const CopyMenu: React.FC<Props> = ({ items }) => {
                         <li key={item.key} role="none">
                             <button type="button" role="menuitem" className={styles.item} onClick={() => copy(item)}>
                                 {copiedKey === item.key ? 'Skopiowano ✓' : item.label}
+                            </button>
+                        </li>
+                    ))}
+                    {actions.length > 0 && <li role="separator" className={styles.menuDivider} />}
+                    {actions.map((action) => (
+                        <li key={action.key} role="none">
+                            <button
+                                type="button"
+                                role="menuitem"
+                                className={styles.item}
+                                onClick={() => {
+                                    setOpen(false);
+                                    action.onSelect();
+                                }}
+                            >
+                                {action.label}
                             </button>
                         </li>
                     ))}

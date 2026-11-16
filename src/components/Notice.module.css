@@ -1,0 +1,94 @@
+/* Region wyśrodkowany na dole; nie przechwytuje kliknięć poza samym komunikatem */
+.region {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 1100;
+    display: flex;
+    justify-content: center;
+    width: min(560px, calc(100vw - 24px));
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+/* Odwrócone kolory motywu: komunikat odcina się od listy w obu motywach */
+.notice {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 4px 4px 4px 16px;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border-radius: var(--radius-control);
+    box-shadow: var(--pop-shadow);
+    font-size: 14px;
+    pointer-events: auto;
+    animation: noticeIn 0.2s ease-out;
+}
+
+.message {
+    min-width: 0;
+    padding: 8px 8px 8px 0;
+    overflow-wrap: anywhere;
+}
+
+.action,
+.close {
+    flex-shrink: 0;
+    min-height: 40px;
+    background: transparent;
+    color: inherit;
+    border: none;
+    border-radius: 6px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.action {
+    padding: 0 12px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.close {
+    min-width: 40px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.action:hover,
+.close:hover {
+    background: rgba(128, 128, 128, 0.3);
+    opacity: 1;
+}
+
+.action:focus-visible,
+.close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+}
+
+@keyframes noticeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .notice {
+        animation: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .region {
+        bottom: 16px;
+    }
+}

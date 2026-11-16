@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Tender } from "../types/Tender";
 import { useUserPreferences } from "../context/UserPreferencesContext";
 import { afterRemoval, nextActiveId } from "../utils/cardNavigation";
-import { TENDER_STATUSES } from "../utils/tenderStatus";
+import { STATUS_CONFIG, TENDER_STATUSES } from "../utils/tenderStatus";
+import { useAuth } from "../context/AuthContext";
+import { useNotice } from "../context/NoticeContext";
 
 /** Czy zdarzenie pochodzi z pola, w którym użytkownik pisze (skróty jednoklawiszowe nie mogą mu wtedy przeszkadzać). */
 const isTypingTarget = (target: EventTarget | null): boolean =>
@@ -21,17 +23,24 @@ type Options = {
     liveTendersById: Map<string, Tender>;
     toggleFavorite: UserPreferences["toggleFavorite"];
     toggleStatus: UserPreferences["toggleStatus"];
+    wasChangedByMe: UserPreferences["wasChangedByMe"];
 };
 
 /**
  * Skróty klawiszowe listy przetargów i aktywna karta, której one dotyczą (J/K, 1-4, 0, S; Ctrl+F i "/" przenoszą
  * fokus do wyszukiwarki, do której `searchInputRef` trzeba podpiąć).
  */
-export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById, toggleFavorite, toggleStatus }: Options) => {
+export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById, toggleFavorite, toggleStatus, wasChangedByMe }: Options) => {
+    const { user } = useAuth();
+    const { showNotice } = useNotice();
+    const myEmail = user?.email ?? null;
     const searchInputRef = useRef<HTMLInputElement>(null);
     // Karta, której dotyczą skróty klawiszowe (J/K, 1-4, 0, S)
     const [activeTenderId, setActiveTenderId] = useState<string | null>(null);
     const previousIdsRef = useRef<string[]>([]);
+    const previousStatusesRef = useRef<Map<string, string | undefined>>(new Map());
+    const activeIdRef = useRef<string | null>(null);
+    activeIdRef.current = activeTenderId;
     const handleActivateTender = useCallback(
         (id: string, toggle: boolean) => setActiveTenderId((current) => (toggle && current === id ? null : id)),
         []
@@ -60,15 +69,29 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Gdy aktywna karta zniknęła z listy (np. po ocenie w kolejce), aktywna zostaje następna albo ostatnia
+    // Gdy aktywna karta zniknęła po własnej ocenie (kolejka "Nieoznaczone"), aktywna zostaje następna albo ostatnia.
+    // Gdy zniknęła przez cudzą zmianę, nic nie przeskakuje pod palcami: aktywna karta się wyłącza, a komunikat mówi, co się stało.
     useEffect(() => {
         const ids = displayedTenders.map((tender) => tender.id);
-        setActiveTenderId((current) => {
-            if (current === null || ids.includes(current)) return current;
-            const successor = afterRemoval(previousIdsRef.current, current);
-            return successor !== null && ids.includes(successor) ? successor : null;
-        });
+        const current = activeIdRef.current;
+        if (current !== null && !ids.includes(current)) {
+            if (wasChangedByMe(current)) {
+                const successor = afterRemoval(previousIdsRef.current, current);
+                setActiveTenderId(successor !== null && ids.includes(successor) ? successor : null);
+            } else {
+                setActiveTenderId(null);
+                const changed = liveTendersById.get(current);
+                const statusChanged = changed?.status !== undefined && changed.status !== previousStatusesRef.current.get(current);
+                if (changed?.status && statusChanged && changed.statusByEmail !== myEmail) {
+                    const author = changed.statusByEmail ?? 'nieznany użytkownik';
+                    showNotice({ message: `Karta zniknęła z listy: ${author} ustawił(a) status „${STATUS_CONFIG[changed.status].label}”.` });
+                }
+            }
+        }
         previousIdsRef.current = ids;
+        previousStatusesRef.current = new Map(displayedTenders.map((tender) => [tender.id, tender.status]));
+        // Reaguje tylko na zmianę listy; pozostałe wartości są czytane w chwili zmiany
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [displayedTenders]);
 
     // Kliknięcie poza kartami wyłącza aktywną kartę

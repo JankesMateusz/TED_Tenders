@@ -34,7 +34,7 @@ const Tenders: React.FC = () => {
     const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
     const { user } = useAuth();
     const uid = user?.uid ?? null;
-    const { favorites, isFavorite, toggleFavorite, toggleStatus, actionError } = useUserPreferences();
+    const { favorites, isFavorite, toggleFavorite, toggleStatus, wasChangedByMe, actionError } = useUserPreferences();
     const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
 
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
@@ -176,7 +176,8 @@ const Tenders: React.FC = () => {
         activeTab,
         liveTendersById,
         toggleFavorite,
-        toggleStatus
+        toggleStatus,
+        wasChangedByMe
     });
 
     const tendersCountBySource = useMemo(() => {

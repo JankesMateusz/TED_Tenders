@@ -18,6 +18,8 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
     const [open, setOpen] = useState(false);
     const [draft, setDraft] = useState('');
     const [saving, setSaving] = useState(false);
+    // Komentarz czekający na potwierdzenie usunięcia (usunięcie jest nieodwracalne i widać je u wszystkich)
+    const [confirmingId, setConfirmingId] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
 
@@ -25,10 +27,17 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
     useEffect(() => {
         if (!open) return;
         const handleKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setOpen(false);
+            // Pierwszy Escape wycofuje pytanie o usunięcie, dopiero drugi zamyka okienko
+            if (event.key === 'Escape') {
+                if (confirmingId !== null) setConfirmingId(null);
+                else setOpen(false);
+            }
         };
         const handleClick = (event: MouseEvent) => {
-            if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+            if (!containerRef.current?.contains(event.target as Node)) {
+                setOpen(false);
+                setConfirmingId(null);
+            }
         };
         document.addEventListener('keydown', handleKey);
         document.addEventListener('mousedown', handleClick);
@@ -36,7 +45,7 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
             document.removeEventListener('keydown', handleKey);
             document.removeEventListener('mousedown', handleClick);
         };
-    }, [open]);
+    }, [open, confirmingId]);
 
     // Po otwarciu i po nowym komentarzu lista przewija się do najnowszego
     useEffect(() => {
@@ -86,10 +95,10 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
                                     <div className={styles.commentMeta}>
                                         <span className={styles.author}>{comment.authorEmail}</span>
                                         <span className={styles.time}>{formatRelativeTime(comment.createdAt)}</span>
-                                        {comment.authorUid === currentUid && (
+                                        {comment.authorUid === currentUid && confirmingId !== comment.id && (
                                             <button
                                                 className={styles.deleteButton}
-                                                onClick={() => onDelete(comment)}
+                                                onClick={() => setConfirmingId(comment.id)}
                                                 aria-label="Usuń komentarz"
                                                 title="Usuń komentarz"
                                             >
@@ -97,6 +106,29 @@ const CommentsPopover: React.FC<Props> = ({ comments, currentUid, onAdd, onDelet
                                             </button>
                                         )}
                                     </div>
+                                    {confirmingId === comment.id && (
+                                        <div className={styles.confirm} role="group" aria-label="Potwierdź usunięcie komentarza">
+                                            <span className={styles.confirmText}>Usunąć ten komentarz?</span>
+                                            <button
+                                                type="button"
+                                                className={styles.confirmDelete}
+                                                onClick={() => {
+                                                    setConfirmingId(null);
+                                                    onDelete(comment);
+                                                }}
+                                            >
+                                                Usuń
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={styles.confirmCancel}
+                                                autoFocus
+                                                onClick={() => setConfirmingId(null)}
+                                            >
+                                                Anuluj
+                                            </button>
+                                        </div>
+                                    )}
                                     <p className={styles.text}>{comment.text}</p>
                                 </li>
                             ))}

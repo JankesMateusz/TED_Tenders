@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/components/Tenders.module.css"
+        ],
+        "createdAt": "2026-11-16T15:52:22.479Z",
+        "reason": "Documented exception in DESIGN.md: the 4px left status bar is the only thick border and encodes shared tender status; predates this session, not confirmed by user"
+      }
+    ]
+  }
+}

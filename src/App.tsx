@@ -2,6 +2,7 @@ import React from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { UserPreferencesProvider } from './context/UserPreferencesContext';
+import { NoticeProvider } from './context/NoticeContext';
 import Tenders from './components/tenders';
 import OrdersModule from './features/orders/OrdersModule';
 import { useHashRoute } from './hooks/useHashRoute';
@@ -30,13 +31,15 @@ const AuthGate: React.FC = () => {
   if (!role) return <NoAccessScreen />;
 
   return (
-    <UserPreferencesProvider>
-      <AwaySummaryProvider>
-        <ModuleSwitch />
-        <ScrollToTopButton />
-        <AwaySummary />
-      </AwaySummaryProvider>
-    </UserPreferencesProvider>
+    <NoticeProvider>
+      <UserPreferencesProvider>
+        <AwaySummaryProvider>
+          <ModuleSwitch />
+          <ScrollToTopButton />
+          <AwaySummary />
+        </AwaySummaryProvider>
+      </UserPreferencesProvider>
+    </NoticeProvider>
   );
 };
 

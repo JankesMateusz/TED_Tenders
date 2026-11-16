@@ -133,6 +133,31 @@
     background: var(--bg-secondary);
 }
 
+/* Cyfra skrótu 1-4 po prawej stronie pozycji; mono, bo to klawisz */
+.shortcut {
+    margin-left: auto;
+    padding: 1px 6px;
+    border: 1px solid var(--border-color);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+@media (hover: none) {
+    .shortcut {
+        display: none;
+    }
+}
+
+.menuDivider {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--border-color);
+}
+
 .itemClear {
     color: var(--text-secondary);
     border-top: 1px solid var(--border-color);

@@ -13,7 +13,8 @@ import { isNewSince } from '../utils/awaySummary';
 import CommentsPopover from './CommentsPopover';
 import StatusMenu from './StatusMenu';
 import LabelMenu from './LabelMenu';
-import CopyMenu, { CopyItem } from './CopyMenu';
+import CopyMenu, { CopyItem, MenuAction } from './CopyMenu';
+import { useNotice } from '../context/NoticeContext';
 import DocsBadge from './DocsBadge';
 import ExternalIcon from './ExternalIcon';
 import { docsLinkUrl } from '../utils/docsCheck';
@@ -54,6 +55,7 @@ const VISIBLE_CPV_CHIPS = 2;
 
 const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment, advertiserHidden, onSetAdvertiserDecision, isActive, onActivate }) => {
     const { user } = useAuth();
+    const { showNotice } = useNotice();
     const { isFavorite, toggleFavorite, toggleStatus, toggleLabel } = useUserPreferences();
 
     const awaySince = useAwaySince();
@@ -99,6 +101,28 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
         { key: 'pubNo', label: 'Kopiuj numer publikacji', value: tender.publicationNumber },
         ...(tender.referenceNumber ? [{ key: 'refNo', label: 'Kopiuj numer referencyjny', value: tender.referenceNumber }] : []),
     ];
+
+    // Decyzja o zamawiającym dotyczy wszystkich osób i wszystkich jego ogłoszeń (także przyszłych), więc jest w menu,
+    // z nazwanym zasięgiem i komunikatem "Cofnij", a nie jako przycisk obok głównego odnośnika
+    const setDecisionWithUndo = (decision: AdvertiserDecision) => {
+        const undoDecision: AdvertiserDecision = decision === 'hidden' ? 'visible' : 'hidden';
+        onSetAdvertiserDecision(tender, decision);
+        showNotice({
+            message: decision === 'hidden'
+                ? `Ukryto zamawiającego „${tender.buyerName}” dla wszystkich osób, także jego przyszłe ogłoszenia.`
+                : `Przywrócono zamawiającego „${tender.buyerName}” dla wszystkich osób.`,
+            actionLabel: 'Cofnij',
+            onAction: () => onSetAdvertiserDecision(tender, undoDecision),
+        });
+    };
+
+    const menuActions: MenuAction[] = tender.buyerNip
+        ? [{
+            key: 'advertiser',
+            label: advertiserHidden ? 'Przywróć zamawiającego dla wszystkich' : 'Ukryj zamawiającego dla wszystkich',
+            onSelect: () => setDecisionWithUndo(advertiserHidden ? 'visible' : 'hidden'),
+        }]
+        : [];
 
     return (
         <li
@@ -161,7 +185,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     >
                         <StarIcon filled={fav} />
                     </button>
-                    <CopyMenu items={copyItems} />
+                    <CopyMenu items={copyItems} actions={menuActions} />
                 </div>
             </div>
 
@@ -214,18 +238,6 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     Zobacz ogłoszenie <ExternalIcon />
                 </a>
                 <DocsBadge tender={tender} canCheck={canSetStatus} />
-                {tender.buyerNip && (
-                    <button
-                        type="button"
-                        className={styles.advertiserButton}
-                        onClick={() => onSetAdvertiserDecision(tender, advertiserHidden ? 'visible' : 'hidden')}
-                        title={advertiserHidden
-                            ? 'Pokazuje ogłoszenia tego zamawiającego na liście (dla wszystkich osób)'
-                            : 'Ukrywa wszystkie ogłoszenia tego zamawiającego, także przyszłe (dla wszystkich osób)'}
-                    >
-                        {advertiserHidden ? 'Przywróć zamawiającego' : 'Ukryj zamawiającego'}
-                    </button>
-                )}
             </div>
 
             <p className={styles.cardFootnote}>

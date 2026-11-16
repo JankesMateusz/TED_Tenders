@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { TenderStatus } from '../types/TenderStatus';
 import { STATUS_CONFIG, TENDER_STATUSES, statusAuthorCaption } from '../utils/tenderStatus';
 import { MESSAGES } from '../constants';
+import StatusIcon from './StatusIcon';
 import styles from './StatusMenu.module.css';
 
 type Props = {
@@ -67,6 +68,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
             <div className={styles.container}>
                 <span className={styles.readOnly} style={{ '--status-color': config.color } as React.CSSProperties}>
                     <span className={styles.dot} aria-hidden="true" />
+                    {status && <StatusIcon status={status} />}
                     {config.label}
                 </span>
                 <span className={styles.caption}>{caption}</span>
@@ -88,6 +90,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                 title={MESSAGES.SHORTCUTS_TITLE}
             >
                 {config && <span className={styles.dot} aria-hidden="true" />}
+                {status && <StatusIcon status={status} />}
                 {config ? config.label : 'Status'}
                 <span className={styles.chevron} aria-hidden="true">▾</span>
             </button>
@@ -95,7 +98,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
 
             {open && (
                 <ul ref={menuRef} className={styles.menu} role="menu" onKeyDown={moveFocus}>
-                    {TENDER_STATUSES.map((value) => {
+                    {TENDER_STATUSES.map((value, index) => {
                         const item = STATUS_CONFIG[value];
                         const active = status === value;
                         return (
@@ -106,6 +109,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                                     aria-checked={active}
                                     className={`${styles.item} ${active ? styles.itemActive : ''}`}
                                     style={{ '--status-color': item.color } as React.CSSProperties}
+                                    aria-keyshortcuts={String(index + 1)}
                                     onClick={() => {
                                         onToggle(value);
                                         setOpen(false);
@@ -113,7 +117,10 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                                     }}
                                 >
                                     <span className={styles.dot} aria-hidden="true" />
+                                    <StatusIcon status={value} />
                                     {item.label}
+                                    {/* Cyfra to skrót klawiszowy aktywnej karty; na ekranie dotykowym jest ukryta */}
+                                    <kbd className={styles.shortcut} aria-hidden="true">{index + 1}</kbd>
                                 </button>
                             </li>
                         );

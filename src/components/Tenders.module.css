@@ -695,23 +695,6 @@
     background: var(--bg-secondary);
 }
 
-.advertiserButton {
-    /* Pasek linków to flex: auto po lewej odsuwa przycisk na prawy brzeg karty */
-    margin-left: auto;
-    padding: 8px 16px;
-    background: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    cursor: pointer;
-    font: inherit;
-    transition: background-color 0.2s ease;
-}
-
-.advertiserButton:hover {
-    background: rgba(0, 0, 0, 0.06);
-}
-
 .newBadge {
     padding: 2px 8px;
     border-radius: 4px;
@@ -1319,7 +1302,6 @@ a.systemBadge:hover {
 @media (max-width: 768px) {
     .tab,
     .link,
-    .advertiserButton,
     .cpvMore,
     .clearFiltersButton,
     .plainCheckbox {
