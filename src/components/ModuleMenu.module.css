@@ -1,0 +1,85 @@
+/* Przycisk "hamburger" w nagłówku i rozwijana lista modułów aplikacji */
+.container {
+    position: relative;
+    display: flex;
+}
+
+.trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.trigger:hover,
+.trigger[aria-expanded='true'] {
+    background: var(--bg-secondary);
+}
+
+.trigger svg {
+    width: 20px;
+    height: 20px;
+}
+
+.menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    min-width: 220px;
+    max-width: calc(100vw - 32px);
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 12px;
+    background: transparent;
+    color: var(--text-primary);
+    border: 0;
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.item:hover,
+.item:focus-visible {
+    background: var(--accent-tint);
+    outline: none;
+}
+
+.itemCurrent {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.check {
+    font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .trigger {
+        transition: none;
+    }
+}

@@ -27,3 +27,9 @@ yarn-error.log*
 .firebase/
 functions/node_modules/
 functions/lib/
+
+# Dane firmy narzeczonej (raport Excel i zrzuty aplikacji), nie do repozytorium
+docs/App/
+
+# Włącza funkcje Zamówień w functions/index.ts (lokalnie; w CI tworzy go deploy.yml)
+functions/orders.enabled

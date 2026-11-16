@@ -1,0 +1,141 @@
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.field select,
+.field input {
+    min-width: 140px;
+    padding: 6px 8px;
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-control);
+    font-size: 14px;
+}
+
+.search {
+    flex: 1 1 280px;
+}
+
+.search input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.table th,
+.table td {
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table th {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.muted {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.tag {
+    display: inline-block;
+    margin: 0 4px 2px 0;
+    padding: 1px 8px;
+    background: var(--accent-bg);
+    border-radius: 999px;
+    font-size: 12px;
+}
+
+.error,
+.warning {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+}
+
+.error {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.warning {
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+}
+
+.more {
+    display: block;
+    margin: 16px auto;
+    padding: 8px 20px;
+    background: var(--button-primary);
+    color: #fff;
+    border: 0;
+    border-radius: var(--radius-control);
+    cursor: pointer;
+}
+
+.more:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* Wąski ekran: każdy wiersz tabeli staje się kartą z podpisami pól. */
+@media (max-width: 760px) {
+    .table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+    }
+
+    .table,
+    .table tbody,
+    .table tr,
+    .table td {
+        display: block;
+    }
+
+    .table tr {
+        margin-bottom: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-card);
+    }
+
+    .table td {
+        border-bottom: 0;
+        padding: 4px 12px;
+    }
+
+    .table td::before {
+        content: attr(data-label) ': ';
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+}
