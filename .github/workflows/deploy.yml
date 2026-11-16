@@ -50,6 +50,12 @@ jobs:
           # Podsumowanie od ostatniej wizyty (baner i plakietki Nowy) jest włączone w obu środowiskach.
           REACT_APP_ENABLE_NOTIFICATIONS: 'true'
 
+      # Funkcje Zamówień (wymagają sekretu ORDERS_DATABASE_URL) wdrażamy tylko na środowisko testowe.
+      # Włącza je plik functions/orders.enabled (zmienna środowiskowa nie dociera do wykrywania funkcji w Firebase CLI).
+      - name: Enable orders functions (test only)
+        if: github.ref_name == 'develop'
+        run: touch functions/orders.enabled
+
       # Jawny --project, żeby wdrożenie zawsze trafiało w projekt przypisany do środowiska.
       - name: Deploy hosting, functions and Firestore rules/indexes
         run: |
@@ -60,5 +66,3 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT_ID: ${{ secrets.REACT_APP_FIREBASE_PROJECT_ID }}
-          # Funkcje Zamówień (wymagają sekretu ORDERS_DATABASE_URL) wdrażamy tylko na środowisko testowe.
-          ENABLE_ORDERS_FUNCTIONS: ${{ github.ref_name == 'develop' && 'true' || 'false' }}
