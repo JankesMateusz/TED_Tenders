@@ -319,10 +319,14 @@
     padding: 0;
     margin: 0;
     display: grid;
+    /* Bez tego kolumna rośnie do najdłuższego niełamliwego fragmentu i kafle wychodzą poza ekran */
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
 }
 
 .tenderCard {
+    min-width: 0;
+    overflow-wrap: anywhere;
     background: var(--surface);
     border: 1px solid var(--border-color);
     border-left: 4px solid var(--border-color);
@@ -475,6 +479,7 @@
 }
 
 .cpvChip {
+    min-width: 0;
     max-width: 100%;
     padding: 4px 10px;
     overflow: hidden;

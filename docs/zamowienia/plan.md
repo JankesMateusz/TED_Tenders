@@ -1,6 +1,6 @@
 # Moduł Zamówień: plan realizacji
 
-Stan na 2026-11-08. Dokument uzupełnia `docs/zamowienia/handoff.md` (stan prac, komendy, pułapki). Dokumentacja bazy, importu i funkcji odczytu jest w `db/README.md` i nie jest tu powielana.
+Stan na 2026-11-09. Dokument uzupełnia `docs/zamowienia/handoff.md` (stan prac, komendy, pułapki). Dokumentacja bazy, importu i funkcji odczytu jest w `db/README.md` i nie jest tu powielana.
 
 ## 1. Cel i zakres
 
@@ -32,14 +32,14 @@ Spójność z `docs/decyzja-backend-i-baza-danych.md`: tam rekomendowano „Fire
 | **Wartość zamówienia zostaje pusta (decyzja 2026-11-08)** | Reguła nieznana, a POC jej nie potrzebuje. `value_total` pusty, `part_value` 1:1 z importu; reguła dojdzie jako migracja z przeliczeniem. UI pokazuje „brak". |
 | **Menu modułów: hamburger po lewej** | Skaluje się na kolejne moduły (zamiast zakładek w `tenders.tsx`, którego nagłówek jest w całości o przetargach). Rejestr w `src/modules.ts`, adresy z hashem (`#/zamowienia`), flaga `REACT_APP_ENABLE_ORDERS`. Przy wyłączonej fladze nagłówek przetargów jest bez zmian. |
 | **Funkcje zamówień eksportowane zwykle (od 2026-11-09)** | Wcześniej tylko w emulatorze, bo bez sekretu `ORDERS_DATABASE_URL` wdrożenie wszystkich funkcji by się nie powiodło. Sekret jest ustawiony w projekcie testowym `tenders-test-b5bb3`. **W produkcyjnym `tendersted` go nie ma: ustawić przed scaleniem do `main`.** |
-| **Neon: projekt `tenders-pg`, Postgres 18, Frankfurt (decyzja 2026-11-09)** | Baza z migracjami 0001 do 0003 i importem raportu 2026 (7 773 zamówienia, 29 263 pozycje), weryfikator bez niezgodności, testy SQL przechodzą też na 18. Funkcje używają adresu pooled (sekret), migracje i import adresu direct. |
-| **Dane osobowe urzędników: bez anonimizacji (zgoda użytkownika 2026-11-09)** | Dane są jawne (strony urzędów, dokumenty, raporty), firma ich nie anonimizuje. Zostaje kwestia poufności samego raportu firmy (ryzyka, pkt 8). |
+| **Neon: projekt `tenders-pg`, Postgres 18, Frankfurt (decyzja 2026-11-08)** | Baza z migracjami 0001 do 0003 i importem raportu 2026 (7 773 zamówienia, 29 263 pozycje), weryfikator bez niezgodności, testy SQL przechodzą też na 18. Funkcje używają adresu pooled (sekret), migracje i import adresu direct. |
+| **Dane osobowe urzędników: bez anonimizacji (zgoda użytkownika 2026-11-08)** | Dane są jawne (strony urzędów, dokumenty, raporty), firma ich nie anonimizuje. Zostaje kwestia poufności samego raportu firmy (ryzyka, pkt 8). |
 | **Kolumny celowo pominięte** | `Benchmark Bid`, `Comments Sales Team`, `Data wysłania pisma` (puste w 100%), `Financing non-EU` (zawsze odwrotność `Financing EU`; odtwarzana tylko w widoku eksportu), `Order Week` i `Publication Quarter` (wyliczane; tydzień = ISO z daty rejestracji, kwartał z daty publikacji, zgodność 100%). |
 | **RAM, storage, ISO 50001, TCO w `positions.attributes` (JSONB)** | Rzadkie parametry zależne od kategorii (RAM i storage dla smartfonów, ISO i TCO to certyfikaty wymagane przez zamawiającego). Nowy parametr to nowy klucz, nie migracja. |
 
 ## 3. Stan na dziś (zrobione)
 
-Gałąź `feature/zamowienia-baza` (odchodzi od `origin/develop`, 0 commitów za nim):
+Gałąź `feature/zamowienia-baza` jest scalona do `develop` (PR #12, 2026-11-08, `5996f31`) i wdrożona na projekt testowy:
 
 | Commit | Zawartość |
 |---|---|
@@ -50,12 +50,17 @@ Gałąź `feature/zamowienia-baza` (odchodzi od `origin/develop`, 0 commitów za
 | `63f82c2` | `getDictionaries` i eksport funkcji pod emulatorem |
 | `3dac473` | Migracja `0003`: kategoria `Phone` (smartfony) |
 | `12b257d` | Menu modułów (hamburger), rejestr modułów, routing hashem, szkielet ekranu „Zamówienia" za flagą |
+| `5a7a074` | Etap A: lista zamówień z filtrami i stronicowaniem kursorem |
+| `eed9206` | Decyzje o statusie zamówienia i wartości w planie |
+| `ec1208a` | Etap B: szczegóły zamówienia, głębokie linki `#/zamowienia/ID` |
+| `421c013` | Zwykły eksport funkcji zamówień (sekret w projekcie testowym) |
+| `44c88ac` | Flaga menu w buildzie CI tylko dla `develop` |
 
-Co jest w lokalnej bazie (kontener `tenders-pg`, wolumen `tenders-pg-data`): 7 773 zamówienia, 29 263 pozycje, 3 792 zamawiających, 5 182 kontakty, 1 379 zwycięzców, 330 vendorów (raport 2026). Weryfikacja „w obie strony": 41 kolumn × 29 263 wierszy bez niezgodności (dozwolone różnice to normalizacja zapisu i wybór najczęstszego wariantu).
+Co jest w bazie (lokalnie w kontenerze `tenders-pg`, wolumen `tenders-pg-data`, **oraz na Neon**, projekt `tenders-pg`, Postgres 18, 30 MB): 7 773 zamówienia, 29 263 pozycje, 3 792 zamawiających, 5 182 kontakty, 1 379 zwycięzców, 330 vendorów (raport 2026). Weryfikacja „w obie strony": 41 kolumn × 29 263 wierszy bez niezgodności (dozwolone różnice to normalizacja zapisu i wybór najczęstszego wariantu).
 
-Testy: 20 w `npm run test:orders` (9 walidacji + 11 zapytań na prawdziwym Postgresie), 197 w całym frontendzie (w tym 13 dla menu i rejestru modułów), 93 w `npm run test:unit`, 19 sprawdzeń SQL schematu (`db/tests/0001`), asercje słowników (`db/tests/0002`) i 7 testów normalizacji (`db/import/normalize.test.mjs`). Warstwa `onCall` sprawdzona HTTP-em na emulatorze (autoryzacja, walidacja, dane).
+Testy: 20 w `npm run test:orders` (9 walidacji + 11 zapytań na prawdziwym Postgresie), 214 w całym frontendzie (w tym menu, lista, szczegóły, routing), 93 w `npm run test:unit`, 46 w `npm run test:functions`, 19 sprawdzeń SQL schematu (`db/tests/0001`), asercje słowników (`db/tests/0002`) i 7 testów normalizacji (`db/import/normalize.test.mjs`). Warstwa `onCall` sprawdzona HTTP-em na emulatorze (autoryzacja, walidacja, dane).
 
-**Niezweryfikowane przez agenta:** wygląd interfejsu (skrypt zrzutów nie umie się logować; użytkownik ocenia menu w przeglądarce), działanie na telefonie i w ciemnym motywie, wdrożenie na projekt testowy, praca na Neon, CI z bazą.
+**Sprawdzone przez użytkownika:** wygląd menu, listy i szczegółów (desktop i mobile) oraz działanie na wdrożonej aplikacji testowej z danymi z Neon. **Niezweryfikowane:** zamówienie z 69 pozycjami, nawigacja klawiaturą, ciemny motyw w szczegółach, produkcja, CI z bazą (`test:orders` nie biegnie w CI), limity i usypianie darmowego planu Neon.
 
 ## 4. Architektura docelowa
 
@@ -76,9 +81,11 @@ Granice modułu: kod frontendu w `src/features/orders/`, funkcje w `functions/or
 
 ## 5. Plan etapów
 
-Kolejność i zależności: **A → B → I-light → C → D → E**, potem F, G, H. Etap I-light (Neon + sekret + zwykły eksport funkcji) warto wyciągnąć zaraz po B, żeby użytkownik oglądał dane na wdrożonej aplikacji testowej bez lokalnych emulatorów. Etap E (czyszczenie zamawiających) jest niezależny od C i D.
+Kolejność i zależności: **A → B → I-light → C → D → E**, potem F, G, H. **A, B i I-light są zrobione; następny jest C.** Etap I-light (Neon + sekret + zwykły eksport funkcji) warto wyciągnąć zaraz po B, żeby użytkownik oglądał dane na wdrożonej aplikacji testowej bez lokalnych emulatorów. Etap E (czyszczenie zamawiających) jest niezależny od C i D.
 
-### Etap A: lista zamówień (UI), następny do zrobienia
+### Etap A: lista zamówień (UI), ZROBIONE 2026-11-08
+
+Zrobione w całości poza punktem 4 (stan filtrów w adresie, odłożone: dziś filtry są w stanie komponentu i zostają przy powrocie ze szczegółów, ale giną po odświeżeniu strony). Opis poniżej zostaje jako zapis założeń.
 
 **Cel:** na ekranie „Zamówienia" widać przewijalną, filtrowalną listę zamówień z bazy.
 
@@ -94,13 +101,17 @@ Gotowe, gdy: 7 773 zamówień da się przejść stronami bez duplikatów, każdy
 
 Ryzyka: konfiguracja konta z rolą w emulatorze; z `REACT_APP_USE_EMULATORS=true` moduł Przetargi widzi pusty Firestore (to oczekiwane).
 
-### Etap B: szczegóły zamówienia (tylko odczyt)
+### Etap B: szczegóły zamówienia (tylko odczyt), ZROBIONE 2026-11-08
+
+Zamiast układu master-detail: szczegóły zastępują listę (lista zostaje zamontowana i ukryta, więc filtry i doczytane strony są po powrocie), z linkiem „Wróć do listy". Wartość zamówienia niepokazywana (decyzja). Opis poniżej zostaje jako zapis założeń.
 
 Układ master-detail: lista po lewej i szczegóły po prawej (szeroki ekran), osobny ekran na telefonie. Sekcje odpowiadają trzem zakładkom starej aplikacji, ale na jednej stronie: **Zamówienie** (numery, daty, link SIWZ i dodatkowe, finansowanie UE, budżet, typ konta, flagi „Poza UZP" i „Lenovo top ten", komentarz), **Zamawiający i PinC** (adres, NIP, kontakt z `mailto:` i telefonem, `canonicalId` jako informacja o grupie), **Pozycje** (tabela z nagłówkiem grupowym „przed" i „po rozstrzygnięciu", `attributes`, zwycięzca, vendor, status z opisem), **Pisma**. Linki zewnętrzne z `rel="noopener noreferrer"`. Puste wartości jako „brak", nie puste komórki. Głęboki link `#/zamowienia/ID`.
 
 Gotowe, gdy: dla zamówienia z 69 pozycjami (MDP 7773 ma 4, największe w danych 69) widok jest czytelny i przewijalny, a nieistniejące ID pokazuje komunikat „Nie znaleziono".
 
-### Etap I-light: wdrożenie odczytu na projekt testowy
+### Etap I-light: wdrożenie odczytu na projekt testowy, ZROBIONE 2026-11-08
+
+Neon założony przez użytkownika, migracje i import wykonane przez agenta (CLI), sekret ustawiony przez użytkownika, rola Secret Manager Admin dla konta CI, flaga menu w buildzie `develop`. Szczegóły i adresy: `handoff.md`, pkt 3. Opis poniżej zostaje jako zapis założeń.
 
 Wymaga działań użytkownika (konto Neon, sekret). Kroki: założyć projekt Neon (region UE) i bazę; zastosować migracje i import na Neon (z `docs/App/import_mdp_2026.sql`, dane osobowe: decyzja o anonimizacji, patrz pkt 8); `firebase functions:secrets:set ORDERS_DATABASE_URL --project tenders-test-b5bb3` (użytkownik); zamienić blok warunkowego eksportu w `functions/index.ts` na zwykły eksport; PR do `develop` (CI wdroży na projekt testowy); w CI dla środowiska testowego ustawić `REACT_APP_ENABLE_ORDERS=true` (do uzgodnienia). Sprawdzić limity darmowego planu przed decyzją (**nie sprawdzone**). Gotowe, gdy: użytkownik widzi listę zamówień na wdrożonej aplikacji testowej, a wdrożenie pozostałych funkcji nie zostało zakłócone.
 
@@ -144,7 +155,7 @@ Runner migracji (dziś migracje stosujemy ręcznie `psql`): prosty skrypt z tabe
 
 ## 6. Praca równoległa z gałęzią `integracja-analiza`
 
-Gałąź analizy (ostatni znany commit `3dfd396`, tylko lokalna, brak `origin/integracja-analiza`) scalała się z `origin/develop` bez konfliktów (sprawdzone dla `develop` w stanie `9185da1`; od tego czasu `develop` dostał tylko zmiany dokumentacji, ponowne sprawdzenie nie było robione). **Z naszą gałęzią są konflikty w czterech plikach** (sprawdzone `git merge-tree`, 2026-11-08), wszystkie typu „obie strony dopisały w tym samym miejscu":
+Gałąź analizy (ostatni znany commit `3dfd396`, tylko lokalna, brak `origin/integracja-analiza`) nie jest jeszcze w `develop`. **Nasza gałąź jest już w `develop` (PR #12), więc to gałąź analizy musi dociągnąć `develop` i rozwiązać konflikty.** Przed scaleniem sprawdzono `git merge-tree` i były konflikty w czterech plikach (po scaleniu nie powtarzano), wszystkie typu „obie strony dopisały w tym samym miejscu":
 
 | Plik | Po stronie analizy | Rozwiązanie |
 |---|---|---|
@@ -157,8 +168,8 @@ Skrypt testowy `test:orders` w głównym `package.json` celowo wstawiony daleko 
 
 ## 7. Pytania otwarte (do użytkowniczki lub analityczki)
 
-1. **Statusy zamówienia:** co zawiera lista rozwijana „Status" na ekranie zamówienia (zrzut ekranu rozwiniętej listy wystarczy). Dziś znamy tylko „Jeszcze nierozstrzygnięty". Blokuje: etap D i widok „otwarte".
-2. **Wartość zamówienia:** wartość = kwota, z jaką wygrał zwycięzca, podzielona przez liczbę części (średnia na część). W danych 65% zamówień wielopozycyjnych ma tę samą kwotę w każdym wierszu, 35% ma różne, a liczba części nie równa się liczbie pozycji (w 1 243 zamówieniach jest mniej części niż pozycji, w 1 686 pole `Part` jest puste). Czy kwota jest powielana per część, per pozycję, czy bywa wpisana inaczej? Czy zamówienie MDP 3345 (suma 2,76 mld) jest prawdziwe? Blokuje: etapy D, F (wartości), G.
+1. ~~**Statusy zamówienia**~~ **Rozstrzygnięte 2026-11-08:** zostaje `open`. Użytkownik zakłada, że pole jest w praktyce zapomniane; zrzut z Pending/Refuse/Confirmed/Cancel dotyczył statusów pozycji. Do doprecyzowania, gdy będzie okazja zapytać.
+2. ~~**Wartość zamówienia**~~ **Odłożone 2026-11-08:** pole zostaje puste (POC). Pytanie pozostaje otwarte (kwota powielana per część, per pozycję czy wpisywana inaczej; czy MDP 3345 z sumą 2,76 mld jest prawdziwe) i blokuje wartości w etapach D, F i G.
 3. **Status `Pending` ze zwycięzcą:** 57% pozycji `Pending` ma już zwycięzcę. Czy zwycięzca pochodzi z ogłoszenia o wyniku, zanim zamawiający potwierdzi informację? Oraz 70 pozycji `Cancel` ze zwycięzcą i 11 `Confirmed` bez zwycięzcy: błąd czy sytuacja dopuszczalna?
 4. **Vendor:** wpisy specjalne („nie wymagali podania modeli", „Assembled-Web Profi", „NTT"): czy to osobne pojęcia? Czy vendor jest zawsze wybierany z listy?
 5. **Duplikaty zamawiających:** kto zatwierdza scalanie i według jakich reguł (np. zmiana adresu to ta sama organizacja; komórka urzędu to osobna jednostka?).
@@ -172,10 +183,10 @@ Skrypt testowy `test:orders` w głównym `package.json` celowo wstawiony daleko 
 
 ## 8. Ryzyka
 
-- **Dane osobowe (RODO):** raport zawiera imiona, telefony i e-maile urzędników. Lokalna baza i plik importu leżą w `docs/App/` (ignorowane przez git). Przed załadowaniem na Neon lub do chmury zdecydować: anonimizacja kontaktów albo zgoda i podstawa prawna. Dopóki nie ma decyzji, dane osobowe zostają lokalnie.
+- **Dane osobowe (RODO):** użytkownik zgodził się 2026-11-08 na wgranie danych urzędników na Neon bez anonimizacji (są jawne: strony urzędów, dokumenty, raporty; firma ich nie anonimizuje). Dane są na Neon. Zostaje poufność samego raportu firmy narzeczonej (pkt niżej).
 - **Poufność danych firmy:** pliki z `docs/App/` nie mogą trafić do repozytorium ani na zewnętrzne usługi.
 - **Utrata danych w Dockerze:** kontener bez wolumenu (`--rm`) kasuje bazę. Już raz się to zdarzyło; teraz jest wolumen `tenders-pg-data`, a odtworzenie trwa kilka sekund (migracje + import).
-- **Limity darmowego Neon:** niesprawdzone. Dane są małe (dziesiątki MB), ale usypianie bazy wydłuża pierwsze zapytanie.
+- **Limity darmowego Neon:** miejsce nie jest ryzykiem (1 GB, baza ma 30 MB, szacunek ok. 150 MB na 5 lat; nie sprawdzono liczby zamówień z lat 2021 do 2025, a `audit_log` urośnie po uruchomieniu zapisów). **Niesprawdzone:** limit godzin obliczeń i usypianie bazy (pierwsze zapytanie po przerwie jest wolniejsze); sprawdzić w panelu przed pokazaniem szerszemu gronu.
 - **Konflikty z gałęzią analizy:** opisane w pkt 6.
 - **Duplikacja typów** frontend/backend: kopie w `src/types/Orders.ts` i `functions/orders/types.ts`. Rozważyć wspólne źródło, jeśli typów będzie przybywać.
 - **Zależność od `requireMember` otwartego tymczasowo:** moduł go nie używa, ale to osobny temat na `develop` (komentarz w `functions/access.ts`).
@@ -190,3 +201,25 @@ Skrypt testowy `test:orders` w głównym `package.json` celowo wstawiony daleko 
 ## 10. Poza zakresem (na razie)
 
 Integracja z bazą firmy (brak schematu), płatności, wielu najemców, aplikacja mobilna, import starszych lat (do czasu plików), migracja przetargów z Firestore do Postgresa.
+
+
+## 11. Pomysły do dopracowania i przemyślenia (NIE zatwierdzone, bez decyzji)
+
+### Współbieżna praca kilku analityków (pomysł użytkownika, 2026-11-09)
+
+**Status: do dopracowania i przemyślenia.** Dziś zamówienia w starej aplikacji może wpisywać naraz tylko jedna osoba; dzielenie listy przetargów wymaga ciągłego dogadywania się („ja biorę X, ty weź inny, wpisałam Y, nie ruszaj"). W aplikacji webowej druga osoba mogłaby widzieć na liście na żywo, że przetarg jest „w trakcie wpisywania", i wziąć inny.
+
+**Co już istnieje (sprawdzone w kodzie):**
+- Wspólny status przetargu w Firestore, widoczny na żywo dla wszystkich (`onSnapshot`): `toEnter`, `entered`, `toClarify`, `notToEnter` (`src/types/TenderStatus.ts`). Reguły (`firestore.rules`) zapisują, kto (`statusBy`, e-mail) i kiedy (`statusAt`, czas serwera) ustawił status.
+- Twarda blokada duplikatów w bazie: unikalny indeks `orders_source_tender_uq` na `orders.source_tender_id` (dla nieusuniętych). Ten sam przetarg z listy nie trafi do bazy dwa razy.
+
+**Szkic rozwiązania (do przemyślenia):**
+1. Nowy wspólny status `entering` („w trakcie wpisywania") z informacją, kto i od kiedy; karta na liście pokazuje „Anna wpisuje od 12 min", filtr „wolne" ukrywa zajęte.
+2. Zajęcie musi być atomowe (dwie osoby klikają naraz: wygrywa jedna, druga dostaje komunikat). Dziś reguły pozwalają ustawić status bez sprawdzania stanu poprzedniego, więc wymaga to transakcji lub zmiany reguł i testów reguł.
+3. Porzucone zajęcia (zamknięta karta): wygasanie po czasie bez aktywności (np. 30 min), przejęcie przez inną osobę po potwierdzeniu.
+4. Zapis zamówienia w bazie ustawia status `entered` po stronie serwera, żeby lista i baza się nie rozjeżdżały.
+5. Edycja zapisanego zamówienia przez dwie osoby naraz: blokada wersji (`version`, już w planie dla Etapu C) zwraca czytelny komunikat zamiast cichego nadpisania.
+
+**Niewiadome i pytania:** czy zespół dziś używa statusów `toEnter` i `entered` na liście (czy nowy stan trafi w istniejący nawyk); role analityków (pytanie 6 w pkt 7); ręcznie dodawane przetargi spoza trzech źródeł nie mają `source_tender_id`, więc potrzebują innej ochrony przed duplikatem (np. zamawiający + numer przetargu, jako ostrzeżenie); limity i koszty Firestore przy kilku osobach (raczej nieistotne, nie sprawdzano).
+
+**Zależności:** stan `entering` można dodać do listy przetargów niezależnie od formularza wpisywania, jako pierwszą korzyść z modułu; pełne zyski wymagają Etapu C. Zmiany w `firestore.rules` wymagają testów (`npm run test:rules`).

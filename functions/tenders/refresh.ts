@@ -194,36 +194,39 @@ const runScheduledRefresh = async (
   }
 };
 
+const SCHEDULE_OPTIONS = {
+  region: REGION,
+  timeZone: 'Europe/Warsaw',
+  timeoutSeconds: FUNCTION_TIMEOUT_SECONDS,
+  memory: '512MiB' as const,
+  retryCount: 0,
+};
+
 /**
  * Cykliczne odświeżanie dzisiejszego dnia (TED i eZamówienia), żeby lista była aktualna bez otwartej aplikacji.
- * Harmonogram (cron, strefa czasowa) łatwo zmienić poniżej: co 10 minut, od 9:00 do 23:50 czasu warszawskiego.
- * W godzinie po północy (0:00-0:50) przebiegi domykają poprzedni dzień, żeby wykres trendu nie pokazywał
- * zakończonych dni jako niekompletnych.
+ * Harmonogram (cron, strefa czasowa) łatwo zmienić poniżej: co 10 minut, od 9:00 do 23:50 czasu warszawskiego,
+ * tylko w dni robocze (w weekendy ogłoszeń prawie nie ma; w razie potrzeby odświeża się je ręcznie).
  */
 export const scheduledRefresh = onSchedule(
-  {
-    region: REGION,
-    schedule: '*/10 0,9-23 * * *',
-    timeZone: 'Europe/Warsaw',
-    timeoutSeconds: FUNCTION_TIMEOUT_SECONDS,
-    memory: '512MiB',
-    retryCount: 0,
-  },
+  { ...SCHEDULE_OPTIONS, schedule: '*/10 9-23 * * 1-5' },
   () => runScheduledRefresh('Zaplanowane odświeżenie', undefined, true)
 );
 
 /**
- * Pobieranie z Bazy Konkurencyjności raz dziennie, o 8:00 czasu warszawskiego. Źródło nie ma oficjalnego API,
- * więc odpytujemy je rzadko (poza tym ręcznym przyciskiem w aplikacji). Obejmuje dzień bieżący i dwa poprzednie.
+ * W godzinie po północy (0:00-0:50) domyka poprzedni dzień, żeby wykres trendu nie pokazywał zakończonych dni
+ * jako niekompletnych. Działa wtorek-sobota, czyli po dniach roboczych (sobota po północy domyka piątek).
+ */
+export const scheduledRefreshFinalize = onSchedule(
+  { ...SCHEDULE_OPTIONS, schedule: '*/10 0 * * 2-6' },
+  () => runScheduledRefresh('Zaplanowane domknięcie dnia', undefined, true)
+);
+
+/**
+ * Pobieranie z Bazy Konkurencyjności co godzinę, od 9:00 do 23:00 czasu warszawskiego, tylko w dni robocze.
+ * Źródło nie ma oficjalnego API, więc nie odpytujemy go częściej (poza ręcznym przyciskiem w aplikacji).
+ * Obejmuje dzień bieżący i dwa poprzednie.
  */
 export const scheduledBazaRefresh = onSchedule(
-  {
-    region: REGION,
-    schedule: '0 8 * * *',
-    timeZone: 'Europe/Warsaw',
-    timeoutSeconds: FUNCTION_TIMEOUT_SECONDS,
-    memory: '512MiB',
-    retryCount: 0,
-  },
+  { ...SCHEDULE_OPTIONS, schedule: '0 9-23 * * 1-5' },
   () => runScheduledRefresh('Zaplanowane pobieranie z Bazy Konkurencyjności', [BAZA])
 );
