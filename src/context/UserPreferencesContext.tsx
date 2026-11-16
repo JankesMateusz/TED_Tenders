@@ -88,8 +88,7 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         // Komunikat z "Cofnij" pojawia się od razu; przy błędzie zapisu znika, a jego miejsce zajmuje komunikat o błędzie
         showNotice({
             message: describeStatusChange(previous, next, email),
-            actionLabel: 'Cofnij',
-            onAction: () => {
+            onUndo: () => {
                 markOwnChange(tender.id);
                 setTenderStatus(tender.id, previous.status ?? null, { uid, email }).catch(reportError);
             },

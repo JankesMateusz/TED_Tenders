@@ -33,7 +33,7 @@ type Options = {
  */
 export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById, toggleFavorite, toggleStatus, wasChangedByMe }: Options) => {
     const { user } = useAuth();
-    const { showNotice } = useNotice();
+    const { showNotice, undoLast } = useNotice();
     const myEmail = user?.email ?? null;
     const shortcutsEnabled = useShortcutsEnabled();
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +116,12 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
             if (isTypingTarget(e.target) || isPopupOpen()) return;
 
             const key = e.key.toLowerCase();
+            // U cofa ostatnią zmianę (status, ukrycie zamawiającego), niezależnie od tego, która karta jest aktywna
+            if (key === 'u') {
+                e.preventDefault();
+                undoLast();
+                return;
+            }
             const ids = displayedTenders.map((tender) => tender.id);
             if (key === 'j' || key === 'k') {
                 e.preventDefault();
@@ -143,7 +149,7 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeTab, shortcutsEnabled, displayedTenders, activeTenderId, liveTendersById, toggleFavorite, toggleStatus]);
+    }, [activeTab, shortcutsEnabled, displayedTenders, activeTenderId, liveTendersById, toggleFavorite, toggleStatus, undoLast]);
 
     return { activeTenderId, onActivate: handleActivateTender, searchInputRef };
 };

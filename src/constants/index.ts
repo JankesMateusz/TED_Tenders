@@ -36,9 +36,9 @@ export const MESSAGES = {
     EMPTY_OTHER: "Brak ogłoszeń do pokazania. Ogłoszenia z gwiazdką są w zakładce „Zapisane”, a ukryci zamawiający są pominięci.",
     QUEUE_CHIP: "Tylko nieocenione",
     QUEUE_CHIP_TITLE: "Domyślny widok: ogłoszenia, których nikt jeszcze nie ocenił",
-    SHORTCUTS_HINT: "Skróty: J — następne, K — poprzednie, 1–4 — status, 0 — usuń status, S — gwiazdka, / — szukaj.",
+    SHORTCUTS_HINT: "Skróty: J — następne, K — poprzednie, 1–4 — status, 0 — usuń status, S — gwiazdka, U — cofnij, / — szukaj.",
     SHORTCUTS_OFF_HINT: "Skróty klawiszowe są wyłączone.",
-    SHORTCUTS_TITLE: "Skróty: J/K, 1–4, 0, S, /",
+    SHORTCUTS_TITLE: "Skróty: J/K, 1–4, 0, S, U, /",
     SAVED_HINT: "Gwiazdka jest prywatna, status jest wspólny dla zespołu."
 } as const;
 

@@ -119,6 +119,7 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                                     aria-checked={active}
                                     className={`${styles.item} ${active ? styles.itemActive : ''}`}
                                     style={{ '--status-color': item.color } as React.CSSProperties}
+                                    // Skrót 1–4 jest tylko dla czytnika ekranu; na ekranie nazwy statusów zostają bez cyfr
                                     aria-keyshortcuts={String(index + 1)}
                                     onClick={() => {
                                         onToggle(value);
@@ -129,8 +130,6 @@ const StatusMenu: React.FC<Props> = ({ status, statusByEmail, statusAt, editable
                                     <span className={styles.dot} aria-hidden="true" />
                                     <StatusIcon status={value} />
                                     {item.label}
-                                    {/* Cyfra to skrót klawiszowy aktywnej karty; na ekranie dotykowym jest ukryta */}
-                                    <kbd className={styles.shortcut} aria-hidden="true">{index + 1}</kbd>
                                 </button>
                             </li>
                         );
