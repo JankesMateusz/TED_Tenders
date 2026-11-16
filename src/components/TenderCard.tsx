@@ -116,8 +116,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
             message: decision === 'hidden'
                 ? `Ukryto zamawiającego „${tender.buyerName}” dla wszystkich osób, także jego przyszłe ogłoszenia.`
                 : `Przywrócono zamawiającego „${tender.buyerName}” dla wszystkich osób.`,
-            actionLabel: 'Cofnij',
-            onAction: () => onSetAdvertiserDecision(tender, undoDecision),
+            onUndo: () => onSetAdvertiserDecision(tender, undoDecision),
         });
     };
 

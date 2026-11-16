@@ -52,6 +52,26 @@
     text-underline-offset: 3px;
 }
 
+/* Klawisz skrótu przy "Cofnij": mały znaczek jak w polu wyszukiwania */
+.key {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 6px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    opacity: 0.8;
+}
+
+@media (hover: none) {
+    .key {
+        display: none;
+    }
+}
+
 .close {
     min-width: 40px;
     font-size: 12px;
