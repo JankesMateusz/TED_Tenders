@@ -37,7 +37,7 @@ const setup = (overrides: Partial<React.ComponentProps<typeof FiltersSheet>> = {
     return { onToggle, onClearFilters, onSortOrderChange };
 };
 
-const trigger = () => screen.getByRole('button', { name: 'Filtry, aktywne: 2' });
+const trigger = () => screen.getByRole('button', { name: 'Filtry i sortowanie, aktywne: 2' });
 
 describe('FiltersSheet', () => {
     it('pokazuje jeden przycisk z liczbą aktywnych filtrów, a arkusz jest zamknięty', () => {
@@ -49,7 +49,7 @@ describe('FiltersSheet', () => {
     it('otwiera arkusz z grupami filtrów, liczbami i sortowaniem', () => {
         setup();
         fireEvent.click(trigger());
-        expect(screen.getByRole('dialog', { name: 'Filtry' })).toBeTruthy();
+        expect(screen.getByRole('dialog', { name: 'Filtry i sortowanie' })).toBeTruthy();
         expect(screen.getByRole('checkbox', { name: /TED/ })).toBeTruthy();
         expect(screen.getByRole('combobox', { name: 'Sortuj' })).toBeTruthy();
     });
@@ -72,7 +72,7 @@ describe('FiltersSheet', () => {
 
     it('bez aktywnych filtrów nie pokazuje "Wyczyść filtry"', () => {
         setup({ hasActiveFilters: false, activeCount: 0 });
-        fireEvent.click(screen.getByRole('button', { name: 'Filtry' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Filtry i sortowanie' }));
         expect(screen.queryByRole('button', { name: 'Wyczyść filtry' })).toBeNull();
     });
 

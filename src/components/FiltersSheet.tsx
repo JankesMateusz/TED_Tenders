@@ -98,9 +98,9 @@ export const FiltersSheet: React.FC<FiltersSheetProps> = ({
                 onClick={() => setOpen(true)}
                 aria-haspopup="dialog"
                 aria-expanded={open}
-                aria-label={activeCount > 0 ? `Filtry, aktywne: ${activeCount}` : 'Filtry'}
+                aria-label={activeCount > 0 ? `Filtry i sortowanie, aktywne: ${activeCount}` : 'Filtry i sortowanie'}
             >
-                Filtry
+                Filtry i sortowanie
                 {activeCount > 0 && <span className={tenders.popoverBadge} aria-hidden="true">{activeCount}</span>}
             </button>
 
@@ -117,7 +117,7 @@ export const FiltersSheet: React.FC<FiltersSheetProps> = ({
                         onKeyDown={handleKeyDown}
                     >
                         <div className={styles.head}>
-                            <h2 id={titleId} className={styles.title}>Filtry</h2>
+                            <h2 id={titleId} className={styles.title}>Filtry i sortowanie</h2>
                             <button type="button" className={styles.close} onClick={close}>Zamknij</button>
                         </div>
 
