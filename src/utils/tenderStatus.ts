@@ -31,6 +31,27 @@ export const statusAuthorCaption = (byEmail?: string, at?: Date): string => {
     return `${author}, ${pad2(at.getDate())}.${pad2(at.getMonth() + 1)} ${pad2(at.getHours())}:${pad2(at.getMinutes())}`;
 };
 
+/**
+ * Komunikat po zmianie statusu. Gdy zastępujemy status ustawiony przez kogoś innego, podaje jego autora,
+ * żeby nadpisanie cudzej decyzji nie przechodziło bez śladu.
+ */
+export const describeStatusChange = (
+    previous: { status?: TenderStatus; byEmail?: string },
+    next: TenderStatus | null,
+    myEmail: string | null
+): string => {
+    const previousLabel = previous.status ? STATUS_CONFIG[previous.status].label : null;
+    const byOther = previous.byEmail !== myEmail;
+    const author = previous.byEmail ?? 'nieznany użytkownik';
+    if (next === null) {
+        if (!previousLabel) return 'Usunięto status.';
+        return byOther ? `Usunięto status „${previousLabel}”, ustawiony przez ${author}.` : `Usunięto status „${previousLabel}”.`;
+    }
+    const base = `Status: ${STATUS_CONFIG[next].label}.`;
+    if (!previousLabel) return base;
+    return byOther ? `${base} Zastąpiono „${previousLabel}” ustawiony przez ${author}.` : `${base} Wcześniej: „${previousLabel}”.`;
+};
+
 /** Podpowiedź przy statusie: kto go ustawił i kiedy, np. "Do wpisania: anna@example.com, 29.10.2026 14:32". */
 export const statusTooltip = (status: TenderStatus, byEmail?: string, at?: Date): string => {
     const author = byEmail ?? 'nieznany użytkownik';

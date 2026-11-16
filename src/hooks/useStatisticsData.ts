@@ -20,30 +20,23 @@ type Options = {
     startDay: string | null;
     endDay: string | null;
     todayDay: string;
-    /** Przetargi z wybranego zakresu dat, bez własnych gwiazdek (te są w "Zapisane"). */
-    unsavedTenders: Tender[];
+    /** Przetargi z wybranego zakresu dat (także te z gwiazdką: zostają na liście zespołu). */
+    rangeTenders: Tender[];
     filterOptions: FilterOptions;
-    isFavorite: (id: string) => boolean;
 };
 
 /**
  * Dane zakładki statystyk: statystyki bieżącego okresu, porównanie z poprzednim okresem, trend z ostatnich dni
- * i wykres godzinowy eZamówień. Wszystkie liczby używają tych samych filtrów i pomijają własne gwiazdki,
+ * i wykres godzinowy eZamówień. Wszystkie liczby używają tych samych filtrów,
  * żeby były ze sobą porównywalne.
  */
-export const useStatisticsData = ({ isStatisticsTab, startDay, endDay, todayDay, unsavedTenders, filterOptions, isFavorite }: Options) => {
+export const useStatisticsData = ({ isStatisticsTab, startDay, endDay, todayDay, rangeTenders, filterOptions }: Options) => {
     // Statystyki opisują ocenę przetargów, więc ignorują filtr statusu: domyślny widok "Nieoznaczone" zostawiłby
     // w nich same nieoznaczone i wyzerował pozostałe statusy.
     const applyStatisticsFilters = useCallback((list: Tender[]) => filterTenders(list, filterOptions, 'status'), [filterOptions]);
-    // Lista spoza wybranego zakresu: dodatkowo bez własnych gwiazdek, jak `unsavedTenders`
-    const filterUnsaved = useCallback(
-        (list: Tender[]) => applyStatisticsFilters(list.filter((tender) => !isFavorite(tender.id))),
-        [applyStatisticsFilters, isFavorite]
-    );
-
     const statistics = useMemo(
-        () => calculateStatistics(applyStatisticsFilters(unsavedTenders)),
-        [applyStatisticsFilters, unsavedTenders]
+        () => calculateStatistics(applyStatisticsFilters(rangeTenders)),
+        [applyStatisticsFilters, rangeTenders]
     );
 
     // Porównanie z poprzednim okresem
@@ -56,8 +49,8 @@ export const useStatisticsData = ({ isStatisticsTab, startDay, endDay, todayDay,
         refreshDayWithRetry
     );
     const previousStatistics = useMemo(
-        () => calculateStatistics(filterUnsaved(previousPeriod.tenders)),
-        [filterUnsaved, previousPeriod.tenders]
+        () => calculateStatistics(applyStatisticsFilters(previousPeriod.tenders)),
+        [applyStatisticsFilters, previousPeriod.tenders]
     );
 
     // Wykres godzinowy: dropdown ma dni z całej bazy (według dziennika odświeżeń), a nie tylko z wybranego
@@ -67,15 +60,15 @@ export const useStatisticsData = ({ isStatisticsTab, startDay, endDay, todayDay,
     const recent = useRecentTenders(isStatisticsTab, todayDay, TREND_DAYS);
     const trend = useMemo(
         () => ({
-            points: countTendersByDay(filterUnsaved(recent.tenders), lastDays(todayDay, TREND_DAYS), recent.completeDays),
+            points: countTendersByDay(applyStatisticsFilters(recent.tenders), lastDays(todayDay, TREND_DAYS), recent.completeDays),
             error: recent.error
         }),
-        [filterUnsaved, recent.tenders, recent.completeDays, recent.error, todayDay]
+        [applyStatisticsFilters, recent.tenders, recent.completeDays, recent.error, todayDay]
     );
     // Średnia godzinowa z tych samych 14 dni (te same dane i filtry co trend, bez dodatkowych zapytań do bazy)
     const hourlyAverage = useMemo(
-        () => averageHourlyDistribution(filterUnsaved(recent.tenders), lastDays(todayDay, TREND_DAYS), recent.completeDays),
-        [filterUnsaved, recent.tenders, recent.completeDays, todayDay]
+        () => averageHourlyDistribution(applyStatisticsFilters(recent.tenders), lastDays(todayDay, TREND_DAYS), recent.completeDays),
+        [applyStatisticsFilters, recent.tenders, recent.completeDays, todayDay]
     );
     const [hourlyDay, setHourlyDay] = useState('');
     const hourlyExtraDay = useMemo(() => {
@@ -87,10 +80,10 @@ export const useStatisticsData = ({ isStatisticsTab, startDay, endDay, todayDay,
     const isExtraDayLoaded = hourlyExtraDay !== null && extraDay.loadedDay === hourlyExtraDay;
     const hourlyDistribution = useMemo(() => {
         const extra = isExtraDayLoaded
-            ? calculateStatistics(filterUnsaved(extraDay.tenders)).ezamowieniaHourlyDistribution
+            ? calculateStatistics(applyStatisticsFilters(extraDay.tenders)).ezamowieniaHourlyDistribution
             : {};
         return { ...extra, ...statistics.ezamowieniaHourlyDistribution };
-    }, [isExtraDayLoaded, extraDay.tenders, filterUnsaved, statistics.ezamowieniaHourlyDistribution]);
+    }, [isExtraDayLoaded, extraDay.tenders, applyStatisticsFilters, statistics.ezamowieniaHourlyDistribution]);
     const hourlyDays = useMemo(() => {
         const days = new Set([...Object.keys(statistics.ezamowieniaHourlyDistribution), ...refreshedDays.map(dayToDisplayDate)]);
         return Array.from(days).sort((a, b) => parseDate(b).getTime() - parseDate(a).getTime());

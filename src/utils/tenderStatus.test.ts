@@ -1,4 +1,37 @@
-import { statusAuthorCaption } from './tenderStatus';
+import { describeStatusChange, statusAuthorCaption } from './tenderStatus';
+
+describe('describeStatusChange', () => {
+    const me = 'ja@example.com';
+
+    it('opisuje pierwsze ustawienie statusu', () => {
+        expect(describeStatusChange({}, 'entered', me)).toBe('Status: Wpisany.');
+    });
+
+    it('przy nadpisaniu cudzego statusu podaje jego autora', () => {
+        expect(describeStatusChange({ status: 'toEnter', byEmail: 'anna@example.com' }, 'entered', me)).toBe(
+            'Status: Wpisany. Zastąpiono „Do wpisania” ustawiony przez anna@example.com.'
+        );
+    });
+
+    it('przy zmianie własnego statusu nie obwinia nikogo', () => {
+        expect(describeStatusChange({ status: 'toEnter', byEmail: me }, 'entered', me)).toBe(
+            'Status: Wpisany. Wcześniej: „Do wpisania”.'
+        );
+    });
+
+    it('przy zdjęciu cudzego statusu podaje autora, przy własnym nie', () => {
+        expect(describeStatusChange({ status: 'entered', byEmail: 'anna@example.com' }, null, me)).toBe(
+            'Usunięto status „Wpisany”, ustawiony przez anna@example.com.'
+        );
+        expect(describeStatusChange({ status: 'entered', byEmail: me }, null, me)).toBe('Usunięto status „Wpisany”.');
+    });
+
+    it('nie zakłada autora, gdy go nie znamy', () => {
+        expect(describeStatusChange({ status: 'toClarify' }, 'entered', me)).toBe(
+            'Status: Wpisany. Zastąpiono „Do wyjaśnienia” ustawiony przez nieznany użytkownik.'
+        );
+    });
+});
 
 describe('statusAuthorCaption', () => {
     it('podaje autora oraz datę i godzinę w czasie lokalnym', () => {

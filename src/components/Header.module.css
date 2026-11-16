@@ -30,7 +30,7 @@
     place-items: center;
     width: 28px;
     height: 28px;
-    border-radius: 8px;
+    border-radius: var(--radius-control);
     background: var(--button-primary);
     color: #ffffff;
     font-size: 14px;
@@ -75,7 +75,7 @@
     background: var(--bg-secondary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
+    border-radius: var(--radius-control);
     font: inherit;
     font-size: 14px;
 }
@@ -97,7 +97,7 @@
     padding: 3px 6px;
     border: 1px solid var(--border-color);
     border-bottom-width: 2px;
-    border-radius: 5px;
+    border-radius: 4px;
     background: var(--surface);
     color: var(--text-secondary);
     font: 600 12px/1 ui-monospace, Consolas, monospace;
@@ -118,9 +118,9 @@
     padding: 0;
     background: transparent;
     border: 0;
-    border-radius: 6px;
+    border-radius: calc(var(--radius-control) - 3px);
     color: var(--text-secondary);
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
     transform: translateY(-50%);
@@ -299,6 +299,11 @@
     padding: 0;
 }
 
+/* Ikona wyszukiwania w pasku przycisków jest tylko na telefonie (na komputerze pole jest zawsze widoczne) */
+.searchToggle {
+    display: none;
+}
+
 .iconButton svg {
     width: 20px;
     height: 20px;
@@ -399,23 +404,25 @@
     }
 }
 
-/* Custom DatePicker Styles */
+/* Kalendarz (react-datepicker): kolory z tokenów motywu, żeby w ciemnym motywie nie zostawał jasny panel */
 :global(.react-datepicker) {
     font-family: inherit;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    box-shadow: var(--pop-shadow);
     overflow: hidden;
 }
 
 :global(.react-datepicker__header) {
-    background: #2c3e50;
+    background: var(--button-primary);
     border-bottom: none;
     padding-top: 12px;
 }
 
 :global(.react-datepicker__current-month) {
-    color: white;
+    color: #ffffff;
     font-weight: 600;
     font-size: 16px;
     padding-bottom: 8px;
@@ -426,7 +433,7 @@
 }
 
 :global(.react-datepicker__day-name) {
-    color: rgba(255, 255, 255, 0.8);
+    color: #ffffff;
     font-weight: 500;
     width: 36px;
     margin: 5px;
@@ -438,55 +445,49 @@
     line-height: 36px;
     margin: 5px;
     border-radius: 50%;
-    transition: all 0.2s ease;
+    color: var(--text-primary);
+    transition: background-color 0.2s ease;
 }
 
 :global(.react-datepicker__day:hover) {
-    background-color: #f0f0f0;
+    background-color: var(--raised);
     border-radius: 50%;
 }
 
-:global(.react-datepicker__day--selected) {
-    background-color: #3498db !important;
-    color: white !important;
+:global(.react-datepicker__day--selected),
+:global(.react-datepicker__day--range-start),
+:global(.react-datepicker__day--range-end) {
+    background-color: var(--button-primary) !important;
+    color: #ffffff !important;
     font-weight: 600;
 }
 
+:global(.react-datepicker__day--in-range) {
+    background-color: var(--accent-bg);
+    color: var(--text-primary);
+}
+
+:global(.react-datepicker__day--in-selecting-range) {
+    background-color: var(--accent-tint);
+    color: var(--text-primary);
+}
+
 :global(.react-datepicker__day--keyboard-selected) {
-    background-color: rgba(52, 152, 219, 0.2);
-    color: #2c3e50;
+    background-color: var(--accent-bg);
+    color: var(--text-primary);
 }
 
 :global(.react-datepicker__day--outside-month) {
-    color: #bbb;
+    color: var(--text-secondary);
+}
+
+:global(.react-datepicker__day--disabled) {
+    color: var(--text-secondary);
+    opacity: 0.5;
 }
 
 :global(.react-datepicker__triangle) {
     display: none;
-}
-
-.emailAlertButton {
-    background: #27ae60;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.emailAlertButton:hover {
-    background: #219a52;
-}
-
-.calendarButton {
-    background: #3498db;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.calendarButton:hover {
-    background: #2980b9;
 }
 
 /* Responsive Design */
@@ -495,9 +496,32 @@
         padding: 10px 12px;
     }
 
-    /* Na telefonie wyszukiwarka jest ukryta: raczej nie jest tam używana, a pasek zyskuje miejsce */
+    /* Na telefonie wyszukiwarka chowa się pod ikoną lupy i rozwija na całą szerokość paska */
     .search {
         display: none;
+    }
+
+    .searchVisible {
+        display: block;
+        flex: 1 1 100%;
+        max-width: none;
+        order: 2;
+    }
+
+    /* 16 px, żeby iOS nie powiększał strony po dotknięciu pola */
+    .searchInput {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    .searchToggle {
+        display: inline-flex;
+    }
+
+    /* Wpisana fraza zawęża listę: ikona jest podświetlona także wtedy, gdy pole jest zwinięte */
+    .searchToggleActive {
+        border-color: var(--accent);
+        color: var(--accent);
     }
 
     .tenderInfo {

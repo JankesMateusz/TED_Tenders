@@ -13,7 +13,8 @@ import { isNewSince } from '../utils/awaySummary';
 import CommentsPopover from './CommentsPopover';
 import StatusMenu from './StatusMenu';
 import LabelMenu from './LabelMenu';
-import CopyMenu, { CopyItem } from './CopyMenu';
+import CopyMenu, { CopyItem, MenuAction } from './CopyMenu';
+import { useNotice } from '../context/NoticeContext';
 import DocsBadge from './DocsBadge';
 import ExternalIcon from './ExternalIcon';
 import { docsLinkUrl } from '../utils/docsCheck';
@@ -54,6 +55,7 @@ const VISIBLE_CPV_CHIPS = 2;
 
 const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment, advertiserHidden, onSetAdvertiserDecision, isActive, onActivate }) => {
     const { user } = useAuth();
+    const { showNotice } = useNotice();
     const { isFavorite, toggleFavorite, toggleStatus, toggleLabel } = useUserPreferences();
 
     const awaySince = useAwaySince();
@@ -62,9 +64,14 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
     const [expanded, setExpanded] = useState<boolean>(false);
     const cardRef = useRef<HTMLLIElement>(null);
 
-    // Po przejściu klawiszami karta ma być widoczna; "nearest" nie przewija, gdy już jest na ekranie
+    // Po przejściu klawiszami karta dostaje prawdziwy fokus (czytnik ekranu ją zapowiada, a Tab zaczyna od niej)
+    // i ma być widoczna; "nearest" nie przewija, gdy już jest na ekranie
     useEffect(() => {
-        if (isActive) cardRef.current?.scrollIntoView({ block: 'nearest' });
+        if (!isActive) return;
+        const card = cardRef.current;
+        // Kliknięcie w pole lub przycisk wewnątrz karty ma zostać tam, gdzie jest
+        if (card && !card.contains(document.activeElement)) card.focus({ preventScroll: true });
+        card?.scrollIntoView({ block: 'nearest' });
     }, [isActive]);
 
     const srcCfg = getSourceConfig(tender.source);
@@ -100,10 +107,34 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
         ...(tender.referenceNumber ? [{ key: 'refNo', label: 'Kopiuj numer referencyjny', value: tender.referenceNumber }] : []),
     ];
 
+    // Decyzja o zamawiającym dotyczy wszystkich osób i wszystkich jego ogłoszeń (także przyszłych), więc jest w menu,
+    // z nazwanym zasięgiem i komunikatem "Cofnij", a nie jako przycisk obok głównego odnośnika
+    const setDecisionWithUndo = (decision: AdvertiserDecision) => {
+        const undoDecision: AdvertiserDecision = decision === 'hidden' ? 'visible' : 'hidden';
+        onSetAdvertiserDecision(tender, decision);
+        showNotice({
+            message: decision === 'hidden'
+                ? `Ukryto zamawiającego „${tender.buyerName}” dla wszystkich osób, także jego przyszłe ogłoszenia.`
+                : `Przywrócono zamawiającego „${tender.buyerName}” dla wszystkich osób.`,
+            actionLabel: 'Cofnij',
+            onAction: () => onSetAdvertiserDecision(tender, undoDecision),
+        });
+    };
+
+    const menuActions: MenuAction[] = tender.buyerNip
+        ? [{
+            key: 'advertiser',
+            label: advertiserHidden ? 'Przywróć zamawiającego dla wszystkich' : 'Ukryj zamawiającego dla wszystkich',
+            onSelect: () => setDecisionWithUndo(advertiserHidden ? 'visible' : 'hidden'),
+        }]
+        : [];
+
     return (
         <li
             ref={cardRef}
             data-tender-card=""
+            tabIndex={-1}
+            aria-label={tender.title}
             onClick={(event) => onActivate(tender.id, !isInteractiveTarget(event.target))}
             className={`${styles.tenderCard} ${tender.status ? styles.tenderCardStatus : ''} ${isActive ? styles.tenderCardActive : ''}`}
             style={statusColor ? ({ '--status-color': statusColor } as React.CSSProperties) : undefined}
@@ -161,7 +192,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     >
                         <StarIcon filled={fav} />
                     </button>
-                    <CopyMenu items={copyItems} />
+                    <CopyMenu items={copyItems} actions={menuActions} />
                 </div>
             </div>
 
@@ -214,18 +245,6 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     Zobacz ogłoszenie <ExternalIcon />
                 </a>
                 <DocsBadge tender={tender} canCheck={canSetStatus} />
-                {tender.buyerNip && (
-                    <button
-                        type="button"
-                        className={styles.advertiserButton}
-                        onClick={() => onSetAdvertiserDecision(tender, advertiserHidden ? 'visible' : 'hidden')}
-                        title={advertiserHidden
-                            ? 'Pokazuje ogłoszenia tego zamawiającego na liście (dla wszystkich osób)'
-                            : 'Ukrywa wszystkie ogłoszenia tego zamawiającego, także przyszłe (dla wszystkich osób)'}
-                    >
-                        {advertiserHidden ? 'Przywróć zamawiającego' : 'Ukryj zamawiającego'}
-                    </button>
-                )}
             </div>
 
             <p className={styles.cardFootnote}>
