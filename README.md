@@ -88,6 +88,9 @@ Sekrety (`FIREBASE_SERVICE_ACCOUNT` i sześć `REACT_APP_FIREBASE_*`) są zdefin
 1. Gałąź feature odchodzi od `develop` (`feature/...`, `fix/...`).
 2. PR do **`develop`** (baza PR musi być `develop`, GitHub domyślnie proponuje `main`). Testy muszą przejść. Merge wdraża na `test`.
 3. Wydanie: PR `develop` → `main`, scalany zwykłym merge commitem (nie squash, żeby gałęzie się nie rozjeżdżały). Merge wdraża na produkcję.
+4. **Zaraz po wydaniu** wciągnij `main` z powrotem do `develop` (merge `main` → `develop`). Scalenie tworzy na `main` commit, którego `develop` nie ma. Bez tego kolejny PR `develop` → `main` pokazuje zbędne różnice, a gałęzie zaczynają się rozjeżdżać.
+
+Hashe `git log main..develop` mówią prawdę tylko wtedy, gdy zawsze scalamy merge commitem. Squash i rebase tworzą nowe commity z inną historią, więc te same zmiany wyglądają wtedy na niewydane.
 
 ### Hotfix na produkcji
 
@@ -98,6 +101,15 @@ Hotfix idzie od `main`, a nie przez `develop`, bo `develop` zawiera niewydane zm
 3. **Zaraz potem** wciągnij zmianę do `develop` (merge `main` → `develop`), inaczej poprawka zginie przy następnym wydaniu.
 
 Zmiany reguł Firestore, indeksów i uprawnień traktujemy tak samo jak kod: zmiana w repozytorium i ta sama ścieżka, bez ręcznych poprawek w konsoli Firebase.
+
+### Moduły niegotowe na produkcję
+
+`develop` musi być zawsze bezpieczny do wdrożenia na `main`, więc kod, który wymaga infrastruktury istniejącej tylko na teście, ukrywamy na **obu** warstwach:
+
+- **Interfejs:** flaga budowania `REACT_APP_ENABLE_*` (dla Zamówień `REACT_APP_ENABLE_ORDERS`), ustawiana w kroku „Build" w `deploy.yml`: `true` dla `develop`, `false` dla `main`.
+- **Funkcje:** flaga interfejsu nie wystarczy, bo wdrożenie obejmuje wszystkie funkcje i brakujący sekret na prodzie je wywala. Funkcje Zamówień są eksportowane w `functions/index.ts` tylko, gdy istnieje plik `functions/orders.enabled`, który `deploy.yml` tworzy wyłącznie dla `develop`. Zmienna środowiskowa się do tego nie nadaje: Firebase CLI nie przekazuje jej do wykrywania funkcji podczas wdrożenia.
+
+Nowy moduł z własną bazą lub sekretem dostaje taki sam przełącznik, zanim jego funkcje trafią do `develop`. Włączenie modułu na produkcji to osobna, świadoma zmiana: najpierw sekret i baza na prodzie, potem zdjęcie warunku `develop` w `deploy.yml`. Szczegóły dla Zamówień: `db/README.md`.
 
 ### Ochrona gałęzi
 
