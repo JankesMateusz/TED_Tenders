@@ -299,6 +299,11 @@
     padding: 0;
 }
 
+/* Ikona wyszukiwania w pasku przycisków jest tylko na telefonie (na komputerze pole jest zawsze widoczne) */
+.searchToggle {
+    display: none;
+}
+
 .iconButton svg {
     width: 20px;
     height: 20px;
@@ -495,9 +500,32 @@
         padding: 10px 12px;
     }
 
-    /* Na telefonie wyszukiwarka jest ukryta: raczej nie jest tam używana, a pasek zyskuje miejsce */
+    /* Na telefonie wyszukiwarka chowa się pod ikoną lupy i rozwija na całą szerokość paska */
     .search {
         display: none;
+    }
+
+    .searchVisible {
+        display: block;
+        flex: 1 1 100%;
+        max-width: none;
+        order: 2;
+    }
+
+    /* 16 px, żeby iOS nie powiększał strony po dotknięciu pola */
+    .searchInput {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    .searchToggle {
+        display: inline-flex;
+    }
+
+    /* Wpisana fraza zawęża listę: ikona jest podświetlona także wtedy, gdy pole jest zwinięte */
+    .searchToggleActive {
+        border-color: var(--accent);
+        color: var(--accent);
     }
 
     .tenderInfo {

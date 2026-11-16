@@ -153,9 +153,28 @@
     font-size: 13px;
 }
 
-/* Podpowiedź o skrótach zajmuje własny wiersz pod licznikiem */
+/* Podpowiedź o skrótach zajmuje własny wiersz pod licznikiem; na ekranie bez myszy (klawiszy nie ma) jej nie pokazujemy */
 .queueHintFull {
     flex-basis: 100%;
+}
+
+@media (hover: none) {
+    .queueHintFull {
+        display: none;
+    }
+}
+
+/* Dotyk: plakietka dokumentów i przycisk "Sprawdź teraz" mają cel dotyku co najmniej 40 px, jak reszta odnośników */
+@media (pointer: coarse) {
+    a.systemBadge {
+        min-height: 40px;
+        padding: 0 12px;
+    }
+
+    .systemBadgeButton {
+        min-width: 40px;
+        min-height: 40px;
+    }
 }
 
 .message {
@@ -1298,8 +1317,29 @@ a.systemBadge:hover {
     transform: translateX(16px);
 }
 
+/* Pasek filtrów dla telefonu (jeden przycisk "Filtry") jest domyślnie ukryty; na wąskim ekranie zastępuje pasek menu */
+.toolbarMobile {
+    display: none;
+}
+
 /* Cele dotykowe na wąskim ekranie: przyciski i odnośniki min. 40 px wysokości */
 @media (max-width: 768px) {
+    .toolbarDesktop {
+        display: none;
+    }
+
+    .toolbarMobile {
+        display: flex;
+        margin-bottom: 12px;
+    }
+
+    /* Karta: akcje zawijają się do kolejnego rzędu zamiast wychodzić poza ekran */
+    .cardActions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: 100%;
+    }
+
     .tab,
     .link,
     .cpvMore,
