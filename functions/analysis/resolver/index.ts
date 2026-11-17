@@ -1,18 +1,19 @@
-import { ezamowieniaAdapter, extractProceedingUrl, noticeObjectId, resolveNotice } from './ezamowienia';
+import { ezamowieniaAdapter, extractProceedingUrl, extractReferenceNumber, noticeObjectId, resolveNotice } from './ezamowienia';
 import { bazaAdapter } from './bazakonkurencyjnosci';
+import { ezamawiajacyAdapter } from './ezamawiajacy';
 import { createHttpClient } from './httpClient';
 import { platformazakupowaAdapter } from './platformazakupowa';
-import { HttpClient, PlatformAdapter, ResolverResult, TenderContext } from './types';
+import { HttpClient, MatchHints, PlatformAdapter, ResolverResult, TenderContext } from './types';
 
 export * from './types';
 
 /** Adaptery dopasowywane do adresu dokumentacji (adresy się nie nakładają, kolejność nie ma znaczenia). */
-export const ADAPTERS: PlatformAdapter[] = [ezamowieniaAdapter, platformazakupowaAdapter, bazaAdapter];
+export const ADAPTERS: PlatformAdapter[] = [ezamowieniaAdapter, platformazakupowaAdapter, ezamawiajacyAdapter, bazaAdapter];
 
 /** Adres dokumentacji → adapter; brak dopasowania = platforma nieobsługiwana (ręczne wgranie plików). */
-const resolveByUrl = async (url: string, http: HttpClient): Promise<ResolverResult> => {
+const resolveByUrl = async (url: string, http: HttpClient, hints?: MatchHints): Promise<ResolverResult> => {
   const adapter = ADAPTERS.find((candidate) => candidate.matches(url));
-  if (adapter) return adapter.resolve(url, http);
+  if (adapter) return adapter.resolve(url, http, hints);
   return { status: 'UNSUPPORTED_PLATFORM', sourceUrl: url, note: 'Dokumentacja leży na platformie, której nie obsługujemy automatycznie.' };
 };
 
@@ -34,13 +35,14 @@ export const resolveDocuments = async (tender: TenderContext, http: HttpClient =
       if (!proceedingUrl) return { status: 'NO_SOURCE_URL', note: 'W ogłoszeniu nie ma adresu strony prowadzonego postępowania.' };
       // Adres wskazuje na same eZamówienia: dokumentacja leży tam, tylko jeszcze jej nie dodano
       if (new URL(proceedingUrl).hostname.endsWith('ezamowienia.gov.pl')) return empty;
-      return resolveByUrl(proceedingUrl, http);
+      // Numer sprawy z ogłoszenia jest dokładniejszy niż to, co mamy w rekordzie
+      return resolveByUrl(proceedingUrl, http, { title: tender.title, referenceNumber: extractReferenceNumber(html) ?? tender.referenceNumber });
     });
   }
 
   if (tender.source === 'TED') {
     if (!tender.documentsUrl) return { status: 'NO_SOURCE_URL', note: 'Ogłoszenie z TED nie podaje adresu dokumentacji.' };
-    return resolveByUrl(tender.documentsUrl, http);
+    return resolveByUrl(tender.documentsUrl, http, { title: tender.title, referenceNumber: tender.referenceNumber });
   }
 
   if (tender.source === 'BAZA_KONKURENCYJNOSCI') {

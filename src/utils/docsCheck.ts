@@ -32,6 +32,7 @@ export const docsFilterOf = (tender: Tender): DocsFilter | undefined => {
 const PLATFORM_NAMES: Record<string, string> = {
     ezamowienia: 'eZamówienia',
     platformazakupowa: 'platformazakupowa.pl',
+    ezamawiajacy: 'ezamawiający',
     bazakonkurencyjnosci: 'Baza Konkurencyjności'
 };
 
