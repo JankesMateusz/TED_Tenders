@@ -8,7 +8,7 @@ import { isItRelatedCpv, normalizeCpv } from './cpvFilter';
  */
 const CATEGORIES = [
     { key: 'computers', label: 'Komputery i stacje robocze', prefixes: ['3020', '3021'] },
-    { key: 'displays', label: 'Monitory i wyświetlacze', prefixes: ['30231', '33195'] },
+    { key: 'displays', label: 'Monitory i wyświetlacze', prefixes: ['30231'] },
     { key: 'printing', label: 'Drukarki, kopiarki i materiały eksploatacyjne', prefixes: ['301', '30192', '302321', '42962'] },
     { key: 'scanners', label: 'Skanery i czytniki', prefixes: ['30216', '385'] },
     { key: 'storage', label: 'Pamięć masowa i pozostały sprzęt komputerowy', prefixes: ['3022', '3023'] },

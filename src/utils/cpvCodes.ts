@@ -82,8 +82,6 @@ export const IT_CPV_CODES: { [code: string]: string } = {
     "32420000": "Urządzenia sieciowe",
     "32500000": "Urządzenia i artykuły telekomunikacyjne",
     "32550000": "Sprzęt telefoniczny",
-    // W słowniku to monitory medyczne, ale zamawiający często używają go dla monitorów komputerowych
-    "33195100": "Monitory",
     "38520000": "Skanery",
     "39162100": "Pomoce dydaktyczne",
     "39162110": "Sprzęt dydaktyczny",

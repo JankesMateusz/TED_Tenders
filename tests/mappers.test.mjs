@@ -273,7 +273,7 @@ describe('mapBazaNotice (Baza Konkurencyjności)', () => {
     it('lista kodów IT dla wyszukiwarki zgadza się z IT_CPV_CODES z aplikacji', () => {
         const frontendSource = readFileSync(new URL('../src/utils/cpvCodes.ts', import.meta.url), 'utf8');
         const frontendCodes = [...frontendSource.matchAll(/^\s+"(\d{8})":/gm)].map((match) => match[1]);
-        assert.equal(frontendCodes.length, 120);
+        assert.equal(frontendCodes.length, 119);
         assert.deepEqual([...IT_CPV_CODES_8].sort(), frontendCodes.sort());
     });
 
