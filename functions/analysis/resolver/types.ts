@@ -1,6 +1,6 @@
 import type { TenderSource } from '../../tenders/model';
 
-export type Platform = 'ezamowienia' | 'platformazakupowa' | 'bazakonkurencyjnosci';
+export type Platform = 'ezamowienia' | 'platformazakupowa' | 'bazakonkurencyjnosci' | 'ezamawiajacy' | 'logintrade' | 'sidaspzp';
 
 export interface ResolvedFile {
   /** Ścieżka względna dla silnika: oryginalna nazwa z platformy (nie z Content-Disposition). */
@@ -44,6 +44,15 @@ export interface TenderContext {
   source: TenderSource;
   link: string;
   documentsUrl: string | null;
+  /** Tytuł i numer sprawy służą do dopasowania profilu zamawiającego do konkretnego postępowania (opcjonalne). */
+  title?: string;
+  referenceNumber?: string | null;
+}
+
+/** Co wiemy o przetargu, gdy adres dokumentacji prowadzi tylko do profilu zamawiającego. */
+export interface MatchHints {
+  referenceNumber?: string | null;
+  title?: string | null;
 }
 
 export interface HttpResponse<T = unknown> {
@@ -80,7 +89,7 @@ export class ResolverError extends Error {
 
 export interface PlatformAdapter {
   matches(url: string): boolean;
-  resolve(url: string, http: HttpClient): Promise<ResolverResult>;
+  resolve(url: string, http: HttpClient, hints?: MatchHints): Promise<ResolverResult>;
 }
 
 /** Maksymalna liczba plików w manifeście (ochrona przed błędem parsowania i nadmiernymi paczkami). */

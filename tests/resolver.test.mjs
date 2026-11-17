@@ -5,9 +5,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { resolveDocuments, ResolverError } from '../functions/lib/analysis/resolver/index.js';
-import { extractProceedingUrl } from '../functions/lib/analysis/resolver/ezamowienia.js';
+import { matchProceeding } from '../functions/lib/analysis/resolver/common.js';
+import { extractFiles as extractEzamawiajacyFiles, extractList } from '../functions/lib/analysis/resolver/ezamawiajacy.js';
+import { extractFiles as extractLogintradeFiles, extractList as extractLogintradeList } from '../functions/lib/analysis/resolver/logintrade.js';
+import { extractFiles as extractSidasFiles } from '../functions/lib/analysis/resolver/sidaspzp.js';
+import { extractProceedingUrl, extractReferenceNumber } from '../functions/lib/analysis/resolver/ezamowienia.js';
 import { assertSessionUrl } from '../functions/lib/analysis/resolver/httpClient.js';
-import { extractFiles } from '../functions/lib/analysis/resolver/platformazakupowa.js';
+import { extractFiles, extractProceedings } from '../functions/lib/analysis/resolver/platformazakupowa.js';
 import { announcementId, extractFiles as extractBazaFiles } from '../functions/lib/analysis/resolver/bazakonkurencyjnosci.js';
 
 const fixture = (name) => readFileSync(new URL(`./fixtures/resolver/${name}`, import.meta.url), 'utf8');
@@ -101,10 +105,13 @@ describe('resolver: eZamówienia', () => {
         assert.equal(result.sourceUrl, 'https://platformazakupowa.pl/pn/sm_wroclaw');
     });
 
-    it('pusta lista i pole 3.1 wskazuje inną platformę: UNSUPPORTED_PLATFORM z linkiem', async () => {
-        const result = await resolveDocuments(ez, fakeHttp(ezRoutes({ docs: [], body: fixture('ez-body-other.html') })));
-        assert.equal(result.status, 'UNSUPPORTED_PLATFORM');
-        assert.match(result.sourceUrl, /ezamawiajacy\.pl/);
+    it('pusta lista i pole 3.1 wskazuje postępowanie na ezamawiającym: lista plików z tej strony', async () => {
+        const page = fixture('ezm-postepowanie.html');
+        const routes = [...ezRoutes({ docs: [], body: fixture('ez-body-other.html') }), ['/demand/334843/notice/public/details', { status: 302, data: '', location: '/pn/zus/demand/notice/public/1/details' }], ['/notice/public/1/details', ok(page)]];
+        const result = await resolveDocuments(ez, fakeHttp(routes));
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'ezamawiajacy');
+        assert.match(result.sourceUrl, /zus\.ezamawiajacy\.pl/);
     });
 
     it('pusta lista i adres w polu 3.1 bez https://: UNSUPPORTED_PLATFORM z linkiem', async () => {
@@ -176,7 +183,7 @@ describe('resolver: TED', () => {
     it('documentsUrl na profil, nieobsługiwaną platformę i nieparsowalny adres', async () => {
         const http = fakeHttp([]);
         assert.equal((await resolveDocuments(ted('https://platformazakupowa.pl/pn/gmina_dydnia'), http)).status, 'PROFILE_NOT_MATCHED');
-        assert.equal((await resolveDocuments(ted('https://pzdw.logintrade.net/zapytania_email,1.html'), http)).status, 'UNSUPPORTED_PLATFORM');
+        assert.equal((await resolveDocuments(ted('https://przetargi.example.pl/zapytania_email,1.html'), http)).status, 'UNSUPPORTED_PLATFORM');
         assert.equal((await resolveDocuments(ted('nie-adres'), http)).status, 'UNSUPPORTED_PLATFORM');
         assert.equal(http.requests.length, 0);
     });
@@ -306,5 +313,427 @@ describe('host przekierowań sesji (D16)', () => {
         assert.throws(() => assertSessionUrl('https://example.com/login'), ResolverError);
         assert.throws(() => assertSessionUrl('https://platformazakupowa.pl.evil.com/'), ResolverError);
         assert.throws(() => assertSessionUrl('http://platformazakupowa.pl/transakcja/1'), ResolverError);
+    });
+});
+
+describe('resolver: numer sprawy z ogłoszenia BZP (pole 4.1.2)', () => {
+    const field = (value, colon = ':') => `<h3>4.1.1.) Nazwa</h3> Coś ${value === undefined ? '' : `<h3>4.1.2.) Numer referencyjny${colon}</h3> ${value}`} <h3>4.1.3.) Rodzaj zamówienia:</h3> Dostawy`;
+
+    it('odczytuje numer z kropkami i spacjami (w prawdziwych ogłoszeniach etykieta ma dwukropek)', () => {
+        assert.equal(extractReferenceNumber(field('ZP 271.12.2026')), 'ZP 271.12.2026');
+        assert.equal(extractReferenceNumber(field('ZAM.271.1.44.2026')), 'ZAM.271.1.44.2026');
+        assert.equal(extractReferenceNumber(field('DZP/12/2026', '')), 'DZP/12/2026');
+    });
+
+    it('puste pole albo brak pola: null', () => {
+        assert.equal(extractReferenceNumber(field('')), null);
+        assert.equal(extractReferenceNumber(field(undefined)), null);
+        assert.equal(extractReferenceNumber(''), null);
+    });
+});
+
+describe('dopasowanie postępowania z listy zamawiającego', () => {
+    const rows = [
+        { id: '1', name: 'ZP 271.12.2026 Dostawa sprzętu komputerowego dla szkół' },
+        { id: '2', name: 'ZP 271.14.2026 Łódzka platforma wsparcia oprogramowania biurowego' },
+        { id: '3', name: 'ZP 271.14.2026 Zakup licencji oprogramowania biurowego (część 2)' }
+    ];
+
+    it('po numerze sprawy, niezależnie od spacji, kropek i wielkości liter', () => {
+        assert.equal(matchProceeding(rows, { referenceNumber: 'zp271.12.2026' })?.id, '1');
+    });
+
+    it('kilka wierszy z tym samym numerem: rozstrzyga tytuł, a bez niego brak dopasowania', () => {
+        assert.equal(matchProceeding(rows, { referenceNumber: 'ZP 271.14.2026' }), null);
+        assert.equal(matchProceeding(rows, { referenceNumber: 'ZP 271.14.2026', title: 'Zakup licencji oprogramowania biurowego' })?.id, '3');
+    });
+
+    it('bez trafienia po numerze dopasowuje po tytule, ale tylko przy jednym kandydacie', () => {
+        assert.equal(matchProceeding(rows, { referenceNumber: 'ZP 999.1.2026', title: 'Dostawa sprzętu komputerowego dla szkół podstawowych' })?.id, '1');
+        assert.equal(matchProceeding(rows, { title: 'Dostawa oprogramowania biurowego' }), null);
+    });
+
+    it('normalizuje polskie znaki, w tym „ł”', () => {
+        assert.equal(matchProceeding(rows, { title: 'Lodzka platforma wsparcia oprogramowania biurowego' })?.id, '2');
+    });
+
+    it('za krótki numer sprawy nie wystarcza, brak danych i pusta lista: null', () => {
+        assert.equal(matchProceeding(rows, { referenceNumber: '12' }), null);
+        assert.equal(matchProceeding(rows, {}), null);
+        assert.equal(matchProceeding([], { referenceNumber: 'ZP 271.12.2026' }), null);
+    });
+});
+
+describe('resolver: profil zamawiającego na platformazakupowa.pl', () => {
+    const PROFILE = 'https://platformazakupowa.pl/pn/gmina_przyklad';
+    const LIST_URL = `${PROFILE}/proceedings`;
+    const ted = (documentsUrl, extra = {}) => ({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl, ...extra });
+    const routes = (list = fixture('pz-proceedings.html')) => [
+        ['/proceedings', ok(list)],
+        ['/transakcja/', ok(fixture('pz-transakcja.html'))]
+    ];
+
+    it('parsuje tylko pierwszą zakładkę (trwające)', () => {
+        const parsed = extractProceedings(fixture('pz-proceedings.html'));
+        assert.deepEqual(parsed.map((row) => row.id), ['1403900', '1403901', '1403902', '1403903']);
+        assert.equal(parsed[0].name, 'ZP 271.12.2026 Dostawa sprzętu komputerowego dla szkół');
+        assert.deepEqual(extractProceedings(fixture('pz-proceedings-empty.html')), []);
+    });
+
+    it('dopasowanie po numerze sprawy: lista plików wskazanego postępowania', async () => {
+        const http = fakeHttp(routes());
+        const result = await resolveDocuments(ted(PROFILE, { referenceNumber: 'ZP 271.12.2026', title: 'Dostawa sprzętu' }), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.sourceUrl, 'https://platformazakupowa.pl/transakcja/1403900');
+        assert.deepEqual(http.requests, [LIST_URL, 'https://platformazakupowa.pl/transakcja/1403900']);
+    });
+
+    it('adres z końcówką /proceedings albo /login też prowadzi do dopasowania', async () => {
+        for (const suffix of ['/proceedings', '/login']) {
+            const result = await resolveDocuments(ted(`${PROFILE}${suffix}`, { referenceNumber: 'ZP 271.13.2026' }), fakeHttp(routes()));
+            assert.equal(result.sourceUrl, 'https://platformazakupowa.pl/transakcja/1403901');
+        }
+    });
+
+    it('dopasowanie tylko po tytule, gdy numeru sprawy brak', async () => {
+        const result = await resolveDocuments(ted(PROFILE, { title: 'Remont dachu budynku urzędu miasta' }), fakeHttp(routes()));
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.sourceUrl, 'https://platformazakupowa.pl/transakcja/1403901');
+    });
+
+    it('niejednoznaczne trafienie, brak trafienia i pusta lista: PROFILE_NOT_MATCHED bez pobierania postępowania', async () => {
+        const cases = [
+            [{ referenceNumber: 'ZP 271.14.2026' }, fixture('pz-proceedings.html')],
+            [{ referenceNumber: 'ZP 271.77.2026', title: 'Zupełnie inne zamówienie' }, fixture('pz-proceedings.html')],
+            [{ referenceNumber: 'ZP 271.12.2026' }, fixture('pz-proceedings-empty.html')]
+        ];
+        for (const [hints, list] of cases) {
+            const http = fakeHttp(routes(list));
+            const result = await resolveDocuments(ted(PROFILE, hints), http);
+            assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+            assert.equal(result.sourceUrl, PROFILE);
+            assert.deepEqual(http.requests, [LIST_URL]);
+        }
+    });
+
+    it('postępowanie z zakładki zakończonych nie jest brane pod uwagę', async () => {
+        const result = await resolveDocuments(ted(PROFILE, { referenceNumber: 'ZP 271.99.2026' }), fakeHttp(routes()));
+        assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+    });
+
+    it('bez numeru sprawy i tytułu nie wysyła zapytania', async () => {
+        const http = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted(PROFILE), http)).status, 'PROFILE_NOT_MATCHED');
+        assert.equal(http.requests.length, 0);
+    });
+
+    it('przekierowanie zamiast listy to błąd platformy, nie brak dopasowania', async () => {
+        const http = fakeHttp([['/proceedings', { status: 302, data: '', location: 'https://platformazakupowa.pl/login' }]]);
+        await assert.rejects(resolveDocuments(ted(PROFILE, { referenceNumber: 'ZP 271.12.2026' }), http), ResolverError);
+    });
+
+    it('eZamówienia: numer sprawy z pola 4.1.2 ogłoszenia trafia do dopasowania profilu', async () => {
+        const body = `${fixture('ez-body-profile.html')} <h3>4.1.2.) Numer referencyjny</h3> ZP 271.13.2026 <h3>4.1.3.) Rodzaj</h3> x`;
+        const http = fakeHttp([...ezRoutes({ docs: [], body }), ...routes()]);
+        const result = await resolveDocuments({ ...ez, title: 'Remont' }, http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.sourceUrl, 'https://platformazakupowa.pl/transakcja/1403901');
+    });
+});
+
+describe('resolver: ezamawiający (Marketplanet)', () => {
+    const HOST = 'https://klient.ezamawiajacy.pl';
+    const BY_DEMAND = `${HOST}/pn/KLIENT/demand/333986/notice/public/details`;
+    const CANONICAL = `${HOST}/pn/KLIENT/demand/notice/public/242550/details`;
+    const ted = (documentsUrl, extra = {}) => ({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl, ...extra });
+    const redirect = (location) => ({ status: 302, data: '', location });
+    const detailRoutes = (page = fixture('ezm-postepowanie.html')) => [
+        ['/demand/333986/notice/public/details', redirect('/pn/KLIENT/demand/notice/public/242550/details')],
+        ['/notice/public/242550/details', ok(page)]
+    ];
+    const listRoutes = (list = fixture('ezm-lista.html')) => [
+        ['/servlet/HomeServlet', ok(fixture('ezm-start.html'))],
+        ['/publicpzp/current/list', ok(list)],
+        ['/details', ok(fixture('ezm-postepowanie.html'))]
+    ];
+
+    it('pliki z tabeli: nazwy, daty, kotwica wiersza; wiersz „Ogłoszenie” (id _-2) pominięty', () => {
+        const files = extractEzamawiajacyFiles(fixture('ezm-postepowanie.html'), CANONICAL);
+        assert.deepEqual(files.map((file) => file.platformFileId), ['2396170', '2396171', '2396172']);
+        assert.deepEqual(files.map((file) => file.path), ['Specyfikacja warunków zamówienia - SWZ.docx', 'Opis przedmiotu zamówienia & załączniki.pdf', 'Wzór umowy.zip']);
+        assert.equal(files[1].publishedAt, '2026-11-10T12:35:00');
+        assert.equal(files[0].url, `${CANONICAL}#_2396170`);
+        assert.ok(files.every((file) => !file.url.includes('/repository/download/')), 'nie zapisujemy tokenów pobrania');
+    });
+
+    it('lista postępowań: dekoduje encje numeryczne; niepełna lista (kolejne strony) jest rozpoznana', () => {
+        const full = extractList(fixture('ezm-lista.html'));
+        assert.deepEqual(full.rows.map((row) => row.id), ['242552', '242791', '242800']);
+        assert.equal(full.rows[0].name, 'BZP.271.1.75.2026 Świadczenie usług wsparcia technicznego dla środowiska chmurowego');
+        assert.equal(full.rows[1].name, 'BZP.271.1.76.2026 Wykonanie gadżetów z przeznaczeniem na cele promocyjne (6 części).');
+        assert.equal(full.complete, true);
+        assert.equal(extractList(fixture('ezm-lista.html').replace('z&nbsp;3', 'z&nbsp;9')).complete, false);
+    });
+
+    it('adres /demand/<id>/notice/public/details: przekierowanie, potem lista plików', async () => {
+        const http = fakeHttp(detailRoutes());
+        const result = await resolveDocuments(ted(BY_DEMAND), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'ezamawiajacy');
+        assert.equal(result.sourceUrl, CANONICAL);
+        assert.equal(result.files.length, 3);
+        assert.deepEqual(http.requests, [BY_DEMAND, CANONICAL]);
+    });
+
+    it('adres docelowy ogłoszenia: jedno zapytanie; odcisk zależy od listy plików', async () => {
+        const first = await resolveDocuments(ted(CANONICAL), fakeHttp(detailRoutes()));
+        const http = fakeHttp(detailRoutes());
+        await resolveDocuments(ted(CANONICAL), http);
+        assert.deepEqual(http.requests, [CANONICAL]);
+        const fewer = fixture('ezm-postepowanie.html').replace(/<tr class="fileDataRow" id="_2396172">[\s\S]*?<\/tr>/, '');
+        const changed = await resolveDocuments(ted(CANONICAL), fakeHttp(detailRoutes(fewer)));
+        assert.equal(changed.files.length, 2);
+        assert.notEqual(first.fingerprint, changed.fingerprint);
+    });
+
+    it('zamowienia.um.warszawa.pl to ten sam silnik', async () => {
+        const url = 'https://zamowienia.um.warszawa.pl/pn/umw/demand/notice/public/236895/details';
+        const result = await resolveDocuments(ted(url), fakeHttp([['/236895/details', ok(fixture('ezm-postepowanie.html'))]]));
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'ezamawiajacy');
+    });
+
+    it('postępowanie bez dokumentów: NO_DOCUMENTS_YET', async () => {
+        const result = await resolveDocuments(ted(CANONICAL), fakeHttp(detailRoutes(fixture('ezm-postepowanie-puste.html'))));
+        assert.equal(result.status, 'NO_DOCUMENTS_YET');
+        assert.equal(result.platform, 'ezamawiajacy');
+    });
+
+    it('postępowanie zakończone (przekierowanie na logowanie): wynik końcowy, nie błąd', async () => {
+        const login = '/app/login?savedUrl=%2Fpn%2FKLIENT%2Fdemand%2Fnotice%2Fpublic%2F242550%2Fdetails&errorMsg=jsp.statuses.expired';
+        const result = await resolveDocuments(ted(CANONICAL), fakeHttp([['/242550/details', redirect(login)]]));
+        assert.equal(result.status, 'UNSUPPORTED_PLATFORM');
+        assert.equal(result.platform, 'ezamawiajacy');
+        assert.match(result.note, /logowanie/);
+    });
+
+    it('przekierowanie na inny host albo bez adresu to błąd platformy', async () => {
+        await assert.rejects(resolveDocuments(ted(CANONICAL), fakeHttp([['/242550/details', redirect('https://example.com/x')]])), ResolverError);
+        await assert.rejects(resolveDocuments(ted(CANONICAL), fakeHttp([['/242550/details', { status: 302, data: '' }]])), ResolverError);
+        const loop = fakeHttp([['/242550/details', redirect('/pn/KLIENT/demand/notice/public/242550/details')]]);
+        await assert.rejects(resolveDocuments(ted(CANONICAL), loop), ResolverError);
+    });
+
+    it('adres ogólny: strona główna → lista → dopasowanie po numerze sprawy → pliki', async () => {
+        const http = fakeHttp(listRoutes());
+        const result = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'BZP.271.1.76.2026' }), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.sourceUrl, `${HOST}/pn/KLIENT/demand/notice/public/242791/details`);
+        assert.deepEqual(http.requests, [`${HOST}/servlet/HomeServlet`, `${HOST}/pn/KLIENT/demand/notice/publicpzp/current/list`, `${HOST}/pn/KLIENT/demand/notice/public/242791/details`]);
+    });
+
+    it('adres ogólny z identyfikatorem zamawiającego w ścieżce pomija stronę główną', async () => {
+        const http = fakeHttp(listRoutes());
+        const result = await resolveDocuments(ted(`${HOST}/pn/KLIENT/demand/notice/lowcost/current/list`, { referenceNumber: 'BZP.271.1.76.2026' }), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(http.requests.length, 2);
+        assert.ok(!http.requests.some((request) => request.includes('HomeServlet')));
+    });
+
+    it('adres ogólny: brak numeru sprawy i tytułu, brak trafienia, brak odnośnika na stronie głównej: PROFILE_NOT_MATCHED', async () => {
+        const none = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted(`${HOST}/`), none)).status, 'PROFILE_NOT_MATCHED');
+        assert.equal(none.requests.length, 0);
+
+        const noMatch = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'BZP.271.9.999.2026', title: 'Zupełnie inne zamówienie' }), fakeHttp(listRoutes()));
+        assert.equal(noMatch.status, 'PROFILE_NOT_MATCHED');
+        assert.equal(noMatch.platform, 'ezamawiajacy');
+
+        const noLink = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'BZP.271.1.76.2026' }), fakeHttp([['/servlet/HomeServlet', ok('<html></html>')]]));
+        assert.equal(noLink.status, 'PROFILE_NOT_MATCHED');
+    });
+
+    it('niepełna lista: dopasowanie po numerze działa, po samym tytule nie', async () => {
+        const partial = fixture('ezm-lista.html').replace('z&nbsp;3', 'z&nbsp;9');
+        const byNumber = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'BZP.271.1.76.2026' }), fakeHttp(listRoutes(partial)));
+        assert.equal(byNumber.status, 'RESOLVED');
+        const byTitle = await resolveDocuments(ted(`${HOST}/`, { title: 'Dostawa licencji oprogramowania biurowego' }), fakeHttp(listRoutes(partial)));
+        assert.equal(byTitle.status, 'PROFILE_NOT_MATCHED');
+        const byTitleFull = await resolveDocuments(ted(`${HOST}/`, { title: 'Dostawa licencji oprogramowania biurowego' }), fakeHttp(listRoutes()));
+        assert.equal(byTitleFull.status, 'RESOLVED');
+    });
+
+    it('eZamówienia z adresem ezamawiającego w polu 3.1: numer sprawy z ogłoszenia', async () => {
+        const body = `<h3>3.1.) Adres strony internetowej prowadzonego postępowania</h3> ${HOST}/ <h3>3.2.) Dostęp</h3> Nie <h3>4.1.2.) Numer referencyjny:</h3> BZP.271.1.76.2026 <h3>4.1.3.) Rodzaj:</h3> x`;
+        const result = await resolveDocuments(ez, fakeHttp([...ezRoutes({ docs: [], body }), ...listRoutes()]));
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'ezamawiajacy');
+    });
+
+    it('www.ezamawiajacy.pl (witryna producenta) nie jest zamawiającym', async () => {
+        const http = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted('https://www.ezamawiajacy.pl/', { referenceNumber: 'ZP 1/2026' }), http)).status, 'UNSUPPORTED_PLATFORM');
+        assert.equal(http.requests.length, 0);
+    });
+});
+
+describe('resolver: logintrade', () => {
+    const HOST = 'https://klient.logintrade.net';
+    const PROCEEDING = `${HOST}/zapytania_email,245002,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.html`;
+    const ted = (documentsUrl, extra = {}) => ({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl, ...extra });
+    const listRoutes = (list = fixture('lt-lista.html'), page = fixture('lt-postepowanie.html')) => [
+        ['/rejestracja/ustawowe.html', ok(list)],
+        ['/zapytania_email,', ok(page)]
+    ];
+
+    it('załączniki: nazwy, daty, kotwica; adresów /DocumentService (zakazanych w robots.txt) nie zapisujemy', () => {
+        const files = extractLogintradeFiles(fixture('lt-postepowanie.html'), PROCEEDING);
+        assert.deepEqual(files.map((file) => file.platformFileId), ['1444913', '1444914', '1444915']);
+        assert.deepEqual(files.map((file) => file.path), ['Załącznik nr 4 do SWZ_Wzór oświadczenia Wykonawcy.doc', 'Specyfikacja warunków zamówienia & załączniki.pdf', 'Wzór umowy.zip']);
+        assert.equal(files[0].publishedAt, '2026-11-12T10:37:19');
+        assert.equal(files[0].url, `${PROCEEDING}#attachment-1444913`);
+        assert.ok(files.every((file) => !file.url.includes('DocumentService')));
+        assert.deepEqual(extractLogintradeFiles(fixture('lt-postepowanie-puste.html'), PROCEEDING), []);
+    });
+
+    it('lista: znak sprawy z tytułem; stronicowanie rozpoznane po ?page=2', () => {
+        const full = extractLogintradeList(fixture('lt-lista.html'));
+        assert.equal(full.rows.length, 3);
+        assert.equal(full.rows[1].name, 'DZP.231.18.2026 Świadczenie usług ratownictwa wodnego i pierwszej pomocy w zespole obiektów basenowych');
+        assert.equal(full.rows[1].id, `${HOST}/zapytania_email,245002,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.html`);
+        assert.equal(full.complete, true);
+        const more = fixture('lt-lista.html').replace('</ul>', '<li><a href="https://klient.logintrade.net/rejestracja/ustawowe.html?page=2">2</a></li></ul>');
+        assert.equal(extractLogintradeList(more).complete, false);
+    });
+
+    it('adres postępowania: lista plików, jedno zapytanie', async () => {
+        const http = fakeHttp(listRoutes());
+        const result = await resolveDocuments(ted(PROCEEDING), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'logintrade');
+        assert.equal(result.sourceUrl, PROCEEDING);
+        assert.equal(result.files.length, 3);
+        assert.deepEqual(http.requests, [PROCEEDING]);
+    });
+
+    it('postępowanie bez załączników: NO_DOCUMENTS_YET', async () => {
+        const result = await resolveDocuments(ted(PROCEEDING), fakeHttp(listRoutes(undefined, fixture('lt-postepowanie-puste.html'))));
+        assert.equal(result.status, 'NO_DOCUMENTS_YET');
+        assert.equal(result.platform, 'logintrade');
+    });
+
+    it('adres ogólny: lista → dopasowanie po numerze sprawy → pliki', async () => {
+        const http = fakeHttp(listRoutes());
+        const result = await resolveDocuments(ted(`${HOST}/rejestracja/ustawowe.html`, { referenceNumber: 'DZP.231.18.2026' }), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.sourceUrl, PROCEEDING);
+        assert.deepEqual(http.requests, [`${HOST}/rejestracja/ustawowe.html`, PROCEEDING]);
+    });
+
+    it('adres ogólny: strona główna zamawiającego też prowadzi do listy', async () => {
+        const result = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'DZP.231.18.2026' }), fakeHttp(listRoutes()));
+        assert.equal(result.status, 'RESOLVED');
+    });
+
+    it('adres ogólny: brak danych, brak trafienia: PROFILE_NOT_MATCHED', async () => {
+        const none = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted(`${HOST}/`), none)).status, 'PROFILE_NOT_MATCHED');
+        assert.equal(none.requests.length, 0);
+
+        const http = fakeHttp(listRoutes());
+        const noMatch = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'DZP.999.1.2026', title: 'Zupełnie inne zamówienie' }), http);
+        assert.equal(noMatch.status, 'PROFILE_NOT_MATCHED');
+        assert.equal(noMatch.platform, 'logintrade');
+        assert.deepEqual(http.requests, [`${HOST}/rejestracja/ustawowe.html`]);
+    });
+
+    it('niepełna lista: dopasowanie po numerze działa, po samym tytule nie', async () => {
+        const partial = fixture('lt-lista.html').replace('</ul>', '<li><a href="?page=2">2</a></li></ul>');
+        const byNumber = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'DZP.231.13.2026' }), fakeHttp(listRoutes(partial)));
+        assert.equal(byNumber.status, 'RESOLVED');
+        const byTitle = await resolveDocuments(ted(`${HOST}/`, { title: 'Dostawa sprzętu komputerowego dla szkół' }), fakeHttp(listRoutes(partial)));
+        assert.equal(byTitle.status, 'PROFILE_NOT_MATCHED');
+    });
+
+    it('odnośnik z listy na inny host albo o dziwnej postaci nie jest wykonywany', async () => {
+        const evil = fixture('lt-lista.html').replace('https://klient.logintrade.net/zapytania_email,245002', 'https://example.com/zapytania_email,245002');
+        const http = fakeHttp(listRoutes(evil));
+        const result = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'DZP.231.18.2026' }), http);
+        assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+        assert.deepEqual(http.requests, [`${HOST}/rejestracja/ustawowe.html`]);
+    });
+
+    it('przekierowanie na inny host to błąd platformy', async () => {
+        const http = fakeHttp([['/zapytania_email,', { status: 302, data: '', location: 'https://example.com/x' }]]);
+        await assert.rejects(resolveDocuments(ted(PROCEEDING), http), ResolverError);
+    });
+
+    it('www.logintrade.net (witryna producenta) nie jest zamawiającym', async () => {
+        const http = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted('https://www.logintrade.net/', { referenceNumber: 'ZP 1/2026' }), http)).status, 'UNSUPPORTED_PLATFORM');
+        assert.equal(http.requests.length, 0);
+    });
+
+    it('eZamówienia z adresem logintrade w polu 3.1: numer sprawy z ogłoszenia', async () => {
+        const body = `<h3>3.1.) Adres strony internetowej prowadzonego postępowania</h3> ${HOST}/rejestracja/ustawowe.html <h3>3.2.) Dostęp</h3> Nie <h3>4.1.2.) Numer referencyjny:</h3> DZP.231.18.2026 <h3>4.1.3.) Rodzaj:</h3> x`;
+        const result = await resolveDocuments(ez, fakeHttp([...ezRoutes({ docs: [], body }), ...listRoutes()]));
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'logintrade');
+    });
+});
+
+describe('resolver: SIDAS PZP', () => {
+    const HOST = 'https://zamowienia.sidaspzp.pl';
+    const UUID = '0a25e1d6-9add-4f18-8a07-742bd37ce041';
+    const FILES_URL = `${HOST}/zamowienia/${UUID}/pliki`;
+    const ted = (documentsUrl, extra = {}) => ({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl, ...extra });
+
+    it('pliki z __NEXT_DATA__: SWZ i załączniki; usunięty trafia do excluded; adresu pobierania nie zapisujemy', () => {
+        const { files, excluded } = extractSidasFiles(fixture('sidas-pliki.html'), FILES_URL);
+        assert.deepEqual(files.map((file) => file.path), ['SWZ.pdf', '1. załącznik_nr_1_oferta.doc', '1a. Formularz cenowy & wycena.xlsx', 'Wzór umowy.pdf']);
+        assert.deepEqual(excluded, [{ name: 'Stary wzór umowy.pdf', reason: 'deleted' }]);
+        assert.equal(files[0].url, `${FILES_URL}#file-aaaaaaaa-0000-4000-8000-000000000001`);
+        assert.equal(files[0].publishedAt, '2026-11-12T10:15:50+01:00');
+    });
+
+    it('strona bez danych Next.js to błąd platformy, a nie „brak plików”', () => {
+        assert.throws(() => extractSidasFiles('<html><body>Zmiana układu</body></html>', FILES_URL), ResolverError);
+    });
+
+    it('adres postępowania (także bez /pliki): jedno zapytanie o /pliki', async () => {
+        for (const url of [FILES_URL, `${HOST}/zamowienia/${UUID}`, `${HOST}/zamowienia/${UUID}/szczegoly?x=1`]) {
+            const http = fakeHttp([['/pliki', ok(fixture('sidas-pliki.html'))]]);
+            const result = await resolveDocuments(ted(url), http);
+            assert.equal(result.status, 'RESOLVED');
+            assert.equal(result.platform, 'sidaspzp');
+            assert.equal(result.sourceUrl, FILES_URL);
+            assert.equal(result.files.length, 4);
+            assert.deepEqual(http.requests, [FILES_URL]);
+        }
+    });
+
+    it('postępowanie bez plików: NO_DOCUMENTS_YET', async () => {
+        const result = await resolveDocuments(ted(FILES_URL), fakeHttp([['/pliki', ok(fixture('sidas-pliki-puste.html'))]]));
+        assert.equal(result.status, 'NO_DOCUMENTS_YET');
+        assert.equal(result.platform, 'sidaspzp');
+    });
+
+    it('adres ogólny: PROFILE_NOT_MATCHED bez zapytań', async () => {
+        const http = fakeHttp([]);
+        const result = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'IZP.272.1.2026' }), http);
+        assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+        assert.equal(result.platform, 'sidaspzp');
+        assert.equal(http.requests.length, 0);
+    });
+
+    it('przekierowanie na inny host to błąd platformy', async () => {
+        const http = fakeHttp([['/pliki', { status: 302, data: '', location: 'https://example.com/x' }]]);
+        await assert.rejects(resolveDocuments(ted(FILES_URL), http), ResolverError);
+    });
+
+    it('inne hosty sidaspzp.pl (np. app.) nie są stroną postępowań', async () => {
+        const http = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted('https://app.sidaspzp.pl/'), http)).status, 'UNSUPPORTED_PLATFORM');
+        assert.equal(http.requests.length, 0);
     });
 });

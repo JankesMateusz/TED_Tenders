@@ -1,9 +1,9 @@
-import { fingerprintOf, hostOf, htmlToText, uniquePaths } from './common';
-import { HttpClient, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
+import { fingerprintOf, hostOf, htmlToText, matchProceeding, ProceedingRow, uniquePaths } from './common';
+import { HttpClient, MatchHints, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
 
 const HOSTS = new Set(['platformazakupowa.pl', 'www.platformazakupowa.pl', 'ww.platformazakupowa.pl']);
 const TRANSACTION_PATH = /^\/transakcja\/(\d+)/;
-const PROFILE_PATH = /^\/pn\//;
+const PROFILE_PATH = /^\/pn\/([^/]+)/;
 const ORIGIN = 'https://platformazakupowa.pl';
 const ROW_PATTERN = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
 const NAME_CELL_PATTERN = /<td[^>]*text-left[^>]*>([\s\S]*?)<\/td>/i;
@@ -44,42 +44,83 @@ const pathOf = (url: string): string | null => {
   }
 };
 
+const TRANSACTION_LINK_PATTERN = /href\s*=\s*["'][^"']*\/transakcja\/(\d+)/i;
+const CELL_PATTERN = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+/** Początek panelu zakładki: pierwszy to „Do terminu składania” (trwające), kolejne ładują się osobno skryptem. */
+const TAB_PANE_PATTERN = /<div[^>]*class\s*=\s*["'][^"']*\btab-pane\b/gi;
+
+/**
+ * Trwające postępowania z tabeli `/pn/<profil>/proceedings` (kolumny: ID, Nazwa, Prowadzący, Data Zakończenia, …).
+ * Bierzemy tylko pierwszy panel zakładek; wiersz poznajemy po linku `/transakcja/<id>`, nazwa to druga komórka.
+ */
+export const extractProceedings = (html: string): ProceedingRow[] => {
+  const panes = [...html.matchAll(TAB_PANE_PATTERN)].map((match) => match.index ?? 0);
+  const firstPane = panes.length > 1 ? html.slice(panes[0], panes[1]) : panes.length === 1 ? html.slice(panes[0]) : html;
+
+  const byId = new Map<string, ProceedingRow>();
+  for (const [, row] of firstPane.matchAll(ROW_PATTERN)) {
+    const id = row.match(TRANSACTION_LINK_PATTERN)?.[1];
+    if (!id || byId.has(id)) continue;
+    const cells = [...row.matchAll(CELL_PATTERN)].map((cell) => htmlToText(cell[1]));
+    byId.set(id, { id, name: cells[1] ?? htmlToText(row) });
+  }
+  return [...byId.values()];
+};
+
+const resolveTransaction = async (transactionId: string, http: HttpClient): Promise<ResolverResult> => {
+  const sourceUrl = `${ORIGIN}/transakcja/${transactionId}`;
+  const response = await http.get<string>(sourceUrl, { text: true, session: true });
+  if (response.status >= 300) {
+    // Nie powinno się zdarzyć po przejściu łańcucha SSO z ciasteczkami; gdyby, to platforma blokuje dostęp, a nie brak plików.
+    throw new ResolverError(
+      `platformazakupowa.pl przekierowała zapytanie (${response.status}${response.location ? ` → ${response.location}` : ''}) zamiast zwrócić stronę postępowania.`,
+      { url: sourceUrl, status: response.status },
+    );
+  }
+
+  const files = extractFiles(typeof response.data === 'string' ? response.data : '');
+  if (files.length === 0) {
+    return { status: 'NO_DOCUMENTS_YET', platform: 'platformazakupowa', sourceUrl, note: 'Na stronie postępowania nie ma jeszcze załączników.' };
+  }
+  if (files.length > MAX_FILES) {
+    throw new ResolverError(`Zbyt wiele plików w postępowaniu (${files.length}, limit ${MAX_FILES}).`);
+  }
+  const unique = uniquePaths(files);
+  return { status: 'RESOLVED', platform: 'platformazakupowa', sourceUrl, files: unique, excluded: [], fingerprint: fingerprintOf('platformazakupowa', unique) };
+};
+
+/** Adres profilu zamawiającego: szukamy na liście jego trwających postępowań dokładnie jednego pasującego do przetargu. */
+const resolveProfile = async (url: string, profile: string, http: HttpClient, hints?: MatchHints): Promise<ResolverResult> => {
+  const notMatched = (note: string): ResolverResult => ({ status: 'PROFILE_NOT_MATCHED', platform: 'platformazakupowa', sourceUrl: url, note });
+  // Bez numeru sprawy i tytułu nie ma czego dopasować, więc oszczędzamy zapytanie
+  if (!hints?.referenceNumber && !hints?.title) return notMatched('Adres prowadzi do profilu zamawiającego, a nie do konkretnego postępowania.');
+
+  const listUrl = `${ORIGIN}/pn/${profile}/proceedings`;
+  const response = await http.get<string>(listUrl, { text: true, session: true });
+  if (response.status >= 300) {
+    throw new ResolverError(
+      `platformazakupowa.pl przekierowała zapytanie (${response.status}${response.location ? ` → ${response.location}` : ''}) zamiast zwrócić listę postępowań.`,
+      { url: listUrl, status: response.status },
+    );
+  }
+
+  const match = matchProceeding(extractProceedings(typeof response.data === 'string' ? response.data : ''), hints);
+  if (!match) return notMatched('Na liście trwających postępowań zamawiającego nie ma dokładnie jednego postępowania pasującego do przetargu.');
+  return resolveTransaction(match.id, http);
+};
+
 export const platformazakupowaAdapter: PlatformAdapter = {
   matches: (url) => HOSTS.has(hostOf(url) ?? ''),
 
-  async resolve(url: string, http: HttpClient): Promise<ResolverResult> {
+  async resolve(url: string, http: HttpClient, hints?: MatchHints): Promise<ResolverResult> {
     const path = pathOf(url) ?? '';
-    if (PROFILE_PATH.test(path)) {
-      return {
-        status: 'PROFILE_NOT_MATCHED',
-        platform: 'platformazakupowa',
-        sourceUrl: url,
-        note: 'Adres prowadzi do profilu zamawiającego, a nie do konkretnego postępowania.',
-      };
-    }
+    const profile = path.match(PROFILE_PATH)?.[1];
+    if (profile) return resolveProfile(url, profile, http, hints);
+
     const transaction = path.match(TRANSACTION_PATH);
     if (!transaction) {
       return { status: 'UNSUPPORTED_PLATFORM', platform: 'platformazakupowa', sourceUrl: url, note: 'Nierozpoznany format adresu platformazakupowa.pl.' };
     }
-
-    const sourceUrl = `${ORIGIN}/transakcja/${transaction[1]}`;
-    const response = await http.get<string>(sourceUrl, { text: true, session: true });
-    if (response.status >= 300) {
-      // Nie powinno się zdarzyć po przejściu łańcucha SSO z ciasteczkami; gdyby, to platforma blokuje dostęp, a nie brak plików.
-      throw new ResolverError(
-        `platformazakupowa.pl przekierowała zapytanie (${response.status}${response.location ? ` → ${response.location}` : ''}) zamiast zwrócić stronę postępowania.`,
-        { url: sourceUrl, status: response.status },
-      );
-    }
-
-    const files = extractFiles(typeof response.data === 'string' ? response.data : '');
-    if (files.length === 0) {
-      return { status: 'NO_DOCUMENTS_YET', platform: 'platformazakupowa', sourceUrl, note: 'Na stronie postępowania nie ma jeszcze załączników.' };
-    }
-    if (files.length > MAX_FILES) {
-      throw new ResolverError(`Zbyt wiele plików w postępowaniu (${files.length}, limit ${MAX_FILES}).`);
-    }
-    const unique = uniquePaths(files);
-    return { status: 'RESOLVED', platform: 'platformazakupowa', sourceUrl, files: unique, excluded: [], fingerprint: fingerprintOf('platformazakupowa', unique) };
+    return resolveTransaction(transaction[1], http);
   },
 };

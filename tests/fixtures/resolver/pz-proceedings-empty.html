@@ -1,0 +1,31 @@
+<!-- Struktura prawdziwej strony /pn/<profil>/proceedings (2026-11-17), skrócona do panelu zakładek; zamawiający bez trwających postępowań. -->
+<div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="tab-active" data-status="active" data-loaded="true">
+        <div class="proceedings-content">
+            <div class="proceedings-no-results" role="status"><p><strong>Brak wyników w tej zakładce.</strong></p></div>
+            <div class="tbl__suppliers-group proceedings-table-container" style="display: none;">
+                <table class="table table-hover table-responsive">
+                    <caption class="sr-only">Do terminu składania</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Nazwa</th>
+                            <th scope="col">Prowadzący</th>
+                            <th scope="col">Data Zakończenia</th>
+                            <th scope="col">Tryb</th>
+                            <th scope="col">Rodzaj postępowania</th>
+                            <th scope="col" class="text-right">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody class="proceedings-table-body"></tbody>
+                </table>
+            </div>
+            <div class="proceedings-pagination"></div>
+        </div>
+    </div>
+    <div role="tabpanel" class="tab-pane " id="tab-ended" data-status="ended" data-loaded="false">
+        <div class="proceedings-content" style="display: none;">
+            <table class="table"><caption class="sr-only">Po terminie składania</caption><tbody class="proceedings-table-body"></tbody></table>
+        </div>
+    </div>
+</div>

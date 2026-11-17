@@ -34,6 +34,15 @@ export const extractProceedingUrl = (html: string): string | null => {
   return match ? normalizeWebAddress(match[1]) : null;
 };
 
+/** Numer sprawy z pola 4.1.2 „Numer referencyjny” w HTML ogłoszenia BZP; null, gdy pole jest puste lub go nie ma. */
+export const extractReferenceNumber = (html: string): string | null => {
+  const text = htmlToText(html);
+  // Numer sprawy sam zawiera kropki (np. „ZP 271.12.2026”), więc koniec wartości to dopiero kolejne pole „N.N.)”;
+  // puste pole zostawia od razu kolejną etykietę, której nie bierzemy za wartość
+  const match = text.match(/4\.1\.2\.\)?\s*Numer referencyjny:?\s+(?!\d+\.\d+(?:\.\d+)*\.\))(.+?)(?=\s\d+\.\d+(?:\.\d+)*\.\)|\s*SEKCJA|$)/i);
+  return match?.[1].trim() || null;
+};
+
 /** Lista dokumentów postępowania; pusta lista (jeszcze nic nie opublikowano) to nie błąd. */
 export const resolveTenderDocuments = async (
   tenderId: string,
