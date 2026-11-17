@@ -377,7 +377,7 @@ describe('Baza Konkurencyjności', () => {
         assert.equal(search.get('status[0]'), 'PUBLISHED');
         assert.equal(search.get('publicationDateRange[from]'), addDays(today, -2));
         assert.equal(search.get('publicationDateRange[to]'), today);
-        assert.equal([...search.keys()].filter((key) => key.startsWith('cpvItem[')).length, 119);
+        assert.equal([...search.keys()].filter((key) => key.startsWith('cpvItem[')).length, 120);
 
         const doc = await db.doc('tenders/BAZA_KONKURENCYJNOSCI_900001').get();
         assert.ok(doc.exists);
