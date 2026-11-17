@@ -8,6 +8,7 @@ import { resolveDocuments, ResolverError } from '../functions/lib/analysis/resol
 import { matchProceeding } from '../functions/lib/analysis/resolver/common.js';
 import { extractFiles as extractEzamawiajacyFiles, extractList } from '../functions/lib/analysis/resolver/ezamawiajacy.js';
 import { extractFiles as extractLogintradeFiles, extractList as extractLogintradeList } from '../functions/lib/analysis/resolver/logintrade.js';
+import { extractFiles as extractSidasFiles } from '../functions/lib/analysis/resolver/sidaspzp.js';
 import { extractProceedingUrl, extractReferenceNumber } from '../functions/lib/analysis/resolver/ezamowienia.js';
 import { assertSessionUrl } from '../functions/lib/analysis/resolver/httpClient.js';
 import { extractFiles, extractProceedings } from '../functions/lib/analysis/resolver/platformazakupowa.js';
@@ -678,5 +679,61 @@ describe('resolver: logintrade', () => {
         const result = await resolveDocuments(ez, fakeHttp([...ezRoutes({ docs: [], body }), ...listRoutes()]));
         assert.equal(result.status, 'RESOLVED');
         assert.equal(result.platform, 'logintrade');
+    });
+});
+
+describe('resolver: SIDAS PZP', () => {
+    const HOST = 'https://zamowienia.sidaspzp.pl';
+    const UUID = '0a25e1d6-9add-4f18-8a07-742bd37ce041';
+    const FILES_URL = `${HOST}/zamowienia/${UUID}/pliki`;
+    const ted = (documentsUrl, extra = {}) => ({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl, ...extra });
+
+    it('pliki z __NEXT_DATA__: SWZ i załączniki; usunięty trafia do excluded; adresu pobierania nie zapisujemy', () => {
+        const { files, excluded } = extractSidasFiles(fixture('sidas-pliki.html'), FILES_URL);
+        assert.deepEqual(files.map((file) => file.path), ['SWZ.pdf', '1. załącznik_nr_1_oferta.doc', '1a. Formularz cenowy & wycena.xlsx', 'Wzór umowy.pdf']);
+        assert.deepEqual(excluded, [{ name: 'Stary wzór umowy.pdf', reason: 'deleted' }]);
+        assert.equal(files[0].url, `${FILES_URL}#file-aaaaaaaa-0000-4000-8000-000000000001`);
+        assert.equal(files[0].publishedAt, '2026-11-12T10:15:50+01:00');
+    });
+
+    it('strona bez danych Next.js to błąd platformy, a nie „brak plików”', () => {
+        assert.throws(() => extractSidasFiles('<html><body>Zmiana układu</body></html>', FILES_URL), ResolverError);
+    });
+
+    it('adres postępowania (także bez /pliki): jedno zapytanie o /pliki', async () => {
+        for (const url of [FILES_URL, `${HOST}/zamowienia/${UUID}`, `${HOST}/zamowienia/${UUID}/szczegoly?x=1`]) {
+            const http = fakeHttp([['/pliki', ok(fixture('sidas-pliki.html'))]]);
+            const result = await resolveDocuments(ted(url), http);
+            assert.equal(result.status, 'RESOLVED');
+            assert.equal(result.platform, 'sidaspzp');
+            assert.equal(result.sourceUrl, FILES_URL);
+            assert.equal(result.files.length, 4);
+            assert.deepEqual(http.requests, [FILES_URL]);
+        }
+    });
+
+    it('postępowanie bez plików: NO_DOCUMENTS_YET', async () => {
+        const result = await resolveDocuments(ted(FILES_URL), fakeHttp([['/pliki', ok(fixture('sidas-pliki-puste.html'))]]));
+        assert.equal(result.status, 'NO_DOCUMENTS_YET');
+        assert.equal(result.platform, 'sidaspzp');
+    });
+
+    it('adres ogólny: PROFILE_NOT_MATCHED bez zapytań', async () => {
+        const http = fakeHttp([]);
+        const result = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'IZP.272.1.2026' }), http);
+        assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+        assert.equal(result.platform, 'sidaspzp');
+        assert.equal(http.requests.length, 0);
+    });
+
+    it('przekierowanie na inny host to błąd platformy', async () => {
+        const http = fakeHttp([['/pliki', { status: 302, data: '', location: 'https://example.com/x' }]]);
+        await assert.rejects(resolveDocuments(ted(FILES_URL), http), ResolverError);
+    });
+
+    it('inne hosty sidaspzp.pl (np. app.) nie są stroną postępowań', async () => {
+        const http = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted('https://app.sidaspzp.pl/'), http)).status, 'UNSUPPORTED_PLATFORM');
+        assert.equal(http.requests.length, 0);
     });
 });

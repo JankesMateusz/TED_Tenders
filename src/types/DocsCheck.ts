@@ -6,7 +6,7 @@ export type DocsCheckState = 'none' | 'available' | 'unsupported' | 'profile' | 
 
 export interface DocsCheck {
     state: DocsCheckState;
-    /** `ezamowienia`, `platformazakupowa`, `ezamawiajacy`, `logintrade` lub `bazakonkurencyjnosci`, gdy znamy platformę z adapterem. */
+    /** `ezamowienia`, `platformazakupowa`, `ezamawiajacy`, `logintrade`, `sidaspzp` lub `bazakonkurencyjnosci`, gdy znamy platformę z adapterem. */
     platform?: string;
     /** Strona postępowania lub dokumentacji na platformie. */
     sourceUrl?: string;

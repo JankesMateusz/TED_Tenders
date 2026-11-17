@@ -112,6 +112,20 @@ Niezbadane. Python na komputerze użytkownika nie zestawił połączenia TLS (sy
 - To odczyt tekstu, nie opinia prawna.
 - **Decyzja użytkownika (2026-11-17):** nie pobieramy plików z platform automatycznie; kontynuujemy tylko listowanie plików (adresy z manifestu nie są przez nic pobierane). Zapis § 3 ust. 7 obejmuje „jakiekolwiek zautomatyzowane pobieranie treści", więc listowanie też jest po stronie ryzyka; do rozmowy z operatorem (zgoda lub API) przed wdrożeniem na produkcję.
 
+### 4.7. SIDAS PZP (Madkom), `zamowienia.sidaspzp.pl` (odczyt 2026-11-17)
+
+- **Strona plików jest publiczna (Sprawdzone na 1 postępowaniu).** `https://zamowienia.sidaspzp.pl/zamowienia/<uuid>/pliki`, aplikacja Next.js z renderowaniem po stronie serwera. Lista plików jest w JSON-ie `<script id="__NEXT_DATA__">` (`props.pageProps`): `termsOfReferences[]` (SWZ; `termsOfReference.documentType`, `isDeleted`/`isInactivated`) i `attachments[]` (`attachment.status`, `addedAt`, `removedAt`), w obu `file.{id,name,extension,size,checksum}`. Są też `order.referenceNumber`, `clarifications[]` (wyjaśnienia, nieobsługiwane) i dane zamawiającego.
+- **Adresu pobierania nie ustalono i nie szukano** (decyzja: tylko listujemy). `ResolvedFile.url` to adres strony z kotwicą `#file-<id>`.
+- **`robots.txt` zwraca 404** (brak pliku). Regulaminu nie czytano.
+- **Adapter `sidaspzp.ts`:** obsługuje adresy `/zamowienia/<uuid>[/…]`, zawsze pyta o `/pliki`. Adresy ogólne (strona główna zamawiającego) dają `PROFILE_NOT_MATCHED`, bo listy postępowań nie znamy. Zmiana układu strony (brak `__NEXT_DATA__`/`attachments`) to `ResolverError`, nie „brak plików”.
+- **Nie wiemy**, czy ogłoszenia TED/BZP faktycznie podają adres w tej postaci (do sprawdzenia w pomiarze, etap 4).
+
+### 4.8. PZP (Aurelia), np. `zamowienia.olsztyn.eu` (częściowe)
+
+- Aplikacja jednostronicowa „PZP 3.1.13”, REST pod `<origin>/api/`; lista: `POST /api/Offers` z `{"orderBy":"1","pageNumber":0,"offerStatuses":[]}` (z kodu pakietu, nie wywołane skutecznie). HTML nie zawiera danych.
+- Serwer nie wysyła certyfikatu pośredniego (Certum DV TLS G2 R39 CA), więc klient w Cloud Functions musiałby go mieć wbudowanego; certyfikat serwera wygasa 2026-12-12. W kodzie jest klucz reCAPTCHA (zakres nieznany). `robots.txt` 404, regulaminu nie czytano.
+- **Nieustalone:** czy lista i pliki są dostępne bez logowania. Wymaga jednego zapytania do `/api/Offers` albo zapisu HAR z przeglądarki.
+
 ## 5. Decyzje i zasady dla tej pracy
 
 - **Kolejność:** najpierw dopasowanie profilu na platformazakupowa.pl, potem ezamawiający, potem logintrade. eB2B, e-ProPublico i własne strony zamawiających zostają jako „inna platforma", dopóki pomiar po wdrożeniu nie pokaże, że warto.

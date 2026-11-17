@@ -34,6 +34,7 @@ const PLATFORM_NAMES: Record<string, string> = {
     platformazakupowa: 'platformazakupowa.pl',
     ezamawiajacy: 'ezamawiający',
     logintrade: 'logintrade',
+    sidaspzp: 'SIDAS PZP',
     bazakonkurencyjnosci: 'Baza Konkurencyjności'
 };
 
