@@ -2,13 +2,14 @@ import { ezamowieniaAdapter, extractProceedingUrl, extractReferenceNumber, notic
 import { bazaAdapter } from './bazakonkurencyjnosci';
 import { ezamawiajacyAdapter } from './ezamawiajacy';
 import { createHttpClient } from './httpClient';
+import { logintradeAdapter } from './logintrade';
 import { platformazakupowaAdapter } from './platformazakupowa';
 import { HttpClient, MatchHints, PlatformAdapter, ResolverResult, TenderContext } from './types';
 
 export * from './types';
 
 /** Adaptery dopasowywane do adresu dokumentacji (adresy się nie nakładają, kolejność nie ma znaczenia). */
-export const ADAPTERS: PlatformAdapter[] = [ezamowieniaAdapter, platformazakupowaAdapter, ezamawiajacyAdapter, bazaAdapter];
+export const ADAPTERS: PlatformAdapter[] = [ezamowieniaAdapter, platformazakupowaAdapter, ezamawiajacyAdapter, logintradeAdapter, bazaAdapter];
 
 /** Adres dokumentacji → adapter; brak dopasowania = platforma nieobsługiwana (ręczne wgranie plików). */
 const resolveByUrl = async (url: string, http: HttpClient, hints?: MatchHints): Promise<ResolverResult> => {

@@ -90,8 +90,9 @@ Starsze ogłoszenia wypadają z zakładki trwających po terminie składania ofe
 
 - **Strona postępowania jest publiczna (Sprawdzone).** `https://<sub>.logintrade.net/zapytania_email,<id>,<hash>.html`, tytuł „Podgląd zapytania", w treści „Znak sprawy".
 - **Pliki mają publiczne adresy (Sprawdzone).** Linki względne `DocumentService,getAttachmentUnlogged,<token>` (10 na badanej stronie, token ok. 180 znaków). Pobranie bez sesji zwróciło PDF.
-- **Nazwy plików: do ustalenia.** Tekst odnośnika był pusty, więc nazwa leży w sąsiedniej komórce albo atrybucie.
-- **Lista postępowań (Sprawdzone na jednym zamawiającym).** `https://<sub>.logintrade.net/rejestracja/ustawowe.html` (ok. 1 MB) wypisuje postępowania z numerem sprawy, tytułem i datami. Nie sprawdzono, jak z wiersza listy złożyć adres postępowania.
+- **Nazwy plików (Sprawdzone na 2 postępowaniach, 2026-11-17):** sekcja „Załączniki” to `div#attachmentList` z blokami `div.attachment[data-id]`; nazwa w `span.attachment-name`, data w `span.attachment-date` (`DD.MM.RRRR - GG:MM:SS`, czas polski), link względny `DocumentService,getAttachmentUnlogged,<token>.html`. Liczba linków równa liczbie plików (18 i 3).
+- **Lista postępowań (Sprawdzone na 3 zamawiających).** `https://<sub>.logintrade.net/rejestracja/ustawowe.html` (ok. 45 KB): wiersze `<tr>` z `td.przetarg > a[href]` (absolutny adres `…/zapytania_email,<id>,<hash>.html` i tytuł) oraz `td.przetarg_znak` (znak sprawy); stronicowanie `?page=N`, najnowsze na górze.
+- **`robots.txt` (`pzdw.logintrade.net`, 2026-11-17):** `User-agent: *` ma `Disallow: /zalaczniki/` i `Disallow: /DocumentService` (adresy samych plików), a `GPTBot` ma zakaz całości. Stron postępowań i listy nie dotyczy. Adresów `/DocumentService` nie zapisujemy w manifeście.
 
 ### 4.4. eB2B
 
@@ -106,7 +107,7 @@ Niezbadane. Python na komputerze użytkownika nie zestawił połączenia TLS (sy
 ### 4.6. Warunki korzystania z platform (etap 0, odczyt 2026-11-17)
 
 - **platformazakupowa.pl: automatyczne pobieranie jest zabronione (Sprawdzone w surowym tekście regulaminu).** Regulamin (OWŚUW, `https://platformazakupowa.pl/strona/1-regulamin`, obowiązuje od 2026-05-08): § 3 ust. 7 „Zakazane jest jakiekolwiek zautomatyzowane pobieranie treści, w szczególności scraping, crawling, TDM lub masowe pobieranie Załączników", z wyjątkiem API lub innych form udostępnionych przez usługodawcę (np. pliki CSV) i obowiązujących przepisów; § 5 ust. 4 zakazuje „powtarzającego się i systematycznego pobierania treści (w tym Załączników)"; § 3 ust. 8–9 i § 7 ust. 8–9 dopuszczają limity, weryfikację anty-botową oraz blokadę konta lub adresów IP i roszczenia z tytułu praw do baz danych. `robots.txt`: `User-agent: *` ma `Crawl-delay: 900` i `Disallow: /file/get_new/*` (adresy plików). Nie znaleziono publicznego API do list postępowań ani plików (niesprawdzane wprost).
-- **logintrade: regulamin nie ma zapisów o botach ani scrapingu (Sprawdzone, streszczenie narzędzia pobierającego, nie surowy tekst).** Regulamin z 2025-05-17 (`<sub>.logintrade.net/rejestracja/regulamin.html`): § 2 ust. 4 zakazuje działań „utrudniających działanie lub powodujących destabilizację" platformy i obchodzenia zabezpieczeń. `robots.txt` nie sprawdzono: połączenie z `*.logintrade.net` z komputera użytkownika kończy się błędem certyfikatu (self signed certificate in certificate chain), jak w 4.5.
+- **logintrade: regulamin nie ma zapisów o botach ani scrapingu (Sprawdzone, streszczenie narzędzia pobierającego, nie surowy tekst).** Regulamin z 2025-05-17 (`<sub>.logintrade.net/rejestracja/regulamin.html`): § 2 ust. 4 zakazuje działań „utrudniających działanie lub powodujących destabilizację" platformy i obchodzenia zabezpieczeń. `robots.txt`: patrz 4.3 (zakaz `/DocumentService` i `/zalaczniki/`, czyli samych plików). `curl` z komputera użytkownika kończy się błędem certyfikatu (self signed certificate in certificate chain), ale Node (`fetch`) łączy się bez problemu, jak z `ezamowienia.gov.pl`; błąd dotyczy lokalnej listy CA w `curl`/Pythonie (por. 4.5).
 - **ezamawiający: nic nie ustalono.** `zus.ezamawiajacy.pl/robots.txt` zwraca 404 (brak pliku), regulaminu nie znaleziono. Domena główna `ezamawiajacy.pl` nie odpowiada.
 - To odczyt tekstu, nie opinia prawna.
 - **Decyzja użytkownika (2026-11-17):** nie pobieramy plików z platform automatycznie; kontynuujemy tylko listowanie plików (adresy z manifestu nie są przez nic pobierane). Zapis § 3 ust. 7 obejmuje „jakiekolwiek zautomatyzowane pobieranie treści", więc listowanie też jest po stronie ryzyka; do rozmowy z operatorem (zgoda lub API) przed wdrożeniem na produkcję.
@@ -176,6 +177,13 @@ Gotowe, gdy: jak w etapie 1, dla przetargów z adresem na ezamawiający.
 ### Etap 3: adapter logintrade
 
 Spodziewany zysk: ok. 3 punkty.
+
+**Stan (2026-11-17, niezacommitowany):** zaimplementowane w `functions/analysis/resolver/logintrade.ts`, `npm run test:unit` 144/144, próba na 4 żywych przypadkach (strona postępowania: 18 plików; adres ogólny z numerem sprawy trafił w postępowanie z plikiem `SWZ <numer sprawy>.pdf`; strona główna; numer spoza listy: `PROFILE_NOT_MATCHED`). Kroki 1–4 zrobione. Decyzje i ustalenia:
+
+- Hosty `*.logintrade.net` poza `www`. Strona postępowania: `/zapytania_email,<id>,<hash>.html`; każdy inny adres (strona główna, `/rejestracja/ustawowe.html`, regulamin) to adres ogólny i idzie przez listę `/rejestracja/ustawowe.html`. Odnośnik z listy jest wykonywany tylko dla tego samego hosta i tej postaci adresu.
+- `ResolvedFile.url` to adres strony postępowania z kotwicą `#attachment-<id>`: adresy `/DocumentService` są zabronione w `robots.txt` i nie zapisujemy ich (zgodnie z decyzją o samym listowaniu).
+- Przechodzenie przekierowań wyniesione do wspólnego `fetchSameHost` w `common.ts` (używają go ezamawiający i logintrade).
+- **Niesprawdzone:** lista `/rejestracja/ustawowe.html` obejmuje tylko postępowania ustawowe (nie sprawdzano list zapytań poza ustawą, `przetargi.html`); zachowanie dla postępowania zakończonego (adres ze starego ogłoszenia); wersje silnika u zamawiających spoza czterech oglądanych; przy niepełnej liście (kolejne strony) dopasowanie tylko po tytule jest wyłączone.
 
 1. Ustalić, skąd wziąć nazwy plików przy linkach `getAttachmentUnlogged` i czy data publikacji pliku jest na stronie.
 2. Ustalić, jak z wiersza listy `/rejestracja/ustawowe.html` złożyć adres postępowania.

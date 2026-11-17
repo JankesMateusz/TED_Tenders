@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { Platform, ResolvedFile } from './types';
+import { HttpClient, Platform, ResolvedFile, ResolverError } from './types';
 
 export const fingerprintOf = (platform: Platform, files: ResolvedFile[]): string => {
   const entries = files
@@ -102,7 +102,39 @@ export const matchProceeding = (
   return byTitle.length === 1 ? byTitle[0] : null;
 };
 
-export const hostOf =(url: string): string | null => {
+export type FetchedPage = { kind: 'page'; url: string; html: string } | { kind: 'stopped'; url: string };
+
+const MAX_REDIRECTS = 3;
+
+/**
+ * Pobiera publiczną stronę (bez ciasteczek), przechodząc przekierowania ręcznie. Przekierowanie na inny host to zmiana
+ * zachowania platformy i ma być widoczne jako błąd. `stopAt` pozwala uznać przekierowanie za wynik, a nie awarię
+ * (np. na logowanie): wtedy zwracamy `stopped` z adresem docelowym.
+ */
+export const fetchSameHost = async (
+  url: string,
+  http: HttpClient,
+  options: { platformName: string; stopAt?: (next: URL) => boolean },
+): Promise<FetchedPage> => {
+  let current = url;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const response = await http.get<string>(current, { text: true, followRedirects: false });
+    if (response.status < 300) return { kind: 'page', url: current, html: typeof response.data === 'string' ? response.data : '' };
+    if (!response.location) {
+      throw new ResolverError(`${options.platformName} odpowiedział ${response.status} bez adresu przekierowania.`, { url: current, status: response.status });
+    }
+
+    const next = new URL(response.location, current);
+    if (next.hostname.toLowerCase() !== new URL(current).hostname.toLowerCase()) {
+      throw new ResolverError(`${options.platformName} przekierował na inny host: ${next.hostname}.`, { url: current, status: response.status });
+    }
+    if (options.stopAt?.(next)) return { kind: 'stopped', url: next.toString() };
+    current = next.toString();
+  }
+  throw new ResolverError(`Zbyt wiele przekierowań na stronie: ${options.platformName}.`, { url });
+};
+
+export const hostOf = (url: string): string | null => {
   try {
     return new URL(url).hostname.toLowerCase();
   } catch {

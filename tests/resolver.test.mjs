@@ -7,6 +7,7 @@ import { describe, it } from 'node:test';
 import { resolveDocuments, ResolverError } from '../functions/lib/analysis/resolver/index.js';
 import { matchProceeding } from '../functions/lib/analysis/resolver/common.js';
 import { extractFiles as extractEzamawiajacyFiles, extractList } from '../functions/lib/analysis/resolver/ezamawiajacy.js';
+import { extractFiles as extractLogintradeFiles, extractList as extractLogintradeList } from '../functions/lib/analysis/resolver/logintrade.js';
 import { extractProceedingUrl, extractReferenceNumber } from '../functions/lib/analysis/resolver/ezamowienia.js';
 import { assertSessionUrl } from '../functions/lib/analysis/resolver/httpClient.js';
 import { extractFiles, extractProceedings } from '../functions/lib/analysis/resolver/platformazakupowa.js';
@@ -181,7 +182,7 @@ describe('resolver: TED', () => {
     it('documentsUrl na profil, nieobsługiwaną platformę i nieparsowalny adres', async () => {
         const http = fakeHttp([]);
         assert.equal((await resolveDocuments(ted('https://platformazakupowa.pl/pn/gmina_dydnia'), http)).status, 'PROFILE_NOT_MATCHED');
-        assert.equal((await resolveDocuments(ted('https://pzdw.logintrade.net/zapytania_email,1.html'), http)).status, 'UNSUPPORTED_PLATFORM');
+        assert.equal((await resolveDocuments(ted('https://przetargi.example.pl/zapytania_email,1.html'), http)).status, 'UNSUPPORTED_PLATFORM');
         assert.equal((await resolveDocuments(ted('nie-adres'), http)).status, 'UNSUPPORTED_PLATFORM');
         assert.equal(http.requests.length, 0);
     });
@@ -572,5 +573,110 @@ describe('resolver: ezamawiający (Marketplanet)', () => {
         const http = fakeHttp([]);
         assert.equal((await resolveDocuments(ted('https://www.ezamawiajacy.pl/', { referenceNumber: 'ZP 1/2026' }), http)).status, 'UNSUPPORTED_PLATFORM');
         assert.equal(http.requests.length, 0);
+    });
+});
+
+describe('resolver: logintrade', () => {
+    const HOST = 'https://klient.logintrade.net';
+    const PROCEEDING = `${HOST}/zapytania_email,245002,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.html`;
+    const ted = (documentsUrl, extra = {}) => ({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl, ...extra });
+    const listRoutes = (list = fixture('lt-lista.html'), page = fixture('lt-postepowanie.html')) => [
+        ['/rejestracja/ustawowe.html', ok(list)],
+        ['/zapytania_email,', ok(page)]
+    ];
+
+    it('załączniki: nazwy, daty, kotwica; adresów /DocumentService (zakazanych w robots.txt) nie zapisujemy', () => {
+        const files = extractLogintradeFiles(fixture('lt-postepowanie.html'), PROCEEDING);
+        assert.deepEqual(files.map((file) => file.platformFileId), ['1444913', '1444914', '1444915']);
+        assert.deepEqual(files.map((file) => file.path), ['Załącznik nr 4 do SWZ_Wzór oświadczenia Wykonawcy.doc', 'Specyfikacja warunków zamówienia & załączniki.pdf', 'Wzór umowy.zip']);
+        assert.equal(files[0].publishedAt, '2026-11-12T10:37:19');
+        assert.equal(files[0].url, `${PROCEEDING}#attachment-1444913`);
+        assert.ok(files.every((file) => !file.url.includes('DocumentService')));
+        assert.deepEqual(extractLogintradeFiles(fixture('lt-postepowanie-puste.html'), PROCEEDING), []);
+    });
+
+    it('lista: znak sprawy z tytułem; stronicowanie rozpoznane po ?page=2', () => {
+        const full = extractLogintradeList(fixture('lt-lista.html'));
+        assert.equal(full.rows.length, 3);
+        assert.equal(full.rows[1].name, 'DZP.231.18.2026 Świadczenie usług ratownictwa wodnego i pierwszej pomocy w zespole obiektów basenowych');
+        assert.equal(full.rows[1].id, `${HOST}/zapytania_email,245002,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.html`);
+        assert.equal(full.complete, true);
+        const more = fixture('lt-lista.html').replace('</ul>', '<li><a href="https://klient.logintrade.net/rejestracja/ustawowe.html?page=2">2</a></li></ul>');
+        assert.equal(extractLogintradeList(more).complete, false);
+    });
+
+    it('adres postępowania: lista plików, jedno zapytanie', async () => {
+        const http = fakeHttp(listRoutes());
+        const result = await resolveDocuments(ted(PROCEEDING), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'logintrade');
+        assert.equal(result.sourceUrl, PROCEEDING);
+        assert.equal(result.files.length, 3);
+        assert.deepEqual(http.requests, [PROCEEDING]);
+    });
+
+    it('postępowanie bez załączników: NO_DOCUMENTS_YET', async () => {
+        const result = await resolveDocuments(ted(PROCEEDING), fakeHttp(listRoutes(undefined, fixture('lt-postepowanie-puste.html'))));
+        assert.equal(result.status, 'NO_DOCUMENTS_YET');
+        assert.equal(result.platform, 'logintrade');
+    });
+
+    it('adres ogólny: lista → dopasowanie po numerze sprawy → pliki', async () => {
+        const http = fakeHttp(listRoutes());
+        const result = await resolveDocuments(ted(`${HOST}/rejestracja/ustawowe.html`, { referenceNumber: 'DZP.231.18.2026' }), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.sourceUrl, PROCEEDING);
+        assert.deepEqual(http.requests, [`${HOST}/rejestracja/ustawowe.html`, PROCEEDING]);
+    });
+
+    it('adres ogólny: strona główna zamawiającego też prowadzi do listy', async () => {
+        const result = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'DZP.231.18.2026' }), fakeHttp(listRoutes()));
+        assert.equal(result.status, 'RESOLVED');
+    });
+
+    it('adres ogólny: brak danych, brak trafienia: PROFILE_NOT_MATCHED', async () => {
+        const none = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted(`${HOST}/`), none)).status, 'PROFILE_NOT_MATCHED');
+        assert.equal(none.requests.length, 0);
+
+        const http = fakeHttp(listRoutes());
+        const noMatch = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'DZP.999.1.2026', title: 'Zupełnie inne zamówienie' }), http);
+        assert.equal(noMatch.status, 'PROFILE_NOT_MATCHED');
+        assert.equal(noMatch.platform, 'logintrade');
+        assert.deepEqual(http.requests, [`${HOST}/rejestracja/ustawowe.html`]);
+    });
+
+    it('niepełna lista: dopasowanie po numerze działa, po samym tytule nie', async () => {
+        const partial = fixture('lt-lista.html').replace('</ul>', '<li><a href="?page=2">2</a></li></ul>');
+        const byNumber = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'DZP.231.13.2026' }), fakeHttp(listRoutes(partial)));
+        assert.equal(byNumber.status, 'RESOLVED');
+        const byTitle = await resolveDocuments(ted(`${HOST}/`, { title: 'Dostawa sprzętu komputerowego dla szkół' }), fakeHttp(listRoutes(partial)));
+        assert.equal(byTitle.status, 'PROFILE_NOT_MATCHED');
+    });
+
+    it('odnośnik z listy na inny host albo o dziwnej postaci nie jest wykonywany', async () => {
+        const evil = fixture('lt-lista.html').replace('https://klient.logintrade.net/zapytania_email,245002', 'https://example.com/zapytania_email,245002');
+        const http = fakeHttp(listRoutes(evil));
+        const result = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'DZP.231.18.2026' }), http);
+        assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+        assert.deepEqual(http.requests, [`${HOST}/rejestracja/ustawowe.html`]);
+    });
+
+    it('przekierowanie na inny host to błąd platformy', async () => {
+        const http = fakeHttp([['/zapytania_email,', { status: 302, data: '', location: 'https://example.com/x' }]]);
+        await assert.rejects(resolveDocuments(ted(PROCEEDING), http), ResolverError);
+    });
+
+    it('www.logintrade.net (witryna producenta) nie jest zamawiającym', async () => {
+        const http = fakeHttp([]);
+        assert.equal((await resolveDocuments(ted('https://www.logintrade.net/', { referenceNumber: 'ZP 1/2026' }), http)).status, 'UNSUPPORTED_PLATFORM');
+        assert.equal(http.requests.length, 0);
+    });
+
+    it('eZamówienia z adresem logintrade w polu 3.1: numer sprawy z ogłoszenia', async () => {
+        const body = `<h3>3.1.) Adres strony internetowej prowadzonego postępowania</h3> ${HOST}/rejestracja/ustawowe.html <h3>3.2.) Dostęp</h3> Nie <h3>4.1.2.) Numer referencyjny:</h3> DZP.231.18.2026 <h3>4.1.3.) Rodzaj:</h3> x`;
+        const result = await resolveDocuments(ez, fakeHttp([...ezRoutes({ docs: [], body }), ...listRoutes()]));
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.platform, 'logintrade');
     });
 });

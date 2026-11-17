@@ -33,6 +33,7 @@ const PLATFORM_NAMES: Record<string, string> = {
     ezamowienia: 'eZamówienia',
     platformazakupowa: 'platformazakupowa.pl',
     ezamawiajacy: 'ezamawiający',
+    logintrade: 'logintrade',
     bazakonkurencyjnosci: 'Baza Konkurencyjności'
 };
 

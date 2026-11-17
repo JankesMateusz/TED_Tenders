@@ -1,4 +1,4 @@
-import { fingerprintOf, hostOf, htmlToText, matchProceeding, ProceedingRow, uniquePaths } from './common';
+import { fetchSameHost, FetchedPage, fingerprintOf, hostOf, htmlToText, matchProceeding, ProceedingRow, uniquePaths } from './common';
 import { HttpClient, MatchHints, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
 
 /**
@@ -7,7 +7,6 @@ import { HttpClient, MatchHints, MAX_FILES, PlatformAdapter, ResolvedFile, Resol
  * w `ResolvedFile.url` jest adres strony postępowania z kotwicą wiersza (`#_<id>`).
  */
 const WARSAW_HOST = 'zamowienia.um.warszawa.pl';
-const MAX_REDIRECTS = 3;
 
 // „www” to witryna producenta platformy, a nie zamawiający
 const isEzamawiajacyHost = (host: string): boolean => (host.endsWith('.ezamawiajacy.pl') && host !== 'www.ezamawiajacy.pl') || host === WARSAW_HOST;
@@ -61,33 +60,13 @@ export const extractList = (html: string): { rows: ProceedingRow[]; complete: bo
   return { rows, complete: !counter || Number(counter[2]) <= rows.length };
 };
 
-type Page = { kind: 'page'; url: string; html: string } | { kind: 'login'; url: string };
-
-/**
- * Pobiera stronę, przechodząc przekierowania ręcznie (bez ciasteczek, strony publiczne ich nie wymagają).
- * Przekierowanie na inny host to zmiana zachowania platformy i ma być widoczne jako błąd; przekierowanie na
- * logowanie oznacza, że postępowania nie ma publicznie (np. zakończone), a to nie awaria.
- */
-const fetchPage = async (url: string, http: HttpClient): Promise<Page> => {
-  let current = url;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const response = await http.get<string>(current, { text: true, followRedirects: false });
-    if (response.status < 300) return { kind: 'page', url: current, html: typeof response.data === 'string' ? response.data : '' };
-    if (!response.location) throw new ResolverError(`ezamawiający odpowiedział ${response.status} bez adresu przekierowania.`, { url: current, status: response.status });
-
-    const next = new URL(response.location, current);
-    if (next.hostname.toLowerCase() !== new URL(current).hostname.toLowerCase()) {
-      throw new ResolverError(`ezamawiający przekierował na inny host: ${next.hostname}.`, { url: current, status: response.status });
-    }
-    if (next.pathname.startsWith('/app/login')) return { kind: 'login', url: next.toString() };
-    current = next.toString();
-  }
-  throw new ResolverError('Zbyt wiele przekierowań na stronie ezamawiającego.', { url });
-};
+/** Strony są publiczne (bez ciasteczek); przekierowanie na logowanie oznacza, że postępowania nie ma publicznie (np. zakończone), a to nie awaria. */
+const fetchPage = (url: string, http: HttpClient): Promise<FetchedPage> =>
+  fetchSameHost(url, http, { platformName: 'ezamawiający', stopAt: (next) => next.pathname.startsWith('/app/login') });
 
 const resolveDetail = async (url: string, http: HttpClient): Promise<ResolverResult> => {
   const page = await fetchPage(url, http);
-  if (page.kind === 'login') {
+  if (page.kind === 'stopped') {
     return {
       status: 'UNSUPPORTED_PLATFORM',
       platform: 'ezamawiajacy',
