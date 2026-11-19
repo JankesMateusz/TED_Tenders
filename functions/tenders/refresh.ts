@@ -5,9 +5,9 @@ import { REGION, requireMember } from '../access';
 import { addDays, isValidDay, todayInWarsaw } from './dates';
 import { fetchBaza } from './bazakonkurencyjnosci';
 import { fetchEzamowienia } from './ezamowienia';
-import { SourceResult, TENDER_SOURCES, TenderSource } from './model';
-import { expiryFrom, saveNewTenders } from './store';
-import { scheduledRefreshTarget } from './schedule';
+import { FetchOptions, SourceResult, TENDER_SOURCES, TenderSource } from './model';
+import { expiryFrom, findExistingIds, saveNewTenders } from './store';
+import { isFullSweepRun, scheduledRefreshTarget } from './schedule';
 import { fetchTed } from './ted';
 
 const LOCK_PATH = 'meta/refreshLock';
@@ -64,12 +64,18 @@ const resolveDay = (requested: unknown): string => {
 
 export interface RefreshOptions {
   sources?: TenderSource[];
+  /**
+   * Tryb przyrostowy: źródła mogą przerwać pobieranie na pierwszej stronie znanych ogłoszeń, zamiast pobierać
+   * cały dzień. Dotyczy tylko bieżącego dnia; dzień zakończony zawsze pobieramy w całości.
+   */
+  incremental?: boolean;
 }
 
-const FETCHERS: Record<TenderSource, (day: string) => Promise<SourceResult>> = {
+const FETCHERS: Record<TenderSource, (day: string, options: FetchOptions) => Promise<SourceResult>> = {
   TED: fetchTed,
   E_ZAMOWIENIA: fetchEzamowienia,
-  BAZA_KONKURENCYJNOSCI: fetchBaza,
+  // Baza ma własne sprawdzanie znanych ogłoszeń (drugi parametr), więc opcje trybu przyrostowego jej nie dotyczą
+  BAZA_KONKURENCYJNOSCI: (day) => fetchBaza(day),
 };
 
 /** Czy Baza była pobierana na tyle niedawno, że kolejne odpytanie źródła nie ma sensu. */
@@ -88,6 +94,8 @@ export const refreshDay = async (day: string, requestedBy: string, options: Refr
   const requested = options.sources ?? DEFAULT_SOURCES;
   // Dzień pobrany po jego zakończeniu jest kompletny; pobrany w trakcie może nie mieć jeszcze późniejszych ogłoszeń
   const dayIsOver = todayInWarsaw() > day;
+  const incremental = Boolean(options.incremental) && !dayIsOver;
+  const fetchOptions: FetchOptions = incremental ? { findKnownIds: findExistingIds } : {};
 
   await acquireLock(requestedBy);
   try {
@@ -98,7 +106,18 @@ export const refreshDay = async (day: string, requestedBy: string, options: Refr
       sources = requested.filter((source) => source !== BAZA);
     }
 
-    const results = await Promise.all(sources.map((source) => FETCHERS[source](day)));
+    // Czas etapów trafia do logu, żeby przy spowolnieniu było widać, czy zawiniło źródło, czy zapis
+    const timings: Record<string, number> = {};
+    const results = await Promise.all(
+      sources.map(async (source) => {
+        const startedAt = Date.now();
+        try {
+          return await FETCHERS[source](day, fetchOptions);
+        } finally {
+          timings[source] = Date.now() - startedAt;
+        }
+      })
+    );
     const bySource = new Map<TenderSource, SourceResult>(sources.map((source, index) => [source, results[index]]));
     const errors = results.flatMap((result) => result.errors);
     const records = results.flatMap((result) => result.records);
@@ -108,7 +127,14 @@ export const refreshDay = async (day: string, requestedBy: string, options: Refr
       throw new HttpsError('unavailable', 'Nie udało się pobrać przetargów z żadnego źródła.');
     }
 
+    const saveStartedAt = Date.now();
     const saved = await saveNewTenders(records);
+    console.log(
+      `Czasy odświeżenia ${day} (ms, ${incremental ? 'przyrostowo' : 'pełne'}): ${JSON.stringify({
+        ...timings,
+        zapis: Date.now() - saveStartedAt,
+      })}`
+    );
 
     const now = new Date();
     // Zapis tylko po pełnym sukcesie, żeby dzień z brakującym źródłem został pobrany ponownie.
@@ -135,6 +161,7 @@ export const refreshDay = async (day: string, requestedBy: string, options: Refr
       existing: saved.existing,
       errors,
       skipped,
+      incremental,
     };
   } finally {
     await releaseLock();
@@ -182,7 +209,9 @@ const runScheduledRefresh = async (
       console.log(`Pominięto: ${label.toLowerCase()} (dzień ${target.day} jest już kompletny).`);
       return;
     }
-    const result = await refreshDay(target.day, SCHEDULER_UID, { sources });
+    // Przebieg o pełnej godzinie i domknięcie dnia pobierają wszystko, pozostałe tylko nowe ogłoszenia
+    const incremental = !target.finalizing && !isFullSweepRun();
+    const result = await refreshDay(target.day, SCHEDULER_UID, { sources, incremental });
     console.log(`${label} zakończone:`, JSON.stringify(result));
   } catch (error) {
     // Blokada zajęta (ręczne odświeżenie w toku) to nie błąd: kolejny przebieg nadrobi
@@ -194,10 +223,16 @@ const runScheduledRefresh = async (
   }
 };
 
+/**
+ * Zadanie cykliczne zwykle kończy się w kilka-kilkanaście sekund. Krótszy limit niż w wywołaniu z aplikacji
+ * ogranicza koszt, gdy źródło zwolni (Cloud Run liczy każdą sekundę, także oczekiwania na odpowiedź).
+ */
+const SCHEDULED_TIMEOUT_SECONDS = 120;
+
 const SCHEDULE_OPTIONS = {
   region: REGION,
   timeZone: 'Europe/Warsaw',
-  timeoutSeconds: FUNCTION_TIMEOUT_SECONDS,
+  timeoutSeconds: SCHEDULED_TIMEOUT_SECONDS,
   memory: '512MiB' as const,
   retryCount: 0,
 };

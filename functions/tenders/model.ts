@@ -43,6 +43,14 @@ export interface SourceResult {
   errors: string[];
 }
 
+/**
+ * Opcje pobierania ze źródła. Z `findKnownIds` źródło może przerwać paginację, gdy trafi na stronę
+ * ogłoszeń, które już mamy (tryb przyrostowy); bez niego pobiera cały dzień.
+ */
+export interface FetchOptions {
+  findKnownIds?: (ids: string[]) => Promise<Set<string>>;
+}
+
 /** Identyfikator dokumentu: stabilny, więc ponowne pobranie nie tworzy duplikatów. */
 export const tenderId = (tender: Pick<TenderRecord, 'source' | 'publicationNumber'>): string =>
   // "/" jest niedozwolone w identyfikatorze dokumentu, a numery eZamówień je zawierają (np. "2026/BZP 00510442/01")

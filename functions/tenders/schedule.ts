@@ -10,6 +10,16 @@ export interface ScheduledRefreshTarget {
   finalizing: boolean;
 }
 
+/** Pierwszy kwadrans godziny (czas warszawski) to przebieg z pełnym pobraniem dnia; pozostałe są przyrostowe. */
+const FULL_SWEEP_MINUTES = 10;
+
+/**
+ * Czy przebieg harmonogramu ma pobrać cały dzień (raz na godzinę, przebieg o pełnej godzinie), a nie tylko
+ * nowe ogłoszenia. Pełne pobranie nadrabia ogłoszenia dodane wstecz, których tryb przyrostowy mógłby nie zauważyć.
+ */
+export const isFullSweepRun = (now: Date = new Date()): boolean =>
+  Number(toWarsaw(now.toISOString())!.time.slice(3, 5)) < FULL_SWEEP_MINUTES;
+
 /**
  * Wybiera dzień dla przebiegu harmonogramu. W ciągu dnia odświeżamy dzisiejszy, a w godzinie po północy
  * poprzedni: dopiero pobranie po jego zakończeniu oznacza dzień w dzienniku jako kompletny, a nikt inny

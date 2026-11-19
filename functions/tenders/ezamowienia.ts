@@ -1,7 +1,7 @@
 import { addDays, toWarsaw } from './dates';
 import { requestWithRetry } from './http';
 import { isItTender } from './itCpvCodes';
-import { OrderType, SourceResult, TenderRecord } from './model';
+import { FetchOptions, OrderType, SourceResult, TenderRecord, tenderId } from './model';
 
 // Adres można podmienić w testach (functions/.env.demo-tenders).
 const EZAMOWIENIA_API_URL =
@@ -67,7 +67,11 @@ export const mapEzamowieniaNotice = (raw: EzamowieniaNotice, orderType: OrderTyp
  * a sama data (bez godziny) działa poprawnie. Pytamy więc o całe doby UTC (dzień poprzedni i wybrany),
  * co obejmuje polską dobę, a wyniki przycinamy do wybranego dnia po stronie serwera.
  */
-const fetchOrderType = async (day: string, orderType: OrderType): Promise<TenderRecord[]> => {
+/** Czy cała strona wyników to ogłoszenia, które już mamy (pusta strona nie jest "znana"). */
+export const pageIsAllKnown = (ids: string[], known: Set<string>): boolean =>
+  ids.length > 0 && ids.every((id) => known.has(id));
+
+const fetchOrderType = async (day: string, orderType: OrderType, options: FetchOptions): Promise<TenderRecord[]> => {
   const records: TenderRecord[] = [];
 
   for (let page = 1; page <= MAX_PAGES; page++) {
@@ -90,10 +94,12 @@ const fetchOrderType = async (day: string, orderType: OrderType): Promise<Tender
 
     const notices: EzamowieniaNotice[] = Array.isArray(response.data) ? response.data : [];
     let reachedOlderDay = false;
+    const pageIds: string[] = [];
 
     for (const notice of notices) {
       const record = mapEzamowieniaNotice(notice, orderType);
       if (!record) continue;
+      pageIds.push(tenderId(record));
       if (record.publicationDate === day) {
         records.push(record);
       } else if (record.publicationDate < day) {
@@ -103,14 +109,18 @@ const fetchOrderType = async (day: string, orderType: OrderType): Promise<Tender
 
     // Wyniki są posortowane malejąco po dacie, więc po przekroczeniu początku dnia dalsze strony są zbędne
     if (notices.length < PAGE_SIZE || reachedOlderDay) break;
+
+    // Tryb przyrostowy: wyniki idą od najnowszych, więc strona samych znanych ogłoszeń oznacza,
+    // że dalsze są już w bazie. Ogłoszenia dodane wstecz nadrabia okresowe pełne pobranie.
+    if (options.findKnownIds && pageIsAllKnown(pageIds, await options.findKnownIds(pageIds))) break;
   }
 
   return records;
 };
 
 /** Pobiera przetargi z eZamówień dla wszystkich typów zamówień. Błąd jednego typu nie przekreśla pozostałych. */
-export const fetchEzamowienia = async (day: string): Promise<SourceResult> => {
-  const results = await Promise.allSettled(ORDER_TYPES.map((orderType) => fetchOrderType(day, orderType)));
+export const fetchEzamowienia = async (day: string, options: FetchOptions = {}): Promise<SourceResult> => {
+  const results = await Promise.allSettled(ORDER_TYPES.map((orderType) => fetchOrderType(day, orderType, options)));
 
   const records: TenderRecord[] = [];
   const errors: string[] = [];
