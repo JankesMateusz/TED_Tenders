@@ -56,6 +56,8 @@ const VISIBLE_CPV_CHIPS = 2;
 const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments, canComment, onAddComment, onDeleteComment, advertiserHidden, onSetAdvertiserDecision, isActive, onActivate }) => {
     const { user } = useAuth();
     const { showNotice } = useNotice();
+    // Gość tylko przegląda: nie widzi statusu, etykiet, komentarzy ani gwiazdki
+    const isGuest = !user || user.isAnonymous;
     const { isFavorite, toggleFavorite, toggleStatus, toggleLabel } = useUserPreferences();
 
     const awaySince = useAwaySince();
@@ -79,7 +81,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
     const orderCfg = tender.orderType ? getOrderTypeConfig(tender.orderType as OrderType) : null;
 
     const fav = isFavorite(tender.id);
-    const statusColor = tender.status ? STATUS_CONFIG[tender.status].color : undefined;
+    const statusColor = !isGuest && tender.status ? STATUS_CONFIG[tender.status].color : undefined;
 
     const labelsCaption = statusAuthorCaption(tender.labelsByEmail, tender.labelsAt);
 
@@ -135,7 +137,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
             tabIndex={-1}
             aria-label={tender.title}
             onClick={(event) => onActivate(tender.id, !isInteractiveTarget(event.target))}
-            className={`${styles.tenderCard} ${tender.status ? styles.tenderCardStatus : ''} ${isActive ? styles.tenderCardActive : ''}`}
+            className={`${styles.tenderCard} ${!isGuest && tender.status ? styles.tenderCardStatus : ''} ${isActive ? styles.tenderCardActive : ''}`}
             style={statusColor ? ({ '--status-color': statusColor } as React.CSSProperties) : undefined}
         >
             <div className={styles.cardHeader}>
@@ -150,7 +152,7 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                             {orderCfg.label}
                         </span>
                     )}
-                    {(tender.labels ?? []).map((label) => (
+                    {!isGuest && (tender.labels ?? []).map((label) => (
                         <span
                             key={label}
                             className={styles.labelBadge}
@@ -162,35 +164,39 @@ const TenderCard: React.FC<Props> = ({ tender, cpvCodes, canSetStatus, comments,
                     ))}
                 </div>
                 <div className={styles.cardActions}>
-                    <StatusMenu
-                        status={tender.status}
-                        statusByEmail={tender.statusByEmail}
-                        statusAt={tender.statusAt}
-                        editable={canSetStatus}
-                        onToggle={(status) => toggleStatus(tender, status)}
-                    />
-                    <LabelMenu
-                        labels={tender.labels ?? []}
-                        editable={canSetStatus}
-                        onToggle={(label) => toggleLabel(tender, label)}
-                    />
-                    {canComment && (
-                        <CommentsPopover
-                            comments={comments}
-                            currentUid={user?.uid ?? null}
-                            onAdd={(text) => onAddComment(tender, text)}
-                            onDelete={onDeleteComment}
-                        />
+                    {!isGuest && (
+                        <>
+                            <StatusMenu
+                                status={tender.status}
+                                statusByEmail={tender.statusByEmail}
+                                statusAt={tender.statusAt}
+                                editable={canSetStatus}
+                                onToggle={(status) => toggleStatus(tender, status)}
+                            />
+                            <LabelMenu
+                                labels={tender.labels ?? []}
+                                editable={canSetStatus}
+                                onToggle={(label) => toggleLabel(tender, label)}
+                            />
+                            {canComment && (
+                                <CommentsPopover
+                                    comments={comments}
+                                    currentUid={user?.uid ?? null}
+                                    onAdd={(text) => onAddComment(tender, text)}
+                                    onDelete={onDeleteComment}
+                                />
+                            )}
+                            <button
+                                className={`${styles.favoriteButton} ${fav ? styles.favoriteActive : ''}`}
+                                onClick={() => toggleFavorite(tender)}
+                                aria-label={fav ? 'Usuń z zapisanych' : 'Zapisz dla siebie'}
+                                aria-pressed={fav}
+                                title={fav ? 'Usuń z zapisanych (widoczne tylko dla Ciebie)' : 'Zapisz dla siebie (widoczne tylko dla Ciebie)'}
+                            >
+                                <StarIcon filled={fav} />
+                            </button>
+                        </>
                     )}
-                    <button
-                        className={`${styles.favoriteButton} ${fav ? styles.favoriteActive : ''}`}
-                        onClick={() => toggleFavorite(tender)}
-                        aria-label={fav ? 'Usuń z zapisanych' : 'Zapisz dla siebie'}
-                        aria-pressed={fav}
-                        title={fav ? 'Usuń z zapisanych (widoczne tylko dla Ciebie)' : 'Zapisz dla siebie (widoczne tylko dla Ciebie)'}
-                    >
-                        <StarIcon filled={fav} />
-                    </button>
                     <CopyMenu items={copyItems} actions={menuActions} />
                 </div>
             </div>

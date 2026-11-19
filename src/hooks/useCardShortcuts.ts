@@ -25,13 +25,15 @@ type Options = {
     toggleFavorite: UserPreferences["toggleFavorite"];
     toggleStatus: UserPreferences["toggleStatus"];
     wasChangedByMe: UserPreferences["wasChangedByMe"];
+    /** False dla gościa: skróty oceny (1-4, 0, S) nie działają, zostaje sama nawigacja J/K. */
+    canRate?: boolean;
 };
 
 /**
  * Skróty klawiszowe listy przetargów i aktywna karta, której one dotyczą (J/K, 1-4, 0, S; Ctrl+F i "/" przenoszą
  * fokus do wyszukiwarki, do której `searchInputRef` trzeba podpiąć).
  */
-export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById, toggleFavorite, toggleStatus, wasChangedByMe }: Options) => {
+export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById, toggleFavorite, toggleStatus, wasChangedByMe, canRate = true }: Options) => {
     const { user } = useAuth();
     const { showNotice, undoLast } = useNotice();
     const myEmail = user?.email ?? null;
@@ -84,7 +86,7 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
                 setActiveTenderId(null);
                 const changed = liveTendersById.get(current);
                 const statusChanged = changed?.status !== undefined && changed.status !== previousStatusesRef.current.get(current);
-                if (changed?.status && statusChanged && changed.statusByEmail !== myEmail) {
+                if (canRate && changed?.status && statusChanged && changed.statusByEmail !== myEmail) {
                     const author = changed.statusByEmail ?? 'nieznany użytkownik';
                     showNotice({ message: `Karta zniknęła z listy: ${author} ustawił(a) status „${STATUS_CONFIG[changed.status].label}”.` });
                 }
@@ -130,7 +132,7 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
             }
 
             const tender = displayedTenders.find((item) => item.id === activeTenderId);
-            if (!tender) return;
+            if (!tender || !canRate) return;
             if (key === 's') {
                 e.preventDefault();
                 toggleFavorite(tender);
@@ -149,7 +151,7 @@ export const useCardShortcuts = ({ displayedTenders, activeTab, liveTendersById,
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeTab, shortcutsEnabled, displayedTenders, activeTenderId, liveTendersById, toggleFavorite, toggleStatus, undoLast]);
+    }, [activeTab, shortcutsEnabled, displayedTenders, activeTenderId, liveTendersById, toggleFavorite, toggleStatus, undoLast, canRate]);
 
     return { activeTenderId, onActivate: handleActivateTender, searchInputRef };
 };
