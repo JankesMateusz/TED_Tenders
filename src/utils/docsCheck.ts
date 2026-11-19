@@ -156,6 +156,14 @@ export const docsBadge = (tender: Tender, now: Date = new Date()): DocsBadgeInfo
             };
         case 'unsupported':
         case 'profile': {
+            if (check.state === 'unsupported' && !check.platform && !check.sourceUrl) {
+                return {
+                    text: '📄 brak adresu dokumentów w ogłoszeniu',
+                    title: 'Ogłoszenie nie podaje adresu dokumentacji, więc nie mamy dokąd prowadzić ani czego sprawdzać automatycznie.',
+                    canCheckNow: false,
+                    tone: 'neutral'
+                };
+            }
             const where = platformName(check);
             return {
                 text: `📄 dokumenty na ${where}`,

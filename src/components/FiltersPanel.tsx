@@ -53,6 +53,8 @@ interface FiltersPanelProps {
     hiddenAdvertisersCount: number;
     showHiddenAdvertisers: boolean;
     onShowHiddenAdvertisersChange: (show: boolean) => void;
+    /** False dla gościa: statusy i etykiety są dla niego niewidoczne, więc nie ma po czym filtrować. */
+    showStatusFilters?: boolean;
 }
 
 export const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -76,7 +78,8 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onClearFilters,
     hiddenAdvertisersCount,
     showHiddenAdvertisers,
-    onShowHiddenAdvertisersChange
+    onShowHiddenAdvertisersChange,
+    showStatusFilters = true
 }) => {
     const statusOptions: FilterPopoverOption[] = STATUS_FILTER_KEYS.map((key) => ({
         key,
@@ -128,7 +131,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
     const selectedStatusCount = STATUS_FILTER_KEYS.filter((key) => statusFilters[key]).length;
 
     // Te same grupy trafiają do arkusza filtrów na telefonie, więc logika wyboru jest jedna
-    const sheetGroups: FilterSheetGroup[] = [
+    const statusSheetGroups: FilterSheetGroup[] = [
         {
             key: 'status',
             label: 'Status',
@@ -136,7 +139,10 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
             onToggle: (key) => onStatusFilterChange(key as keyof StatusFilters),
             footerAction: { label: 'Pokaż wszystkie statusy', onClick: onShowAllStatuses }
         },
-        { key: 'labels', label: 'Etykiety', options: labelOptions, onToggle: (key) => onLabelToggle(key as TenderLabel) },
+        { key: 'labels', label: 'Etykiety', options: labelOptions, onToggle: (key) => onLabelToggle(key as TenderLabel) }
+    ];
+    const sheetGroups: FilterSheetGroup[] = [
+        ...(showStatusFilters ? statusSheetGroups : []),
         { key: 'docs', label: 'Dokumenty', options: docsOptions, onToggle: (key) => onDocsToggle(key as DocsFilter) },
         { key: 'sources', label: 'Źródło', options: sourceOptions, onToggle: (key) => onSourceToggle(key as TenderSource) },
         { key: 'orderTypes', label: 'Typ', options: orderTypeOptions, onToggle: (key) => onOrderTypeToggle(key as OrderType) }
@@ -144,37 +150,41 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
     return (
         <>
-            <div className={styles.toolbarMobile}>
-                <FiltersSheet
-                    groups={sheetGroups}
-                    activeCount={activeChips.length}
-                    hasActiveFilters={hasActiveFilters}
-                    onClearFilters={onClearFilters}
-                    sortOrder={sortOrder}
-                    sortOptions={SORT_OPTIONS}
-                    onSortOrderChange={onSortOrderChange}
-                    hiddenAdvertisersCount={hiddenAdvertisersCount}
-                    showHiddenAdvertisers={showHiddenAdvertisers}
-                    onShowHiddenAdvertisersChange={onShowHiddenAdvertisersChange}
-                />
-            </div>
-            <div className={`${styles.toolbar} ${styles.toolbarDesktop}`}>
-                <FilterPopover
-                    label="Status"
-                    options={statusOptions}
-                    onToggle={(key) => onStatusFilterChange(key as keyof StatusFilters)}
-                    badge={selectedStatusCount}
-                >
-                    <button type="button" className={styles.popoverFooter} onClick={onShowAllStatuses}>
-                        Pokaż wszystkie statusy
-                    </button>
-                </FilterPopover>
-                <FilterPopover
-                    label="Etykiety"
-                    options={labelOptions}
-                    onToggle={(key) => onLabelToggle(key as TenderLabel)}
-                    badge={selectedLabels.length > 0 ? selectedLabels.length : undefined}
-                />
+                <div className={styles.toolbarMobile}>
+                    <FiltersSheet
+                        groups={sheetGroups}
+                        activeCount={activeChips.length}
+                        hasActiveFilters={hasActiveFilters}
+                        onClearFilters={onClearFilters}
+                        sortOrder={sortOrder}
+                        sortOptions={SORT_OPTIONS}
+                        onSortOrderChange={onSortOrderChange}
+                        hiddenAdvertisersCount={hiddenAdvertisersCount}
+                        showHiddenAdvertisers={showHiddenAdvertisers}
+                        onShowHiddenAdvertisersChange={onShowHiddenAdvertisersChange}
+                    />
+                </div>
+                <div className={`${styles.toolbar} ${styles.toolbarDesktop}`}>
+                    {showStatusFilters && (
+                        <>
+                        <FilterPopover
+                            label="Status"
+                            options={statusOptions}
+                            onToggle={(key) => onStatusFilterChange(key as keyof StatusFilters)}
+                            badge={selectedStatusCount}
+                        >
+                            <button type="button" className={styles.popoverFooter} onClick={onShowAllStatuses}>
+                                Pokaż wszystkie statusy
+                            </button>
+                        </FilterPopover>
+                        <FilterPopover
+                            label="Etykiety"
+                            options={labelOptions}
+                            onToggle={(key) => onLabelToggle(key as TenderLabel)}
+                            badge={selectedLabels.length > 0 ? selectedLabels.length : undefined}
+                        />
+                    </>
+                )}
                 <FilterPopover
                     label="Dokumenty"
                     options={docsOptions}

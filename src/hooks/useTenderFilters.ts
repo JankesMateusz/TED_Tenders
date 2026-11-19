@@ -18,7 +18,7 @@ type AdvertiserDecisions = ReturnType<typeof useAdvertiserDecisions>["advertiser
  * Stan wszystkich filtrów listy przetargów: panel filtrów, pasek boczny, wyszukiwarka, przełącznik "Wszystkie / IT"
  * i kategoria CPV ze statystyk. Filtry (poza frazą wyszukiwania) są zapamiętywane w przeglądarce osobno dla każdego konta.
  */
-export const useTenderFilters = (uid: string | null, advertiserDecisions: AdvertiserDecisions) => {
+export const useTenderFilters = (uid: string | null, advertiserDecisions: AdvertiserDecisions, isGuest = false) => {
     const [searchQuery, setSearchQuery] = useState<string>("");
     // Domyślnie tylko przetargi z kodami CPV związanymi z IT; przycisk „All tenders” pokazuje wszystkie branże
     const [isFiltered, setIsFiltered] = useState<boolean>(true);
@@ -31,8 +31,14 @@ export const useTenderFilters = (uid: string | null, advertiserDecisions: Advert
     // Kategoria CPV ze statystyk: dotyczy tylko bieżącej sesji, w przeciwieństwie do zapamiętywanych filtrów
     const [selectedCpvCategory, setSelectedCpvCategory] = useState<CpvCategoryKey | null>(null);
     const [sortOrder, setSortOrder] = useState<SortOrder>(initialFilters.sortOrder);
-    const [statusFilters, setStatusFilters] = useState<StatusFilters>(initialFilters.statusFilters);
-    const [selectedLabels, setSelectedLabels] = useState<TenderLabel[]>(initialFilters.selectedLabels);
+    const [storedStatusFilters, setStatusFilters] = useState<StatusFilters>(initialFilters.statusFilters);
+    const [storedLabels, setSelectedLabels] = useState<TenderLabel[]>(initialFilters.selectedLabels);
+    // Gość nie widzi statusów ani etykiet, więc filtry po nich go nie dotyczą (domyślna kolejka "Nieoznaczone" ukryłaby mu połowę listy)
+    const statusFilters = useMemo<StatusFilters>(
+        () => (isGuest ? { toEnter: true, entered: true, toClarify: true, notToEnter: true, unmarked: true } : storedStatusFilters),
+        [isGuest, storedStatusFilters]
+    );
+    const selectedLabels = useMemo<TenderLabel[]>(() => (isGuest ? [] : storedLabels), [isGuest, storedLabels]);
     const [selectedDocs, setSelectedDocs] = useState<DocsFilter[]>(initialFilters.selectedDocs);
     // Firmy prywatne i NGO są domyślnie ukryte; przełącznik w filtrach pokazuje je na czas przeglądania
     const [showHiddenAdvertisers, setShowHiddenAdvertisers] = useState<boolean>(false);
@@ -44,12 +50,12 @@ export const useTenderFilters = (uid: string | null, advertiserDecisions: Advert
             selectedBuyers,
             selectedCities,
             selectedCpvs,
-            statusFilters,
-            selectedLabels,
+            statusFilters: storedStatusFilters,
+            selectedLabels: storedLabels,
             selectedDocs,
             sortOrder
         });
-    }, [uid, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, statusFilters, selectedLabels, selectedDocs, sortOrder]);
+    }, [uid, selectedSources, selectedOrderTypes, selectedBuyers, selectedCities, selectedCpvs, storedStatusFilters, storedLabels, selectedDocs, sortOrder]);
 
     const filterOptions = useMemo(() => ({
         selectedSources,

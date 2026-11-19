@@ -34,8 +34,15 @@ const Tenders: React.FC = () => {
     const [useDateRange, setUseDateRange] = useState<boolean>(false); // Domyślnie pojedynczy dzień
     const { user } = useAuth();
     const uid = user?.uid ?? null;
+    // Gość (konto anonimowe) tylko przegląda: nie widzi statusów, etykiet, komentarzy ani zapisanych
+    const isGuest = !user || user.isAnonymous;
     const { favorites, toggleFavorite, toggleStatus, wasChangedByMe, actionError } = useUserPreferences();
     const [activeTab, setActiveTab] = useState<'tenders' | 'saved' | 'statistics'>('tenders');
+
+    // Po wylogowaniu zakładka "Zapisane" znika, więc nie można na niej zostać
+    useEffect(() => {
+        if (isGuest && activeTab === 'saved') setActiveTab('tenders');
+    }, [isGuest, activeTab]);
 
     // Zakres dni do odczytu z bazy. W trybie pojedynczego dnia końcem jest zawsze początek.
     const startDay = startDate ? toDayString(startDate) : null;
@@ -46,7 +53,7 @@ const Tenders: React.FC = () => {
 
     const { commentsByTender, commentsError, addComment, deleteComment } = useComments(startDay, endDay);
     const { advertiserDecisions, advertiserError, setAdvertiserDecision } = useAdvertiserDecisions();
-    const filters = useTenderFilters(uid, advertiserDecisions);
+    const filters = useTenderFilters(uid, advertiserDecisions, isGuest);
     const {
         searchQuery,
         isFiltered,
@@ -175,7 +182,8 @@ const Tenders: React.FC = () => {
         liveTendersById,
         toggleFavorite,
         toggleStatus,
-        wasChangedByMe
+        wasChangedByMe,
+        canRate: !isGuest
     });
 
     const tendersCountBySource = useMemo(() => {
@@ -236,8 +244,8 @@ const Tenders: React.FC = () => {
                         onChange={setActiveTab}
                         tabs={[
                             { id: 'tenders', label: <>Przetargi <span className={styles.tabCount}>{filteredTenders.length}</span></> },
-                            { id: 'saved', label: <>Zapisane <span className={styles.tabCount}>{favorites.length}</span></> },
-                            { id: 'statistics', label: 'Statystyki' }
+                            ...(isGuest ? [] : [{ id: 'saved' as const, label: <>Zapisane <span className={styles.tabCount}>{favorites.length}</span></> }]),
+                            { id: 'statistics' as const, label: 'Statystyki' }
                         ]}
                     />
                 </div>
@@ -284,6 +292,7 @@ const Tenders: React.FC = () => {
                                     hiddenAdvertisersCount={hiddenAdvertisersCount}
                                     showHiddenAdvertisers={filters.showHiddenAdvertisers}
                                     onShowHiddenAdvertisersChange={filters.setShowHiddenAdvertisers}
+                                    showStatusFilters={!isGuest}
                                 />
                                 <TendersList
                                     activeTab={activeTab}

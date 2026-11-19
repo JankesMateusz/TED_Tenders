@@ -22,6 +22,7 @@ const FIELDS = [
   'change-notice-version-identifier',
   'deadline-receipt-tender-date-lot',
   'document-url-lot',
+  'submission-url-lot',
   'internal-identifier-proc',
 ];
 
@@ -117,7 +118,8 @@ export const mapTedNotice = (raw: any, fallbackDay: string): TenderRecord | null
     cpvCodes,
     isIT: isItTender(cpvCodes),
     link: `https://ted.europa.eu/udl?uri=TED:NOTICE:${publicationNumber}:TEXT:PL:HTML`,
-    documentsUrl: extractDocumentsUrl(raw['document-url-lot']),
+    // Zamawiający często nie wypełnia adresu dokumentacji, ale podaje adres składania ofert (np. strona postępowania na eZamówieniach)
+    documentsUrl: extractDocumentsUrl(raw['document-url-lot']) ?? extractDocumentsUrl(raw['submission-url-lot']),
     referenceNumber: extractReferenceNumber(raw['internal-identifier-proc']),
     orderType: extractOrderType(raw['contract-nature']),
     buyerMainActivity: extractActivity(raw['authority-main-activity']),
