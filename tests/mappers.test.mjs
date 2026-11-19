@@ -127,6 +127,14 @@ describe('mapTedNotice', () => {
         assert.equal(url(undefined), null);
     });
 
+    it('bez adresu dokumentacji używa adresu składania ofert (np. strona postępowania na eZamówieniach)', () => {
+        const submit = 'https://ezamowienia.gov.pl/mp-client/search/list/ocds-148610-3b90c696-decd-4231-8eb5-530f52cf2219';
+        const url = (docs, sub) => mapTedNotice({ ...raw, 'document-url-lot': docs, 'submission-url-lot': sub }, '2026-10-28').documentsUrl;
+        assert.equal(url(undefined, [submit]), submit);
+        assert.equal(url(['https://platformazakupowa.pl/pn/x'], [submit]), 'https://platformazakupowa.pl/pn/x');
+        assert.equal(url(undefined, undefined), null);
+    });
+
     it('adres dokumentacji bez https:// (np. AGH: "www.dzp.agh.edu.pl") dostaje schemat', () => {
         const url = (field) => mapTedNotice({ ...raw, 'document-url-lot': field }, '2026-10-28').documentsUrl;
         assert.equal(url(['www.dzp.agh.edu.pl']), 'https://www.dzp.agh.edu.pl');

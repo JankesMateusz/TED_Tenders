@@ -66,8 +66,9 @@ describe('docsBadge', () => {
         expect(docsBadge(withCheck({ state: 'profile', sourceUrl: 'https://platformazakupowa.pl/pn/gmina' }), NOW)!.title).toContain('profilu zamawiającego');
     });
 
-    it('platforma bez adresu: ogólna nazwa', () => {
-        expect(docsBadge(withCheck({ state: 'unsupported' }), NOW)!.text).toBe('📄 dokumenty na innej platformie');
+    it('ogłoszenie bez adresu dokumentacji: osobny komunikat, nie „inna platforma"', () => {
+        expect(docsBadge(withCheck({ state: 'unsupported' }), NOW)!.text).toBe('📄 brak adresu dokumentów w ogłoszeniu');
+        expect(docsBadge(withCheck({ state: 'unsupported', sourceUrl: 'https://www.logintrade.net/x' }), NOW)!.text).toBe('📄 dokumenty na logintrade.net');
     });
 
     it('błąd sprawdzenia nie udaje braku dokumentów i pozwala sprawdzić ponownie', () => {

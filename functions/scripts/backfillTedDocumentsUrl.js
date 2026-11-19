@@ -1,6 +1,6 @@
 // Uzupełnia `documentsUrl` w przetargach z TED, które go nie mają, bo wcześniejszy mapper odrzucał adresy bez `https://`
 // (np. TED zwraca `www.dzp.agh.edu.pl`). Odświeżanie nie nadpisuje istniejących przetargów, więc skrypt pobiera pole
-// `document-url-lot` z TED od nowa i zapisuje tylko tam, gdzie wychodzi poprawny adres. Przetargom, które miały już wynik
+// `document-url-lot` (a gdy go brak, `submission-url-lot`) z TED od nowa i zapisuje tylko tam, gdzie wychodzi poprawny adres. Przetargom, które miały już wynik
 // sprawdzania dokumentów bez adresu (`docsCheck.state` = `unsupported` bez `sourceUrl`), czyści `docsCheck`, żeby
 // kolejne sprawdzenie (np. przycisk „Sprawdź dokumenty" w panelu admina) objęło je ponownie.
 //
@@ -27,10 +27,14 @@ const CHUNK = 100;
 const fetchDocumentUrls = async (publicationNumbers) => {
   const response = await axios.post(
     TED_API_URL,
-    { query: `publication-number IN (${publicationNumbers.join(' ')})`, fields: ['publication-number', 'document-url-lot'], limit: CHUNK },
+    { query: `publication-number IN (${publicationNumbers.join(' ')})`, fields: ['publication-number', 'document-url-lot', 'submission-url-lot'], limit: CHUNK },
     { headers: { 'Content-Type': 'application/json' }, timeout: 30000 },
   );
-  return new Map((response.data?.notices ?? []).map((notice) => [notice['publication-number'], extractDocumentsUrl(notice['document-url-lot'])]));
+  // Jak w mapperze: adres dokumentacji, a gdy go brak, adres składania ofert
+  return new Map((response.data?.notices ?? []).map((notice) => [
+    notice['publication-number'],
+    extractDocumentsUrl(notice['document-url-lot']) ?? extractDocumentsUrl(notice['submission-url-lot']),
+  ]));
 };
 
 const run = async () => {
