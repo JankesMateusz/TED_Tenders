@@ -1,4 +1,4 @@
-import { fetchSameHost, fingerprintOf, hostOf, htmlToText, matchProceeding, ProceedingRow, uniquePaths } from './common';
+import { fetchSameHost, fingerprintOf, hostOf, htmlToText, matchProceeding, MAX_LIST_PAGES, ProceedingRow, uniquePaths } from './common';
 import { HttpClient, MatchHints, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
 
 /**
@@ -19,6 +19,9 @@ const ROW = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
 const ROW_LINK = /<td[^>]*class\s*=\s*["'][^"']*\bprzetarg\b[^"']*["'][^>]*>\s*<a[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i;
 const ROW_REFERENCE = /<td[^>]*przetarg_znak[^>]*>([\s\S]*?)<\/td>/i;
 const NEXT_PAGE = /[?&]page=2\b/;
+
+/** Numery stron z odnośników paginacji (`?page=N`). */
+const pageNumbers = (html: string): number[] => [...html.matchAll(/[?&;]page=(\d+)/g)].map((match) => Number(match[1]));
 
 /** Załączniki z sekcji „Załączniki” strony postępowania; czas publikacji jest polski, bez strefy (`RRRR-MM-DDTGG:MM:SS`). */
 export const extractFiles = (html: string, pageUrl: string): ResolvedFile[] => {
@@ -80,7 +83,21 @@ const resolveFromList = async (url: string, http: HttpClient, hints?: MatchHints
 
   const origin = new URL(url).origin;
   const list = await fetchPage(`${origin}${LIST_PATH}`, http);
-  const { rows, complete } = extractList(list.kind === 'page' ? list.html : '');
+  const first = extractList(list.kind === 'page' ? list.html : '');
+  const rows = [...first.rows];
+  let complete = first.complete;
+  // Kolejne strony `?page=N`, dopóki paginacja wskazuje wyższy numer niż ostatnio pobrany; strona bez nowych wierszy przerywa
+  let highest = first.complete ? 1 : Math.max(2, ...pageNumbers(list.kind === 'page' ? list.html : ''));
+  for (let page = 2; page <= highest && page <= MAX_LIST_PAGES; page++) {
+    const next = await fetchPage(`${origin}${LIST_PATH}?page=${page}`, http);
+    const html = next.kind === 'page' ? next.html : '';
+    const known = new Set(rows.map((row) => row.id));
+    const added = extractList(html).rows.filter((row) => !known.has(row.id));
+    rows.push(...added);
+    if (added.length === 0) break;
+    highest = Math.max(highest, ...pageNumbers(html));
+    complete = page >= highest;
+  }
   const match = matchProceeding(rows, hints, complete);
   if (!match) return notMatched('Na liście postępowań zamawiającego nie ma dokładnie jednego postępowania pasującego do przetargu.');
 

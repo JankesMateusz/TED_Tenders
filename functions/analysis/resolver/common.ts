@@ -54,6 +54,8 @@ const MIN_REFERENCE_LENGTH = 5;
 /** Do porównania tytułów bierzemy słowa dłuższe niż 3 znaki (pomija spójniki i przyimki). */
 const MIN_TITLE_WORD_LENGTH = 4;
 const TITLE_WORDS_MATCH_RATIO = 0.7;
+/** Od tylu słów tytułu pełne trafienie rozstrzyga między kilkoma kandydatami. */
+const MIN_TITLE_WORDS_FOR_EXACT = 5;
 
 const stripDiacritics = (text: string): string =>
   // „ł” nie rozkłada się w NFD, więc zamieniamy je osobno
@@ -99,8 +101,21 @@ export const matchProceeding = (
 
   if (!titleFallback) return null;
   const byTitle = rows.filter((row) => titleMatches(row, titleWords));
-  return byTitle.length === 1 ? byTitle[0] : null;
+  if (byTitle.length === 1) return byTitle[0];
+  // Kilku kandydatów powyżej progu (np. podobne zakupy tego samego zamawiającego): wygrywa jedyny, który zawiera
+  // wszystkie słowa tytułu. Przy krótkim tytule pełne trafienie nic nie dowodzi, więc wtedy nie rozstrzygamy.
+  if (byTitle.length > 1 && titleWords.length >= MIN_TITLE_WORDS_FOR_EXACT) {
+    const exact = byTitle.filter((row) => {
+      const rowWords = new Set(significantWords(row.name));
+      return titleWords.every((word) => rowWords.has(word));
+    });
+    if (exact.length === 1) return exact[0];
+  }
+  return null;
 };
+
+/** Ile stron listy postępowań czytamy najwyżej (zabezpieczenie przed nadmiarem zapytań do platformy). */
+export const MAX_LIST_PAGES = 10;
 
 export type FetchedPage = { kind: 'page'; url: string; html: string } | { kind: 'stopped'; url: string };
 
