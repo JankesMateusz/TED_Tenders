@@ -105,8 +105,8 @@ describe('mapowanie wyniku resolvera na stan docsCheck', () => {
         assert.equal(outcomeFromResult({ status: 'NO_SOURCE_URL', note: 'n' }).state, 'unsupported');
     });
 
-    it('stany końcowe: tylko none i error są ponawiane', () => {
-        assert.deepEqual(['none', 'error', 'available', 'unsupported', 'profile'].map(isTerminalState), [false, false, true, true, true]);
+    it('stany końcowe: none, error i profile są ponawiane', () => {
+        assert.deepEqual(['none', 'error', 'profile', 'available', 'unsupported'].map(isTerminalState), [false, false, false, true, true]);
         assert.equal(errorOutcome().state, 'error');
     });
 

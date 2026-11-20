@@ -154,9 +154,20 @@ export const docsBadge = (tender: Tender, now: Date = new Date()): DocsBadgeInfo
                 canCheckNow: true,
                 tone: 'warn'
             };
-        case 'unsupported':
         case 'profile': {
-            if (check.state === 'unsupported' && !check.platform && !check.sourceUrl) {
+            // Postępowanie mogło jeszcze nie trafić na listę zamawiającego, więc sprawdzamy ponownie według harmonogramu
+            const where = platformName(check);
+            return {
+                text: check.nextCheckAt
+                    ? `📄 dokumenty na ${where} · następne sprawdzenie ${formatCheckTime(check.nextCheckAt, now)}`
+                    : `📄 dokumenty na ${where}`,
+                title: `Link prowadzi do profilu zamawiającego, a nie do konkretnego postępowania, i nie udało się dopasować go na liście zamawiającego. ${checkedAt}${progress} ${next}`.trim(),
+                canCheckNow: true,
+                tone: 'neutral'
+            };
+        }
+        case 'unsupported':
+            if (!check.platform && !check.sourceUrl) {
                 return {
                     text: '📄 brak adresu dokumentów w ogłoszeniu',
                     title: 'Ogłoszenie nie podaje adresu dokumentacji, więc nie mamy dokąd prowadzić ani czego sprawdzać automatycznie.',
@@ -164,16 +175,12 @@ export const docsBadge = (tender: Tender, now: Date = new Date()): DocsBadgeInfo
                     tone: 'neutral'
                 };
             }
-            const where = platformName(check);
             return {
-                text: `📄 dokumenty na ${where}`,
-                title: check.state === 'profile'
-                    ? 'Link prowadzi do profilu zamawiającego, a nie do konkretnego postępowania. Dokumentów nie sprawdzamy automatycznie.'
-                    : 'Dokumentacja leży na platformie, której nie sprawdzamy automatycznie.',
+                text: `📄 dokumenty na ${platformName(check)}`,
+                title: 'Dokumentacja leży na platformie, której nie sprawdzamy automatycznie.',
                 canCheckNow: false,
                 tone: 'neutral'
             };
-        }
         case 'error':
             return {
                 text: check.nextCheckAt
