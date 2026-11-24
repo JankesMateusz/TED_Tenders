@@ -1,6 +1,6 @@
 import type { TenderSource } from '../../tenders/model';
 
-export type Platform = 'ezamowienia' | 'platformazakupowa' | 'bazakonkurencyjnosci' | 'ezamawiajacy' | 'logintrade' | 'sidaspzp';
+export type Platform = 'ezamowienia' | 'platformazakupowa' | 'bazakonkurencyjnosci' | 'ezamawiajacy' | 'logintrade' | 'sidaspzp' | 'epropublico';
 
 export interface ResolvedFile {
   /** Ścieżka względna dla silnika: oryginalna nazwa z platformy (nie z Content-Disposition). */

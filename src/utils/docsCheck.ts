@@ -35,6 +35,7 @@ const PLATFORM_NAMES: Record<string, string> = {
     ezamawiajacy: 'ezamawiający',
     logintrade: 'logintrade',
     sidaspzp: 'SIDAS PZP',
+    epropublico: 'e-ProPublico',
     bazakonkurencyjnosci: 'Baza Konkurencyjności'
 };
 

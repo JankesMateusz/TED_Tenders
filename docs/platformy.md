@@ -102,7 +102,14 @@ Starsze ogłoszenia wypadają z zakładki trwających po terminie składania ofe
 
 ### 4.5. e-ProPublico
 
-Niezbadane. Python na komputerze użytkownika nie zestawił połączenia TLS (systemowy `curl` Windows dostał odpowiedź 302). To samo zjawisko wystąpiło wcześniej z serwerem GUS, więc może to być lokalna lista urzędów certyfikacji.
+Zbadane 2026-11-24 na jednym postępowaniu (UMG, CRZP/218/2026/AZP); adapter w `functions/analysis/resolver/epropublico.ts`. Wcześniejszy błąd TLS dotyczył lokalnego Pythona i `curl`, a nie platformy.
+
+- Strona `/Ogloszenia/Details/<uuid>` i lista `/Ogloszenia/DokumentyZamowienia?przetargId=<uuid>` są publiczne (HTML, bez JS i sesji). Lista ma sekcje (`h5.section-header`): „Ogłoszenie”, „Specyfikacja”, „Załączniki do specyfikacji”; wiersz: nazwa (link), typ (rozszerzenie), rozmiar KB, data publikacji (bez godziny).
+- Sekcja „Ogłoszenie” to samo ogłoszenie o zamówieniu, które jest od razu po publikacji, więc nie liczy się jako dokumentacja (inaczej `NO_DOCUMENTS_YET` nigdy by nie wystąpiło).
+- Adres pobrania `/Dokumenty/Download/<guid>` jest bez tokenu; serwer zwraca 200 z `Content-Disposition` (sprawdzono tylko nagłówki).
+- `robots.txt`: blokuje wymienione boty AI (m.in. ClaudeBot, GPTBot), a `User-agent: *` ma `Allow: /`. Regulaminu platformy nie czytano.
+- Nie wiadomo, jak wygląda strona postępowania bez żadnej sekcji dokumentów; brak sekcji `section-header` adapter traktuje jako zmianę układu (błąd), a nie brak plików.
+- Adresy ogólne (strona główna, `/Zamawiajacy/...`) dają `PROFILE_NOT_MATCHED`; listy postępowań zamawiającego adapter nie czyta.
 
 ### 4.6. Warunki korzystania z platform (etap 0, odczyt 2026-11-17)
 

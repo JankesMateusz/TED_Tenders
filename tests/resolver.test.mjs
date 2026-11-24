@@ -9,6 +9,7 @@ import { matchProceeding } from '../functions/lib/analysis/resolver/common.js';
 import { extractFiles as extractEzamawiajacyFiles, extractList } from '../functions/lib/analysis/resolver/ezamawiajacy.js';
 import { extractFiles as extractLogintradeFiles, extractList as extractLogintradeList } from '../functions/lib/analysis/resolver/logintrade.js';
 import { extractFiles as extractSidasFiles } from '../functions/lib/analysis/resolver/sidaspzp.js';
+import { extractFiles as extractEpropublicoFiles } from '../functions/lib/analysis/resolver/epropublico.js';
 import { extractProceedingUrl, extractReferenceNumber } from '../functions/lib/analysis/resolver/ezamowienia.js';
 import { assertSessionUrl } from '../functions/lib/analysis/resolver/httpClient.js';
 import { extractFiles, extractProceedings } from '../functions/lib/analysis/resolver/platformazakupowa.js';
@@ -789,5 +790,60 @@ describe('resolver: SIDAS PZP', () => {
         const http = fakeHttp([]);
         assert.equal((await resolveDocuments(ted('https://app.sidaspzp.pl/'), http)).status, 'UNSUPPORTED_PLATFORM');
         assert.equal(http.requests.length, 0);
+    });
+});
+
+describe('resolver: e-ProPublico', () => {
+    const HOST = 'https://e-propublico.pl';
+    const ID = '53f4170b-933b-48cb-889d-e2f4b48998dc';
+    const DOCS_URL = `${HOST}/Ogloszenia/DokumentyZamowienia?przetargId=${ID}`;
+    const ted = (documentsUrl, extra = {}) => ({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl, ...extra });
+
+    it('pliki z sekcji dokumentacji: bez sekcji „Ogłoszenie”, rozszerzenie z kolumny „Typ”, adres pobrania bezpośredni', () => {
+        const files = extractEpropublicoFiles(fixture('epropublico-dokumenty.html'), DOCS_URL);
+        assert.equal(files.length, 7);
+        assert.ok(!files.some((file) => file.path.startsWith('Ogłoszenie')));
+        const opis = files.find((file) => file.path === '5_Opis przedmiotu zamówienia.zip');
+        assert.ok(opis);
+        assert.equal(opis.url, `${HOST}/Dokumenty/Download/11ca3cc7-204d-0845-9d9f-55f8a4f27c57`);
+        assert.equal(opis.platformFileId, '11ca3cc7-204d-0845-9d9f-55f8a4f27c57');
+        assert.equal(opis.publishedAt, '2026-11-24T00:00:00');
+    });
+
+    it('strona bez sekcji to błąd platformy, a nie „brak plików”', () => {
+        assert.throws(() => extractEpropublicoFiles('<html><body>Zmiana układu</body></html>', DOCS_URL), ResolverError);
+    });
+
+    it('adres szczegółów lub listy dokumentów: jedno zapytanie o listę dokumentów', async () => {
+        for (const url of [`${HOST}/Ogloszenia/Details/${ID.toUpperCase()}`, DOCS_URL, `${HOST}/Ogloszenia/DokumentyZamowienia?przetargId=${ID.toUpperCase()}`]) {
+            const http = fakeHttp([['/DokumentyZamowienia', ok(fixture('epropublico-dokumenty.html'))]]);
+            const result = await resolveDocuments(ted(url), http);
+            assert.equal(result.status, 'RESOLVED');
+            assert.equal(result.platform, 'epropublico');
+            assert.equal(result.sourceUrl, DOCS_URL);
+            assert.equal(result.files.length, 7);
+            assert.deepEqual(http.requests, [DOCS_URL]);
+        }
+    });
+
+    it('tylko ogłoszenie, bez dokumentacji: NO_DOCUMENTS_YET', async () => {
+        const result = await resolveDocuments(ted(DOCS_URL), fakeHttp([['/DokumentyZamowienia', ok(fixture('epropublico-dokumenty-puste.html'))]]));
+        assert.equal(result.status, 'NO_DOCUMENTS_YET');
+        assert.equal(result.platform, 'epropublico');
+    });
+
+    it('adres ogólny: PROFILE_NOT_MATCHED bez zapytań', async () => {
+        for (const url of [`${HOST}/`, `${HOST}/Zamawiajacy/AktualneOgloszenia?zamawiajacyId=${ID}`, `${HOST}/Ogloszenia/DokumentyZamowienia?przetargId=x`]) {
+            const http = fakeHttp([]);
+            const result = await resolveDocuments(ted(url, { referenceNumber: 'CRZP/218/2026/AZP' }), http);
+            assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+            assert.equal(result.platform, 'epropublico');
+            assert.equal(http.requests.length, 0);
+        }
+    });
+
+    it('przekierowanie na inny host to błąd platformy', async () => {
+        const http = fakeHttp([['/DokumentyZamowienia', { status: 302, data: '', location: 'https://example.com/x' }]]);
+        await assert.rejects(resolveDocuments(ted(DOCS_URL), http), ResolverError);
     });
 });
