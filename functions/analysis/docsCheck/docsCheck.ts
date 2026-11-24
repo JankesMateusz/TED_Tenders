@@ -147,6 +147,37 @@ export const enqueueDocsChecks = onCall<{ sinceDay?: string; limit?: number }>({
   return { enqueued, candidates: docs.length };
 });
 
+/**
+ * Przetargi ze stanem `profile` zapisanym, zanim stał się on niekońcowy, nie mają zaplanowanego następnego sprawdzenia.
+ * Dla każdego takiego (z pozostałymi sprawdzeniami z limitu) kolejkujemy następne i zapisujemy `nextCheckAt`, żeby UI
+ * pokazał termin. Pomijamy te z już ustawionym `nextCheckAt` i te, którym limit sprawdzeń się wyczerpał.
+ */
+export const requeueProfileChecks = async (limit: number, deps: Pick<DocsCheckDeps, 'enqueue' | 'now'> = defaultDeps()): Promise<{ enqueued: number; candidates: number }> => {
+  const docs = (await getFirestore().collection('tenders').where('docsCheck.state', '==', 'profile').get()).docs;
+  const now = deps.now();
+  let enqueued = 0;
+  for (const doc of docs) {
+    if (enqueued >= limit) break;
+    const previous = stored(doc.data().docsCheck);
+    if (previous?.nextCheckAt) continue;
+    const done = previous?.checks ?? 1;
+    const when = nextCheckTime(done, now);
+    if (!when) continue;
+    // Kolejka przed zapisem, jak w `processDocsCheck`: gdy zapis się nie uda, ponowienie doda to samo zadanie (deduplikacja)
+    await deps.enqueue({ docId: doc.id, check: done + 1 }, when);
+    await doc.ref.update({ 'docsCheck.nextCheckAt': Timestamp.fromDate(when) });
+    enqueued++;
+  }
+  return { enqueued, candidates: docs.length };
+};
+
+/** Jednorazowo wznawia sprawdzanie przetargów oznaczonych jako `profile` przed zmianą, która uczyniła ten stan niekońcowym. Tylko admin. */
+export const requeueProfileDocsChecks = onCall<{ limit?: number }>({ region: REGION, timeoutSeconds: 300 }, async (request) => {
+  requireAdmin(request);
+  const { limit } = request.data ?? {};
+  return requeueProfileChecks(Math.min(Number.isInteger(limit) ? (limit as number) : MAX_ENQUEUE, MAX_ENQUEUE));
+});
+
 /** Najkrótszy odstęp między ręcznymi sprawdzeniami tego samego przetargu (ochrona platform przed wielokrotnym klikaniem). */
 export const MANUAL_COOLDOWN_MS = 60 * 1000;
 

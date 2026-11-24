@@ -10,7 +10,7 @@ const admin = requireFromFunctions('firebase-admin');
 admin.initializeApp({ projectId: PROJECT_ID });
 const db = admin.firestore();
 
-const { processDocsCheck, runManualCheck, MANUAL_COOLDOWN_MS } = await import('../functions/lib/analysis/docsCheck/docsCheck.js');
+const { processDocsCheck, runManualCheck, requeueProfileChecks, MANUAL_COOLDOWN_MS } = await import('../functions/lib/analysis/docsCheck/docsCheck.js');
 const { ResolverError } = await import('../functions/lib/analysis/resolver/index.js');
 
 const DOC_ID = 'E_ZAMOWIENIA_2026_BZP_88_01';
@@ -194,5 +194,46 @@ describe('runManualCheck („Sprawdź teraz")', () => {
 
     it('nieistniejący przetarg to not-found', async () => {
         await assert.rejects(runManualCheck('NIE_MA_TAKIEGO', makeDeps([none])), { code: 'not-found' });
+    });
+});
+
+describe('requeueProfileChecks (wznowienie przetargów ze stanem profile)', () => {
+    const OTHER_ID = 'E_ZAMOWIENIA_2026_BZP_88_02';
+    const base = { source: 'TED', link: 'https://x', documentsUrl: 'https://platformazakupowa.pl/pn/gmina', isIT: true, title: 'Laptopy' };
+    const profile = (extra = {}) => ({ state: 'profile', platform: 'platformazakupowa', sourceUrl: 'https://platformazakupowa.pl/pn/gmina', checks: 1, nextCheckAt: null, ...extra });
+
+    beforeEach(async () => {
+        for (const id of [DOC_ID, OTHER_ID]) await db.doc(`tenders/${id}`).delete();
+    });
+
+    it('kolejkuje następne sprawdzenie i zapisuje nextCheckAt tylko dla profile bez zaplanowanego sprawdzenia', async () => {
+        await db.doc(`tenders/${DOC_ID}`).set({ ...base, docsCheck: profile() });
+        await db.doc(`tenders/${OTHER_ID}`).set({ ...base, docsCheck: { state: 'none', checks: 1, nextCheckAt: null } });
+        const deps = makeDeps([]);
+        const result = await requeueProfileChecks(100, deps);
+        assert.deepEqual(result, { enqueued: 1, candidates: 1 });
+        assert.equal(deps.queued.length, 1);
+        assert.equal(deps.queued[0].docId, DOC_ID);
+        assert.equal(deps.queued[0].check, 2);
+        const check = await docsCheckOf();
+        assert.equal(check.state, 'profile');
+        assert.equal(check.checks, 1);
+        assert.equal(check.nextCheckAt.toDate().toISOString(), deps.queued[0].when.toISOString());
+    });
+
+    it('pomija przetargi z już zaplanowanym sprawdzeniem i z wyczerpanym limitem', async () => {
+        await db.doc(`tenders/${DOC_ID}`).set({ ...base, docsCheck: profile({ nextCheckAt: admin.firestore.Timestamp.fromDate(NOW) }) });
+        await db.doc(`tenders/${OTHER_ID}`).set({ ...base, docsCheck: profile({ checks: 6 }) });
+        const deps = makeDeps([]);
+        assert.deepEqual(await requeueProfileChecks(100, deps), { enqueued: 0, candidates: 2 });
+        assert.equal(deps.queued.length, 0);
+    });
+
+    it('respektuje limit', async () => {
+        await db.doc(`tenders/${DOC_ID}`).set({ ...base, docsCheck: profile() });
+        await db.doc(`tenders/${OTHER_ID}`).set({ ...base, docsCheck: profile() });
+        const deps = makeDeps([]);
+        assert.equal((await requeueProfileChecks(1, deps)).enqueued, 1);
+        assert.equal(deps.queued.length, 1);
     });
 });

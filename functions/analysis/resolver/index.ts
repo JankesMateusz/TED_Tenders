@@ -1,5 +1,6 @@
 import { ezamowieniaAdapter, extractProceedingUrl, extractReferenceNumber, noticeObjectId, resolveNotice } from './ezamowienia';
 import { bazaAdapter } from './bazakonkurencyjnosci';
+import { epropublicoAdapter } from './epropublico';
 import { ezamawiajacyAdapter } from './ezamawiajacy';
 import { createHttpClient } from './httpClient';
 import { logintradeAdapter } from './logintrade';
@@ -10,7 +11,7 @@ import { HttpClient, MatchHints, PlatformAdapter, ResolverResult, TenderContext 
 export * from './types';
 
 /** Adaptery dopasowywane do adresu dokumentacji (adresy się nie nakładają, kolejność nie ma znaczenia). */
-export const ADAPTERS: PlatformAdapter[] = [ezamowieniaAdapter, platformazakupowaAdapter, ezamawiajacyAdapter, logintradeAdapter, sidasPzpAdapter, bazaAdapter];
+export const ADAPTERS: PlatformAdapter[] = [ezamowieniaAdapter, platformazakupowaAdapter, ezamawiajacyAdapter, logintradeAdapter, sidasPzpAdapter, epropublicoAdapter, bazaAdapter];
 
 /** Adres dokumentacji → adapter; brak dopasowania = platforma nieobsługiwana (ręczne wgranie plików). */
 const resolveByUrl = async (url: string, http: HttpClient, hints?: MatchHints): Promise<ResolverResult> => {

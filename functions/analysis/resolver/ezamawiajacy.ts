@@ -1,4 +1,4 @@
-import { fetchSameHost, FetchedPage, fingerprintOf, hostOf, htmlToText, matchProceeding, ProceedingRow, uniquePaths } from './common';
+import { fetchSameHost, FetchedPage, fingerprintOf, hostOf, htmlToText, matchProceeding, MAX_LIST_PAGES, ProceedingRow, uniquePaths } from './common';
 import { HttpClient, MatchHints, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
 
 /**
@@ -47,7 +47,7 @@ export const extractFiles = (html: string, pageUrl: string): ResolvedFile[] => {
 };
 
 /** Wiersze listy postępowań: identyfikator ogłoszenia, a jako nazwa numer sprawy z opisem. `complete` = lista nie ma kolejnych stron. */
-export const extractList = (html: string): { rows: ProceedingRow[]; complete: boolean } => {
+export const extractList = (html: string): { rows: ProceedingRow[]; complete: boolean; shown?: number; total?: number } => {
   const rows: ProceedingRow[] = [];
   for (const [, attributes, row] of html.matchAll(DATA_ROW)) {
     const id = attributes.match(ROW_ID)?.[1];
@@ -57,7 +57,8 @@ export const extractList = (html: string): { rows: ProceedingRow[]; complete: bo
   }
   const counter = htmlToText(html).match(LIST_COUNTER);
   // Bez licznika nie wiemy, że są kolejne strony
-  return { rows, complete: !counter || Number(counter[2]) <= rows.length };
+  // `shown` to koniec zakresu z licznika („Pozycje 1-25 z 26” → 25), czyli przesunięcie następnej strony
+  return { rows, complete: !counter || Number(counter[2]) <= rows.length, ...(counter ? { shown: Number(counter[1]), total: Number(counter[2]) } : {}) };
 };
 
 /** Strony są publiczne (bez ciasteczek); przekierowanie na logowanie oznacza, że postępowania nie ma publicznie (np. zakończone), a to nie awaria. */
@@ -101,9 +102,25 @@ const resolveFromList = async (url: string, http: HttpClient, hints?: MatchHints
     if (!client) return notMatched('Na stronie głównej zamawiającego nie ma odnośnika do listy postępowań.');
   }
 
-  const list = await fetchPage(`${origin}/pn/${client}/demand/notice/publicpzp/current/list`, http);
+  const listUrl = `${origin}/pn/${client}/demand/notice/publicpzp/current/list`;
+  const list = await fetchPage(listUrl, http);
   if (list.kind !== 'page') return notMatched('Lista postępowań zamawiającego wymaga logowania.');
-  const { rows, complete } = extractList(list.html);
+  const first = extractList(list.html);
+  const rows = [...first.rows];
+  let { complete, shown } = first;
+  // Kolejne strony przez przesunięcie wierszy (`?GD_pagestart=<koniec poprzedniego zakresu>`); brak postępu przerywa pętlę
+  for (let page = 2; !complete && shown !== undefined && page <= MAX_LIST_PAGES; page++) {
+    const next = await fetchPage(`${listUrl}?GD_pagestart=${shown}`, http);
+    if (next.kind !== 'page') break;
+    const more = extractList(next.html);
+    const known = new Set(rows.map((row) => row.id));
+    const added = more.rows.filter((row) => !known.has(row.id));
+    rows.push(...added);
+    if (added.length === 0 || more.shown === undefined || more.shown <= shown) break;
+    shown = more.shown;
+    // `complete` z `extractList` dotyczy jednej strony, więc kompletność oceniamy licznikiem: pokazano już wszystkie pozycje
+    complete = more.total !== undefined && shown >= more.total;
+  }
   const match = matchProceeding(rows, hints, complete);
   if (!match) return notMatched('Na liście trwających postępowań zamawiającego nie ma dokładnie jednego postępowania pasującego do przetargu.');
   return resolveDetail(`${origin}/pn/${client}/demand/notice/public/${match.id}/details`, http);

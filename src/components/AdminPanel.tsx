@@ -40,6 +40,7 @@ interface EnqueueDocsChecksResult {
 }
 
 const enqueueDocsChecks = httpsCallable<{ sinceDay?: string }, EnqueueDocsChecksResult>(functions, 'enqueueDocsChecks');
+const requeueProfileDocsChecks = httpsCallable<void, EnqueueDocsChecksResult>(functions, 'requeueProfileDocsChecks');
 
 const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ online, onClose }) => {
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -109,6 +110,27 @@ const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ 
         } catch (error) {
             console.error('Kolejkowanie sprawdzeń dokumentów nie powiodło się:', error);
             setDocsMessage({ text: (error as { message?: string })?.message || 'Nie udało się zakolejkować sprawdzeń.', isError: true });
+        } finally {
+            setIsQueueingDocs(false);
+        }
+    };
+
+    // Wznawia sprawdzanie przetargów, których link prowadzi do profilu zamawiającego, a które zostały oznaczone przed ponawianiem tego stanu
+    const handleRequeueProfileDocs = async () => {
+        if (!window.confirm('Wznowić sprawdzanie dokumentów dla przetargów, których link prowadzi do strony zamawiającego (a nie do postępowania)? Serwer zapyta platformy o listy postępowań (ok. 1 zapytanie na sekundę).')) return;
+        setIsQueueingDocs(true);
+        setDocsMessage(null);
+        try {
+            const { data } = await requeueProfileDocsChecks();
+            setDocsMessage({
+                text: data.enqueued > 0
+                    ? `Wznowiono sprawdzanie ${data.enqueued} przetargów (z linkiem do strony zamawiającego: ${data.candidates}). Wyniki pojawią się na kartach w ciągu kilku godzin.`
+                    : `Nic do wznowienia: przetargi z linkiem do strony zamawiającego (${data.candidates}) mają już zaplanowane sprawdzenie albo wyczerpały limit.`,
+                isError: false
+            });
+        } catch (error) {
+            console.error('Wznawianie sprawdzeń dokumentów nie powiodło się:', error);
+            setDocsMessage({ text: (error as { message?: string })?.message || 'Nie udało się wznowić sprawdzeń.', isError: true });
         } finally {
             setIsQueueingDocs(false);
         }
@@ -191,6 +213,14 @@ const AdminPanel: React.FC<{ online: OnlineEntry[]; onClose: () => void }> = ({ 
                         {isQueueingDocs ? 'Kolejkowanie...' : 'Sprawdź dokumenty'}
                     </button>
                 </div>
+                <p style={{ margin: '8px 0' }}>
+                    <small className={styles.role}>
+                        Przetargi, w których ogłoszenie podaje tylko stronę zamawiającego, są teraz sprawdzane ponownie. Ten przycisk wznawia te, które zostały oznaczone wcześniej.
+                    </small>
+                </p>
+                <button className={styles.primaryButton} style={{ margin: 0 }} type="button" disabled={isQueueingDocs} onClick={handleRequeueProfileDocs}>
+                    {isQueueingDocs ? 'Kolejkowanie...' : 'Wznów sprawdzanie stron zamawiających'}
+                </button>
                 {docsMessage && <p className={docsMessage.isError ? styles.error : styles.role} role={docsMessage.isError ? 'alert' : 'status'}>{docsMessage.text}</p>}
 
                 <DevManifestTool /> {/* DEV-MANIFEST: tymczasowe */}

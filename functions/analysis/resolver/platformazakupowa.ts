@@ -1,4 +1,4 @@
-import { fingerprintOf, hostOf, htmlToText, matchProceeding, ProceedingRow, uniquePaths } from './common';
+import { fingerprintOf, hostOf, htmlToText, matchProceeding, MAX_LIST_PAGES, ProceedingRow, uniquePaths } from './common';
 import { HttpClient, MatchHints, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
 
 const HOSTS = new Set(['platformazakupowa.pl', 'www.platformazakupowa.pl', 'ww.platformazakupowa.pl']);
@@ -67,6 +67,12 @@ export const extractProceedings = (html: string): ProceedingRow[] => {
   return [...byId.values()];
 };
 
+/** Numer ostatniej strony listy z paginacji (`?page=N`); 1, gdy paginacji nie ma. */
+export const lastListPage = (html: string): number =>
+  Math.max(1, ...[...html.matchAll(/[?&;]page=(\d+)/g)].map((match) => Number(match[1])));
+
+const LIST_PAGE_QUERY = 'tab=active&query=&sort-field=endsAt&sort-type=DESC';
+
 const resolveTransaction = async (transactionId: string, http: HttpClient): Promise<ResolverResult> => {
   const sourceUrl = `${ORIGIN}/transakcja/${transactionId}`;
   const response = await http.get<string>(sourceUrl, { text: true, session: true });
@@ -104,7 +110,21 @@ const resolveProfile = async (url: string, profile: string, http: HttpClient, hi
     );
   }
 
-  const match = matchProceeding(extractProceedings(typeof response.data === 'string' ? response.data : ''), hints);
+  const firstPage = typeof response.data === 'string' ? response.data : '';
+  const rows = new Map(extractProceedings(firstPage).map((row) => [row.id, row]));
+  // Lista ma po 20 postępowań na stronę, a więksi zamawiający mają ich więcej: czytamy kolejne strony
+  const last = lastListPage(firstPage);
+  const pagesToRead = Math.min(last, MAX_LIST_PAGES);
+  for (let page = 2; page <= pagesToRead; page++) {
+    const next = await http.get<string>(`${listUrl}?page=${page}&${LIST_PAGE_QUERY}`, { text: true, session: true });
+    if (next.status >= 300) {
+      throw new ResolverError(`platformazakupowa.pl odpowiedziała ${next.status} na stronę ${page} listy postępowań.`, { url: listUrl, status: next.status });
+    }
+    for (const row of extractProceedings(typeof next.data === 'string' ? next.data : '')) rows.set(row.id, row);
+  }
+
+  // Lista ucięta limitem stron jest niepełna, więc po samym tytule nie dopasowujemy
+  const match = matchProceeding([...rows.values()], hints, last <= pagesToRead);
   if (!match) return notMatched('Na liście trwających postępowań zamawiającego nie ma dokładnie jednego postępowania pasującego do przetargu.');
   return resolveTransaction(match.id, http);
 };

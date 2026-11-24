@@ -13,8 +13,12 @@ export interface DocsCheckOutcome {
   noticePublishedAt?: string;
 }
 
-/** Stany końcowe: dokumentacja znaleziona albo leży tam, gdzie nie potrafimy jej odczytać. Sprawdzanie się kończy. */
-export const isTerminalState = (state: DocsCheckState): boolean => state !== 'none' && state !== 'error';
+/**
+ * Stany końcowe: dokumentacja znaleziona albo leży tam, gdzie nie potrafimy jej odczytać. Sprawdzanie się kończy.
+ * `profile` jest ponawiane jak `none`: postępowanie mogło jeszcze nie trafić na listę zamawiającego (ogłoszenie bywa
+ * opublikowane wcześniej niż postępowanie na platformie), więc brak dopasowania nie musi być ostateczny.
+ */
+export const isTerminalState = (state: DocsCheckState): boolean => state === 'available' || state === 'unsupported';
 
 const withoutUndefined = <T extends object>(value: T): T =>
   Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;

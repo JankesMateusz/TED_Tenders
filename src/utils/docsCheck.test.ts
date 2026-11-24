@@ -66,6 +66,15 @@ describe('docsBadge', () => {
         expect(docsBadge(withCheck({ state: 'profile', sourceUrl: 'https://platformazakupowa.pl/pn/gmina' }), NOW)!.title).toContain('profilu zamawiającego');
     });
 
+    it('profil: ponawiany, pokazuje następne sprawdzenie i pozwala sprawdzić teraz', () => {
+        const badge = docsBadge(withCheck({ state: 'profile', sourceUrl: 'https://platformazakupowa.pl/pn/gmina', checks: 1, checkedAt: at(10, 0), nextCheckAt: at(12, 0) }), NOW)!;
+        expect(badge.text).toBe('📄 dokumenty na platformazakupowa.pl · następne sprawdzenie 12:00');
+        expect(badge.canCheckNow).toBe(true);
+        expect(badge.tone).toBe('warn');
+        // po ostatnim sprawdzeniu nie ma już na co czekać: kolor neutralny
+        expect(docsBadge(withCheck({ state: 'profile', sourceUrl: 'https://platformazakupowa.pl/pn/gmina', checks: 6, checkedAt: at(10, 0) }), NOW)!.tone).toBe('neutral');
+    });
+
     it('ogłoszenie bez adresu dokumentacji: osobny komunikat, nie „inna platforma"', () => {
         expect(docsBadge(withCheck({ state: 'unsupported' }), NOW)!.text).toBe('📄 brak adresu dokumentów w ogłoszeniu');
         expect(docsBadge(withCheck({ state: 'unsupported', sourceUrl: 'https://www.logintrade.net/x' }), NOW)!.text).toBe('📄 dokumenty na logintrade.net');

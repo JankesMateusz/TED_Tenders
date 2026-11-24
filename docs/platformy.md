@@ -102,7 +102,14 @@ Starsze ogłoszenia wypadają z zakładki trwających po terminie składania ofe
 
 ### 4.5. e-ProPublico
 
-Niezbadane. Python na komputerze użytkownika nie zestawił połączenia TLS (systemowy `curl` Windows dostał odpowiedź 302). To samo zjawisko wystąpiło wcześniej z serwerem GUS, więc może to być lokalna lista urzędów certyfikacji.
+Zbadane 2026-11-24 na jednym postępowaniu (UMG, CRZP/218/2026/AZP); adapter w `functions/analysis/resolver/epropublico.ts`. Wcześniejszy błąd TLS dotyczył lokalnego Pythona i `curl`, a nie platformy.
+
+- Strona `/Ogloszenia/Details/<uuid>` i lista `/Ogloszenia/DokumentyZamowienia?przetargId=<uuid>` są publiczne (HTML, bez JS i sesji). Lista ma sekcje (`h5.section-header`): „Ogłoszenie”, „Specyfikacja”, „Załączniki do specyfikacji”; wiersz: nazwa (link), typ (rozszerzenie), rozmiar KB, data publikacji (bez godziny).
+- Sekcja „Ogłoszenie” to samo ogłoszenie o zamówieniu, które jest od razu po publikacji, więc nie liczy się jako dokumentacja (inaczej `NO_DOCUMENTS_YET` nigdy by nie wystąpiło).
+- Adres pobrania `/Dokumenty/Download/<guid>` jest bez tokenu; serwer zwraca 200 z `Content-Disposition` (sprawdzono tylko nagłówki).
+- `robots.txt`: blokuje wymienione boty AI (m.in. ClaudeBot, GPTBot), a `User-agent: *` ma `Allow: /`. Regulaminu platformy nie czytano.
+- Nie wiadomo, jak wygląda strona postępowania bez żadnej sekcji dokumentów; brak sekcji `section-header` adapter traktuje jako zmianę układu (błąd), a nie brak plików.
+- Adresy ogólne (strona główna, `/Zamawiajacy/...`) dają `PROFILE_NOT_MATCHED`; listy postępowań zamawiającego adapter nie czyta.
 
 ### 4.6. Warunki korzystania z platform (etap 0, odczyt 2026-11-17)
 
@@ -158,7 +165,7 @@ Spodziewany zysk: ok. 11 punktów procentowych pokrycia.
 Do rozstrzygnięcia w trakcie:
 
 - **Czy `profile` ma zostać stanem końcowym.** W pomiarze świeże ogłoszenia dopasowały się od razu, ale zamawiający może dodać postępowanie na platformie później niż ogłoszenie w BZP. Jeśli po wdrożeniu będą takie przypadki, rozważyć ponawianie jak dla stanu `none`.
-- **Przetargi już oznaczone jako `profile`.** `enqueueDocsChecks` pomija przetargi mające `docsCheck`. Ustalić z użytkownikiem, czy potrzebne jest jednorazowe ponowne sprawdzenie, czy wystarczy, że nowe przetargi będą dopasowywane.
+- **Przetargi już oznaczone jako `profile`.** `enqueueDocsChecks` pomija przetargi mające `docsCheck`. Stan `profile` jest teraz ponawiany (limit 6 sprawdzeń), a te zapisane wcześniej wznawia jednorazowo admin wywołaniem `requeueProfileDocsChecks` (opcjonalnie `{ limit }`; pomija przetargi z zaplanowanym sprawdzeniem i z wyczerpanym limitem).
 
 Gotowe, gdy: testy jednostkowe przechodzą, a pomiar przez `resolveDocumentsCallable` (funkcja admina, do 20 przetargów naraz) na projekcie testowym pokazuje dla świeżych przetargów z adresem profilu wynik `RESOLVED` lub `NO_DOCUMENTS_YET` zamiast `PROFILE_NOT_MATCHED`. Użytkownik ogląda kilka dopasowań ręcznie.
 

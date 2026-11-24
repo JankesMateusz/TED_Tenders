@@ -9,6 +9,7 @@ import { matchProceeding } from '../functions/lib/analysis/resolver/common.js';
 import { extractFiles as extractEzamawiajacyFiles, extractList } from '../functions/lib/analysis/resolver/ezamawiajacy.js';
 import { extractFiles as extractLogintradeFiles, extractList as extractLogintradeList } from '../functions/lib/analysis/resolver/logintrade.js';
 import { extractFiles as extractSidasFiles } from '../functions/lib/analysis/resolver/sidaspzp.js';
+import { extractFiles as extractEpropublicoFiles } from '../functions/lib/analysis/resolver/epropublico.js';
 import { extractProceedingUrl, extractReferenceNumber } from '../functions/lib/analysis/resolver/ezamowienia.js';
 import { assertSessionUrl } from '../functions/lib/analysis/resolver/httpClient.js';
 import { extractFiles, extractProceedings } from '../functions/lib/analysis/resolver/platformazakupowa.js';
@@ -353,6 +354,19 @@ describe('dopasowanie postępowania z listy zamawiającego', () => {
         assert.equal(matchProceeding(rows, { title: 'Dostawa oprogramowania biurowego' }), null);
     });
 
+    it('kilku kandydatów po tytule: wygrywa jedyny z pełnym trafieniem, a przy krótkim tytule brak rozstrzygnięcia', () => {
+        const list = [
+            { id: 'a', name: 'WEiTI/40/ZP/2026/1035 Dostawa sprzętu komputerowego na potrzeby projektu dla Instytutu Mikroelektroniki Wydziału Elektroniki i Technik Informacyjnych Politechniki Warszawskiej' },
+            { id: 'b', name: 'WEiTI/38/ZP/2026/1034 Dostawa sprzętu komputerowego dla Instytutu Radioelektroniki i Technik Multimedialnych Politechniki Warszawskiej.' }
+        ];
+        const title = 'Dostawa sprzętu komputerowego dla Instytutu Radioelektroniki i Technik Multimedialnych Politechniki Warszawskiej';
+        assert.equal(matchProceeding(list, { title })?.id, 'b');
+        // Dwa pełne trafienia: nadal niejednoznaczne
+        assert.equal(matchProceeding([...list, { id: 'c', name: `${list[1].name} (część 2)` }], { title }), null);
+        // Krótki tytuł: pełne trafienie nie rozstrzyga
+        assert.equal(matchProceeding([{ id: 'x', name: 'Dostawa sprzętu komputerowego dla szkół' }, { id: 'y', name: 'Dostawa sprzętu komputerowego dla szkół podstawowych' }], { title: 'Dostawa sprzętu komputerowego dla szkół' }), null);
+    });
+
     it('normalizuje polskie znaki, w tym „ł”', () => {
         assert.equal(matchProceeding(rows, { title: 'Lodzka platforma wsparcia oprogramowania biurowego' })?.id, '2');
     });
@@ -430,6 +444,25 @@ describe('resolver: profil zamawiającego na platformazakupowa.pl', () => {
     it('przekierowanie zamiast listy to błąd platformy, nie brak dopasowania', async () => {
         const http = fakeHttp([['/proceedings', { status: 302, data: '', location: 'https://platformazakupowa.pl/login' }]]);
         await assert.rejects(resolveDocuments(ted(PROFILE, { referenceNumber: 'ZP 271.12.2026' }), http), ResolverError);
+    });
+
+    it('lista na kilku stronach: postępowanie ze strony 2 jest znalezione', async () => {
+        const withPaging = (html, last) => `${html}<ul class="pagination"><li><a href="?page=2&&amp;tab=active&amp;query=">2</a></li><li><a href="?page=${last}&&amp;tab=active&amp;query=">${last}</a></li></ul>`;
+        const page1 = withPaging(fixture('pz-proceedings.html'), 2);
+        const page2 = fixture('pz-proceedings.html').replaceAll('1403900', '1409900').replace('ZP 271.12.2026', 'WEiTI/38/ZP/2026/1034');
+        const http = fakeHttp([['?page=2', ok(page2)], ['/proceedings', ok(page1)], ['/transakcja/', ok(fixture('pz-transakcja.html'))]]);
+        const result = await resolveDocuments(ted(PROFILE, { referenceNumber: 'WEiTI/38/ZP/2026/1034' }), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.sourceUrl, 'https://platformazakupowa.pl/transakcja/1409900');
+        assert.deepEqual(http.requests, [LIST_URL, `${LIST_URL}?page=2&tab=active&query=&sort-field=endsAt&sort-type=DESC`, 'https://platformazakupowa.pl/transakcja/1409900']);
+    });
+
+    it('lista ucięta limitem stron: po samym tytule nie dopasowujemy', async () => {
+        const html = `${fixture('pz-proceedings.html')}<a href="?page=50&amp;tab=active">50</a>`;
+        const http = fakeHttp([['/proceedings', ok(html)], ['/transakcja/', ok(fixture('pz-transakcja.html'))]]);
+        const byTitle = await resolveDocuments(ted(PROFILE, { title: 'Remont dachu budynku urzędu miasta' }), http);
+        assert.equal(byTitle.status, 'PROFILE_NOT_MATCHED');
+        assert.equal(http.requests.length, 10);
     });
 
     it('eZamówienia: numer sprawy z pola 4.1.2 ogłoszenia trafia do dopasowania profilu', async () => {
@@ -563,6 +596,17 @@ describe('resolver: ezamawiający (Marketplanet)', () => {
         assert.equal(byTitleFull.status, 'RESOLVED');
     });
 
+    it('lista na kilku stronach: postępowanie z drugiej strony (GD_pagestart)', async () => {
+        const page1 = fixture('ezm-lista.html').replace('z&nbsp;3', 'z&nbsp;4');
+        const page2 = fixture('ezm-lista.html').replace('Pozycje&nbsp;1-3&nbsp;z&nbsp;3', 'Pozycje&nbsp;4-4&nbsp;z&nbsp;4')
+            .replaceAll('242552', '252552').replaceAll('242791', '252791').replaceAll('242800', '252800').replaceAll('BZP.271.1.76.2026', 'ZI-1.271.89.2026');
+        const http = fakeHttp([['GD_pagestart=3', ok(page2)], ...listRoutes(page1)]);
+        const result = await resolveDocuments(ted(`${HOST}/pn/KLIENT/demand/notice/lowcost/current/list`, { referenceNumber: 'ZI-1.271.89.2026', title: 'Inny tytuł' }), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.equal(result.sourceUrl, `${HOST}/pn/KLIENT/demand/notice/public/252791/details`);
+        assert.ok(http.requests.includes(`${HOST}/pn/KLIENT/demand/notice/publicpzp/current/list?GD_pagestart=3`));
+    });
+
     it('eZamówienia z adresem ezamawiającego w polu 3.1: numer sprawy z ogłoszenia', async () => {
         const body = `<h3>3.1.) Adres strony internetowej prowadzonego postępowania</h3> ${HOST}/ <h3>3.2.) Dostęp</h3> Nie <h3>4.1.2.) Numer referencyjny:</h3> BZP.271.1.76.2026 <h3>4.1.3.) Rodzaj:</h3> x`;
         const result = await resolveDocuments(ez, fakeHttp([...ezRoutes({ docs: [], body }), ...listRoutes()]));
@@ -655,6 +699,17 @@ describe('resolver: logintrade', () => {
         assert.equal(byTitle.status, 'PROFILE_NOT_MATCHED');
     });
 
+    it('lista na kilku stronach: postępowanie z drugiej strony (?page=2)', async () => {
+        const link = '<li><a href="?page=2">2</a></li></ul>';
+        const page1 = fixture('lt-lista.html').replace('</ul>', link);
+        const page2 = fixture('lt-lista.html').replace('</ul>', link)
+            .replaceAll('245001', '255001').replaceAll('245002', '255002').replaceAll('245003', '255003').replace('DZP.231.18.2026', 'ZP.1.2026.77');
+        const http = fakeHttp([['ustawowe.html?page=2', ok(page2)], ...listRoutes(page1)]);
+        const result = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: 'ZP.1.2026.77', title: 'Inny tytuł' }), http);
+        assert.equal(result.status, 'RESOLVED');
+        assert.match(result.sourceUrl, /zapytania_email,255002,/);
+    });
+
     it('odnośnik z listy na inny host albo o dziwnej postaci nie jest wykonywany', async () => {
         const evil = fixture('lt-lista.html').replace('https://klient.logintrade.net/zapytania_email,245002', 'https://example.com/zapytania_email,245002');
         const http = fakeHttp(listRoutes(evil));
@@ -735,5 +790,60 @@ describe('resolver: SIDAS PZP', () => {
         const http = fakeHttp([]);
         assert.equal((await resolveDocuments(ted('https://app.sidaspzp.pl/'), http)).status, 'UNSUPPORTED_PLATFORM');
         assert.equal(http.requests.length, 0);
+    });
+});
+
+describe('resolver: e-ProPublico', () => {
+    const HOST = 'https://e-propublico.pl';
+    const ID = '53f4170b-933b-48cb-889d-e2f4b48998dc';
+    const DOCS_URL = `${HOST}/Ogloszenia/DokumentyZamowienia?przetargId=${ID}`;
+    const ted = (documentsUrl, extra = {}) => ({ source: 'TED', link: 'https://ted.europa.eu/x', documentsUrl, ...extra });
+
+    it('pliki z sekcji dokumentacji: bez sekcji „Ogłoszenie”, rozszerzenie z kolumny „Typ”, adres pobrania bezpośredni', () => {
+        const files = extractEpropublicoFiles(fixture('epropublico-dokumenty.html'), DOCS_URL);
+        assert.equal(files.length, 7);
+        assert.ok(!files.some((file) => file.path.startsWith('Ogłoszenie')));
+        const opis = files.find((file) => file.path === '5_Opis przedmiotu zamówienia.zip');
+        assert.ok(opis);
+        assert.equal(opis.url, `${HOST}/Dokumenty/Download/11ca3cc7-204d-0845-9d9f-55f8a4f27c57`);
+        assert.equal(opis.platformFileId, '11ca3cc7-204d-0845-9d9f-55f8a4f27c57');
+        assert.equal(opis.publishedAt, '2026-11-24T00:00:00');
+    });
+
+    it('strona bez sekcji to błąd platformy, a nie „brak plików”', () => {
+        assert.throws(() => extractEpropublicoFiles('<html><body>Zmiana układu</body></html>', DOCS_URL), ResolverError);
+    });
+
+    it('adres szczegółów lub listy dokumentów: jedno zapytanie o listę dokumentów', async () => {
+        for (const url of [`${HOST}/Ogloszenia/Details/${ID.toUpperCase()}`, DOCS_URL, `${HOST}/Ogloszenia/DokumentyZamowienia?przetargId=${ID.toUpperCase()}`]) {
+            const http = fakeHttp([['/DokumentyZamowienia', ok(fixture('epropublico-dokumenty.html'))]]);
+            const result = await resolveDocuments(ted(url), http);
+            assert.equal(result.status, 'RESOLVED');
+            assert.equal(result.platform, 'epropublico');
+            assert.equal(result.sourceUrl, DOCS_URL);
+            assert.equal(result.files.length, 7);
+            assert.deepEqual(http.requests, [DOCS_URL]);
+        }
+    });
+
+    it('tylko ogłoszenie, bez dokumentacji: NO_DOCUMENTS_YET', async () => {
+        const result = await resolveDocuments(ted(DOCS_URL), fakeHttp([['/DokumentyZamowienia', ok(fixture('epropublico-dokumenty-puste.html'))]]));
+        assert.equal(result.status, 'NO_DOCUMENTS_YET');
+        assert.equal(result.platform, 'epropublico');
+    });
+
+    it('adres ogólny: PROFILE_NOT_MATCHED bez zapytań', async () => {
+        for (const url of [`${HOST}/`, `${HOST}/Zamawiajacy/AktualneOgloszenia?zamawiajacyId=${ID}`, `${HOST}/Ogloszenia/DokumentyZamowienia?przetargId=x`]) {
+            const http = fakeHttp([]);
+            const result = await resolveDocuments(ted(url, { referenceNumber: 'CRZP/218/2026/AZP' }), http);
+            assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+            assert.equal(result.platform, 'epropublico');
+            assert.equal(http.requests.length, 0);
+        }
+    });
+
+    it('przekierowanie na inny host to błąd platformy', async () => {
+        const http = fakeHttp([['/DokumentyZamowienia', { status: 302, data: '', location: 'https://example.com/x' }]]);
+        await assert.rejects(resolveDocuments(ted(DOCS_URL), http), ResolverError);
     });
 });
