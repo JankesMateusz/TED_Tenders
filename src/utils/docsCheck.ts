@@ -164,7 +164,8 @@ export const docsBadge = (tender: Tender, now: Date = new Date()): DocsBadgeInfo
                     : `📄 dokumenty na ${where}`,
                 title: `Link prowadzi do profilu zamawiającego, a nie do konkretnego postępowania, i nie udało się dopasować go na liście zamawiającego. ${checkedAt}${progress} ${next}`.trim(),
                 canCheckNow: true,
-                tone: 'neutral'
+                // Żółty, dopóki trwają sprawdzenia (jak „brak dokumentów”): wynik może się jeszcze zmienić
+                tone: check.nextCheckAt ? 'warn' : 'neutral'
             };
         }
         case 'unsupported':
