@@ -165,7 +165,7 @@ Spodziewany zysk: ok. 11 punktów procentowych pokrycia.
 Do rozstrzygnięcia w trakcie:
 
 - **Czy `profile` ma zostać stanem końcowym.** W pomiarze świeże ogłoszenia dopasowały się od razu, ale zamawiający może dodać postępowanie na platformie później niż ogłoszenie w BZP. Jeśli po wdrożeniu będą takie przypadki, rozważyć ponawianie jak dla stanu `none`.
-- **Przetargi już oznaczone jako `profile`.** `enqueueDocsChecks` pomija przetargi mające `docsCheck`. Ustalić z użytkownikiem, czy potrzebne jest jednorazowe ponowne sprawdzenie, czy wystarczy, że nowe przetargi będą dopasowywane.
+- **Przetargi już oznaczone jako `profile`.** `enqueueDocsChecks` pomija przetargi mające `docsCheck`. Stan `profile` jest teraz ponawiany (limit 6 sprawdzeń), a te zapisane wcześniej wznawia jednorazowo admin wywołaniem `requeueProfileDocsChecks` (opcjonalnie `{ limit }`; pomija przetargi z zaplanowanym sprawdzeniem i z wyczerpanym limitem).
 
 Gotowe, gdy: testy jednostkowe przechodzą, a pomiar przez `resolveDocumentsCallable` (funkcja admina, do 20 przetargów naraz) na projekcie testowym pokazuje dla świeżych przetargów z adresem profilu wynik `RESOLVED` lub `NO_DOCUMENTS_YET` zamiast `PROFILE_NOT_MATCHED`. Użytkownik ogląda kilka dopasowań ręcznie.
 

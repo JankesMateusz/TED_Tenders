@@ -8,7 +8,7 @@ export { inviteUser, listUsersStatus } from './users';
 export { refreshTenders, scheduledBazaRefresh, scheduledRefresh, scheduledRefreshFinalize } from './tenders/refresh';
 export { snapshotLabelOnStatusChange } from './labels/labelSnapshot';
 export { resolveDocumentsCallable as resolveDocuments } from './analysis/resolveCallable';
-export { checkDocsNow, checkDocumentsTask, enqueueDocsCheckOnCreate, enqueueDocsChecks } from './analysis/docsCheck/docsCheck';
+export { checkDocsNow, checkDocumentsTask, enqueueDocsCheckOnCreate, enqueueDocsChecks, requeueProfileDocsChecks } from './analysis/docsCheck/docsCheck';
 
 // Funkcje modułu zamówień. Eksportowane tylko, gdy istnieje plik functions/orders.enabled (tworzy go deploy.yml dla
 // środowiska testowego), bo wymagają sekretu ORDERS_DATABASE_URL w projekcie, na który wdrażamy (patrz db/README.md).
