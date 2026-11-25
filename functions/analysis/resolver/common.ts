@@ -78,7 +78,8 @@ const titleMatches = (row: ProceedingRow, titleWords: string[]): boolean => {
 /**
  * Wybiera z listy postępowań zamawiającego to, które odpowiada przetargowi; null, gdy nie ma dokładnie jednego kandydata.
  * 1) numer sprawy zawarty w nazwie dokładnie jednego wiersza; przy kilku trafieniach rozstrzyga zgodny tytuł;
- * 2) bez trafień po numerze: dokładnie jeden wiersz zgodny po tytule.
+ * 2) numer sprawy znany, ale bez trafień: brak dopasowania (postępowania jeszcze nie ma na liście);
+ * 3) numeru sprawy brak (lub za krótki): dokładnie jeden wiersz zgodny po tytule.
  * Nie zgadujemy: niejednoznaczność oznacza brak dopasowania.
  */
 export const matchProceeding = (
@@ -97,6 +98,9 @@ export const matchProceeding = (
       const narrowed = byReference.filter((row) => titleMatches(row, titleWords));
       return narrowed.length === 1 ? narrowed[0] : null;
     }
+    // Znany numer sprawy, którego nie ma na liście: postępowanie jeszcze nie zostało opublikowane. Tytuły zakupów tego
+    // samego zamawiającego bywają powtarzalne („Dostawa sprzętu komputerowego…”), więc tytuł wskazałby wcześniejsze postępowanie.
+    return null;
   }
 
   if (!titleFallback) return null;

@@ -349,9 +349,18 @@ describe('dopasowanie postępowania z listy zamawiającego', () => {
         assert.equal(matchProceeding(rows, { referenceNumber: 'ZP 271.14.2026', title: 'Zakup licencji oprogramowania biurowego' })?.id, '3');
     });
 
-    it('bez trafienia po numerze dopasowuje po tytule, ale tylko przy jednym kandydacie', () => {
-        assert.equal(matchProceeding(rows, { referenceNumber: 'ZP 999.1.2026', title: 'Dostawa sprzętu komputerowego dla szkół podstawowych' })?.id, '1');
+    it('bez numeru sprawy dopasowuje po tytule, ale tylko przy jednym kandydacie', () => {
+        assert.equal(matchProceeding(rows, { title: 'Dostawa sprzętu komputerowego dla szkół podstawowych' })?.id, '1');
         assert.equal(matchProceeding(rows, { title: 'Dostawa oprogramowania biurowego' }), null);
+    });
+
+    it('znany numer sprawy, którego nie ma na liście: nie zgaduje po tytule (wcześniejszy zakup o podobnym tytule)', () => {
+        assert.equal(matchProceeding(rows, { referenceNumber: 'ZP 999.1.2026', title: 'Dostawa sprzętu komputerowego dla szkół podstawowych' }), null);
+        const bialystok = [{ id: 'old', name: 'ZK-DZP.262.41.2026 Dostawa sprzętu komputerowego na potrzeby Politechniki Białostockiej' }];
+        const title = 'Dostawa sprzętu komputerowego na potrzeby Politechniki Białostockiej ZK-DZP.262.57.2026';
+        assert.equal(matchProceeding(bialystok, { referenceNumber: 'ZK-DZP.262.57.2026', title }), null);
+        // Po opublikowaniu postępowania numer trafia na listę i dopasowanie działa
+        assert.equal(matchProceeding([...bialystok, { id: 'new', name: 'ZK-DZP.262.57.2026 Dostawa sprzętu komputerowego na potrzeby Politechniki Białostockiej' }], { referenceNumber: 'ZK-DZP.262.57.2026', title })?.id, 'new');
     });
 
     it('kilku kandydatów po tytule: wygrywa jedyny z pełnym trafieniem, a przy krótkim tytule brak rozstrzygnięcia', () => {
