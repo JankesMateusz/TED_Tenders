@@ -841,14 +841,50 @@ describe('resolver: e-ProPublico', () => {
         assert.equal(result.platform, 'epropublico');
     });
 
-    it('adres ogólny: PROFILE_NOT_MATCHED bez zapytań', async () => {
+    it('adres ogólny bez numeru sprawy: PROFILE_NOT_MATCHED bez zapytań', async () => {
         for (const url of [`${HOST}/`, `${HOST}/Zamawiajacy/AktualneOgloszenia?zamawiajacyId=${ID}`, `${HOST}/Ogloszenia/DokumentyZamowienia?przetargId=x`]) {
-            const http = fakeHttp([]);
-            const result = await resolveDocuments(ted(url, { referenceNumber: 'CRZP/218/2026/AZP' }), http);
-            assert.equal(result.status, 'PROFILE_NOT_MATCHED');
-            assert.equal(result.platform, 'epropublico');
-            assert.equal(http.requests.length, 0);
+            for (const referenceNumber of [undefined, '', '12/26']) {
+                const http = fakeHttp([]);
+                const result = await resolveDocuments(ted(url, { referenceNumber, title: 'Dostawa pomocy dydaktycznych' }), http);
+                assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+                assert.equal(result.platform, 'epropublico');
+                assert.equal(http.requests.length, 0);
+            }
         }
+    });
+
+    describe('adres ogólny z numerem sprawy: wyszukiwanie po sygnaturze', () => {
+        const GUID = '1b572ad9-23cb-478a-b967-231d8e23f323';
+        const row = (signature, id, topic) => `<tr><td>${signature}</td><td><a href="/Ogloszenia/Details/${id}">${topic}</a></td><td>Gmina</td><td>04.12.2026<br />13:00:00</td><td>Składanie ofert</td></tr>`;
+        const search = (...rows) => `<table><tr><th>Sygnatura</th><th>Temat</th></tr>${rows.join('')}</table>`;
+        const hints = { referenceNumber: 'ROI.271.12.2026', title: 'Dostawa pomocy dydaktycznych do pracowni w szkołach' };
+
+        it('jedno trafienie: lista dokumentów tego postępowania', async () => {
+            const http = fakeHttp([
+                ['/Ogloszenia?searchText=', ok(search(row('ROI.271.12.2026', GUID, 'Dostawa pomocy dydaktycznych do pracowni w szkołach podstawowych')))],
+                ['/DokumentyZamowienia', ok(fixture('epropublico-dokumenty.html'))]
+            ]);
+            const result = await resolveDocuments(ted(`${HOST}/`, hints), http);
+            assert.equal(result.status, 'RESOLVED');
+            assert.equal(result.sourceUrl, `${HOST}/Ogloszenia/DokumentyZamowienia?przetargId=${GUID}`);
+            assert.deepEqual(http.requests, [`${HOST}/Ogloszenia?searchText=ROI.271.12.2026`, result.sourceUrl]);
+        });
+
+        it('brak trafienia (postępowanie jeszcze nie opublikowane) lub inna sygnatura: PROFILE_NOT_MATCHED', async () => {
+            for (const html of [search(), search(row('ROI.271.11.2026', GUID, 'Dostawa pomocy dydaktycznych do pracowni w szkołach'))]) {
+                const result = await resolveDocuments(ted(`${HOST}/`, hints), fakeHttp([['/Ogloszenia?searchText=', ok(html)]]));
+                assert.equal(result.status, 'PROFILE_NOT_MATCHED');
+            }
+        });
+
+        it('ta sama sygnatura u kilku zamawiających: rozstrzyga tytuł, a bez zgodnego tytułu brak dopasowania', async () => {
+            const other = '2c1f0000-0000-4000-8000-000000000000';
+            const rows = [row('ROI.271.12.2026', other, 'Zakup mebli biurowych dla urzędu'), row('ROI.271.12.2026', GUID, 'Dostawa pomocy dydaktycznych do pracowni w szkołach')];
+            const routes = [['/Ogloszenia?searchText=', ok(search(...rows))], ['/DokumentyZamowienia', ok(fixture('epropublico-dokumenty.html'))]];
+            assert.equal((await resolveDocuments(ted(`${HOST}/`, hints), fakeHttp(routes))).status, 'RESOLVED');
+            const noTitle = await resolveDocuments(ted(`${HOST}/`, { referenceNumber: hints.referenceNumber }), fakeHttp(routes));
+            assert.equal(noTitle.status, 'PROFILE_NOT_MATCHED');
+        });
     });
 
     it('przekierowanie na inny host to błąd platformy', async () => {

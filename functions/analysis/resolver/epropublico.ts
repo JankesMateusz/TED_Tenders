@@ -1,5 +1,5 @@
-import { fetchSameHost, fingerprintOf, hostOf, htmlToText, uniquePaths } from './common';
-import { HttpClient, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
+import { fetchSameHost, fingerprintOf, hostOf, htmlToText, matchProceeding, normalizeCompact, ProceedingRow, uniquePaths } from './common';
+import { HttpClient, MatchHints, MAX_FILES, PlatformAdapter, ResolvedFile, ResolverError, ResolverResult } from './types';
 
 /**
  * e-ProPublico (Datacomp): `e-propublico.pl/Ogloszenia/Details/<uuid>`. Strona postępowania i lista dokumentów
@@ -12,6 +12,9 @@ const GUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const DETAILS_PATH = new RegExp(`^/Ogloszenia/Details/(${GUID})/?$`, 'i');
 const DOCUMENTS_PATH = /^\/Ogloszenia\/DokumentyZamowienia\/?$/i;
 const GUID_ONLY = new RegExp(`^${GUID}$`, 'i');
+const DETAILS_LINK = new RegExp(`href\\s*=\\s*["'][^"']*/Ogloszenia/Details/(${GUID})["']`, 'i');
+/** Krótsza sygnatura dałaby w globalnej wyszukiwarce zbyt wiele przypadkowych trafień. */
+const MIN_SEARCH_REFERENCE_LENGTH = 5;
 
 const SECTION_SPLIT = /<h5[^>]*\bsection-header\b[^>]*>/i;
 const ROW = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
@@ -63,10 +66,53 @@ export const extractFiles = (html: string, pageUrl: string): ResolvedFile[] => {
   return [...byId.values()];
 };
 
+/** Wiersze wyników wyszukiwania: identyfikator z odnośnika `Details/<uuid>`, a jako nazwa sygnatura z tematem. */
+export const extractSearchRows = (html: string): ProceedingRow[] => {
+  const rows: ProceedingRow[] = [];
+  for (const [, row] of html.matchAll(ROW)) {
+    const id = row.match(DETAILS_LINK)?.[1];
+    if (!id) continue;
+    const cells = [...row.matchAll(CELL)].map((cell) => htmlToText(cell[1]));
+    rows.push({ id: id.toLowerCase(), name: `${cells[0] ?? ''} ${cells[1] ?? ''}`.trim() });
+  }
+  return rows;
+};
+
+/**
+ * Adres ogólny (strona główna, lista ogłoszeń): wyszukiwarka e-ProPublico szuka po sygnaturze, więc postępowanie
+ * znajdujemy po numerze sprawy z ogłoszenia. Bez numeru sprawy nie szukamy: lista obejmuje wszystkich zamawiających.
+ */
+const resolveFromSearch = async (url: string, origin: string, http: HttpClient, hints?: MatchHints): Promise<ResolverResult> => {
+  const notMatched = (note: string): ResolverResult => ({ status: 'PROFILE_NOT_MATCHED', platform: 'epropublico', sourceUrl: url, note });
+  const reference = hints?.referenceNumber?.trim();
+  if (!reference || normalizeCompact(reference).length < MIN_SEARCH_REFERENCE_LENGTH) {
+    return notMatched('Adres nie prowadzi do konkretnego postępowania w e-ProPublico.');
+  }
+
+  const page = await fetchSameHost(`${origin}/Ogloszenia?searchText=${encodeURIComponent(reference)}`, http, { platformName: 'e-ProPublico' });
+  const match = page.kind === 'page' ? matchProceeding(extractSearchRows(page.html), hints ?? {}) : null;
+  if (!match) return notMatched('W e-ProPublico nie ma dokładnie jednego postępowania z numerem sprawy z ogłoszenia.');
+  return resolveDetails(match.id, origin, http);
+};
+
+const resolveDetails = async (id: string, origin: string, http: HttpClient): Promise<ResolverResult> => {
+  const documentsUrl = `${origin}/Ogloszenia/DokumentyZamowienia?przetargId=${id.toLowerCase()}`;
+  const page = await fetchSameHost(documentsUrl, http, { platformName: 'e-ProPublico' });
+  const files = extractFiles(page.kind === 'page' ? page.html : '', documentsUrl);
+  if (files.length === 0) {
+    return { status: 'NO_DOCUMENTS_YET', platform: 'epropublico', sourceUrl: documentsUrl, note: 'Na stronie postępowania nie ma jeszcze dokumentów (poza ogłoszeniem).' };
+  }
+  if (files.length > MAX_FILES) {
+    throw new ResolverError(`Zbyt wiele plików w postępowaniu (${files.length}, limit ${MAX_FILES}).`);
+  }
+  const unique = uniquePaths(files);
+  return { status: 'RESOLVED', platform: 'epropublico', sourceUrl: documentsUrl, files: unique, excluded: [], fingerprint: fingerprintOf('epropublico', unique) };
+};
+
 export const epropublicoAdapter: PlatformAdapter = {
   matches: (url) => HOSTS.has(hostOf(url) ?? ''),
 
-  async resolve(url: string, http: HttpClient): Promise<ResolverResult> {
+  async resolve(url: string, http: HttpClient, hints?: MatchHints): Promise<ResolverResult> {
     let parsed: URL;
     try {
       parsed = new URL(url);
@@ -76,21 +122,7 @@ export const epropublicoAdapter: PlatformAdapter = {
 
     const queryId = parsed.searchParams.get('przetargId') ?? '';
     const id = parsed.pathname.match(DETAILS_PATH)?.[1] ?? (DOCUMENTS_PATH.test(parsed.pathname) && GUID_ONLY.test(queryId) ? queryId : undefined);
-    if (!id) {
-      // Strona główna, lista ogłoszeń zamawiającego i inne adresy: listy postępowań nie znamy, więc niczego nie zgadujemy
-      return { status: 'PROFILE_NOT_MATCHED', platform: 'epropublico', sourceUrl: url, note: 'Adres nie prowadzi do konkretnego postępowania w e-ProPublico.' };
-    }
-
-    const documentsUrl = `${parsed.origin}/Ogloszenia/DokumentyZamowienia?przetargId=${id.toLowerCase()}`;
-    const page = await fetchSameHost(documentsUrl, http, { platformName: 'e-ProPublico' });
-    const files = extractFiles(page.kind === 'page' ? page.html : '', documentsUrl);
-    if (files.length === 0) {
-      return { status: 'NO_DOCUMENTS_YET', platform: 'epropublico', sourceUrl: documentsUrl, note: 'Na stronie postępowania nie ma jeszcze dokumentów (poza ogłoszeniem).' };
-    }
-    if (files.length > MAX_FILES) {
-      throw new ResolverError(`Zbyt wiele plików w postępowaniu (${files.length}, limit ${MAX_FILES}).`);
-    }
-    const unique = uniquePaths(files);
-    return { status: 'RESOLVED', platform: 'epropublico', sourceUrl: documentsUrl, files: unique, excluded: [], fingerprint: fingerprintOf('epropublico', unique) };
+    if (!id) return resolveFromSearch(url, parsed.origin, http, hints);
+    return resolveDetails(id, parsed.origin, http);
   },
 };
